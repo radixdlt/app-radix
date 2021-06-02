@@ -3,7 +3,7 @@
 /**
  * Instruction class of the Boilerplate application.
  */
-#define CLA 0xE0
+#define CLA 0xAA
 
 /**
  * Length of APPNAME variable in the Makefile.
