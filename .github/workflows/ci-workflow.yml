@@ -55,15 +55,15 @@ jobs:
           name: code-coverage
           path: unit-tests/coverage
 
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./unit-tests/coverage.info
-          flags: unittests
-          name: codecov-app-boilerplate
-          fail_ci_if_error: true
-          verbose: true
+      # - name: Upload to codecov.io
+      #   uses: codecov/codecov-action@v1
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     file: ./unit-tests/coverage.info
+      #     flags: unittests
+      #     name: codecov-app-ledger-radix
+      #     fail_ci_if_error: true
+      #     verbose: true
       
       - name: HTML documentation
         run: doxygen .doxygen/Doxyfile

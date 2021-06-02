@@ -23,19 +23,19 @@ include $(BOLOS_SDK)/Makefile.defines
 
 APP_LOAD_PARAMS  = --curve secp256k1
 APP_LOAD_PARAMS += --appFlags 0x240
-APP_LOAD_PARAMS += --path "44'"
+APP_LOAD_PARAMS += --path "536'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
-APPNAME      = "Boilerplate"
-APPVERSION_M = 1
-APPVERSION_N = 0
-APPVERSION_P = 1
+APPNAME      = "Radix"
+APPVERSION_M = 0
+APPVERSION_N = 2
+APPVERSION_P = 3
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
-    ICONNAME=icons/nanox_app_boilerplate.gif
+    ICONNAME=icons/nanox_app_radix.gif
 else
-    ICONNAME=icons/nanos_app_boilerplate.gif
+    ICONNAME=icons/nanos_app_radix.gif
 endif
 
 all: default
@@ -62,7 +62,7 @@ ifeq ($(TARGET_NAME),TARGET_NANOX)
     DEFINES += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
     DEFINES += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
 else
-    DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=128
+    DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=256 # Boilerplate app uses 128
 endif
 
 DEBUG = 0
@@ -80,7 +80,7 @@ endif
 ifneq ($(BOLOS_ENV),)
 $(info BOLOS_ENV=$(BOLOS_ENV))
 CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
-GCCPATH   := $(BOLOS_ENV)/gcc-arm-none-eabi-5_3-2016q1/bin/
+GCCPATH   := $(BOLOS_ENV)/gcc-arm-none-eabi-10-2020-q4-major-linux/bin/
 else
 $(info BOLOS_ENV is not set: falling back to CLANGPATH and GCCPATH)
 endif
@@ -121,4 +121,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS COIN BOL
+	@echo VARIANTS COIN XRD

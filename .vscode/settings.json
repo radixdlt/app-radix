@@ -2,6 +2,7 @@
     "files.associations": {
         "*.h": "c"
     },
-    "C_Cpp.clang_format_path": "/usr/bin/clang-format",
-    "editor.formatOnSave": true
+    "C_Cpp.clang_format_path": "${workspaceRoot}/.clang-format",
+    "editor.formatOnSave": true,
+    "clang-format.executable.osx": "/usr/local/bin/clang-format"
 }
