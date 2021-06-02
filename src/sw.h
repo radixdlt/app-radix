@@ -1,5 +1,8 @@
 #pragma once
 
+// Keep in sync with
+// https://github.com/radixdlt/radixdlt-javascript/blob/main/packages/hardware-ledger/src/_types.ts#L13
+
 /**
  * Status word for success.
  */
