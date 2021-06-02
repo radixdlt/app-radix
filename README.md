@@ -1,6 +1,6 @@
-# Ledger Boilerplate Application
+# Ledger Radix Application
 
-This is a boilerplate application which can be forked to start a new project for the Ledger Nano S/X.
+This is a radix application which can be forked to start a new project for the Ledger Nano S/X.
 
 ## Prerequisite
 
@@ -48,7 +48,7 @@ The flow processed in [GitHub Actions](https://github.com/features/actions) is t
 
 It outputs 4 artifacts:
 
-- `boilerplate-app-debug` within output files of the compilation process in debug mode
+- `radix-app-debug` within output files of the compilation process in debug mode
 - `speculos-log` within APDU command/response when executing end-to-end tests
 - `code-coverage` within HTML details of code coverage
 - `documentation` within HTML auto-generated documentation

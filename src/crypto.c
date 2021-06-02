@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
+ *   Ledger App Radix.
  *   (c) 2020 Ledger SAS.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -104,7 +104,7 @@ int crypto_sign_message() {
     }
 
     G_context.tx_info.signature_len = sig_len;
-    G_context.tx_info.v = (uint8_t)(info & CX_ECCINFO_PARITY_ODD);
+    G_context.tx_info.v = (uint8_t) (info & CX_ECCINFO_PARITY_ODD);
 
     return 0;
 }

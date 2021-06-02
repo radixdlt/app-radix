@@ -1,8 +1,7 @@
 from io import BytesIO
 from typing import Union
 
-from boilerplate_client.utils import (read, read_uint, read_varint,
-                                      write_varint, UINT64_MAX)
+from radix_client.utils import read, read_uint, read_varint, write_varint, UINT64_MAX
 
 
 class TransactionError(Exception):
@@ -10,7 +9,9 @@ class TransactionError(Exception):
 
 
 class Transaction:
-    def __init__(self, nonce: int, to: Union[str, bytes], value: int, memo: str) -> None:
+    def __init__(
+        self, nonce: int, to: Union[str, bytes], value: int, memo: str
+    ) -> None:
         self.nonce: int = nonce
         self.to: bytes = bytes.fromhex(to[2:]) if isinstance(to, str) else to
         self.value: int = value
@@ -26,13 +27,15 @@ class Transaction:
             raise TransactionError(f"Bad address: '{self.to}'!")
 
     def serialize(self) -> bytes:
-        return b"".join([
-            self.nonce.to_bytes(8, byteorder="big"),
-            self.to,
-            self.value.to_bytes(8, byteorder="big"),
-            write_varint(len(self.memo)),
-            self.memo
-        ])
+        return b"".join(
+            [
+                self.nonce.to_bytes(8, byteorder="big"),
+                self.to,
+                self.value.to_bytes(8, byteorder="big"),
+                write_varint(len(self.memo)),
+                self.memo,
+            ]
+        )
 
     @classmethod
     def from_bytes(cls, hexa: Union[bytes, BytesIO]):

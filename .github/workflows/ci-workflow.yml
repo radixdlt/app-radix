@@ -21,7 +21,7 @@ jobs:
       - name: Upload app binary
         uses: actions/upload-artifact@v2
         with:
-          name: boilerplate-app-debug
+          name: radix-app-debug
           path: bin
 
   job_unit_test:
@@ -98,7 +98,7 @@ jobs:
       - name: Download app binary
         uses: actions/download-artifact@v2
         with:
-          name: boilerplate-app-debug
+          name: radix-app-debug
           path: bin
 
       - name: Run test

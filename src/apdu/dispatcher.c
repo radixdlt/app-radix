@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
+ *   Ledger App Radix.
  *   (c) 2020 Ledger SAS.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,14 @@
 #include "../handler/get_app_name.h"
 #include "../handler/get_public_key.h"
 #include "../handler/sign_tx.h"
+#include "../handler/sign_hash.h"
+#include "../handler/diffie_hellman.h"
+
+static void fill_buffer(buffer_t *buf, const command_t *cmd) {
+    buf->ptr = cmd->data;
+    buf->size = cmd->lc;
+    buf->offset = 0;
+}
 
 int apdu_dispatcher(const command_t *cmd) {
     if (cmd->cla != CLA) {
@@ -36,7 +44,6 @@ int apdu_dispatcher(const command_t *cmd) {
     }
 
     buffer_t buf = {0};
-
     switch (cmd->ins) {
         case GET_VERSION:
             if (cmd->p1 != 0 || cmd->p2 != 0) {
@@ -59,9 +66,7 @@ int apdu_dispatcher(const command_t *cmd) {
                 return io_send_sw(SW_WRONG_DATA_LENGTH);
             }
 
-            buf.ptr = cmd->data;
-            buf.size = cmd->lc;
-            buf.offset = 0;
+            fill_buffer(&buf, cmd);
 
             return handler_get_public_key(&buf, (bool) cmd->p1);
         case SIGN_TX:
@@ -75,11 +80,34 @@ int apdu_dispatcher(const command_t *cmd) {
                 return io_send_sw(SW_WRONG_DATA_LENGTH);
             }
 
-            buf.ptr = cmd->data;
-            buf.size = cmd->lc;
-            buf.offset = 0;
+            fill_buffer(&buf, cmd);
 
             return handler_sign_tx(&buf, cmd->p1, (bool) (cmd->p2 & P2_MORE));
+        case SIGN_HASH:
+            if (cmd->p1 > 1 || cmd->p2 > 0) {
+                return io_send_sw(SW_WRONG_P1P2);
+            }
+
+            if (!cmd->data) {
+                return io_send_sw(SW_WRONG_DATA_LENGTH);
+            }
+
+            fill_buffer(&buf, cmd);
+
+            return handler_sign_hash(&buf);
+        case DIFFIE_HELLMAN:
+            if (cmd->p1 > 1 || cmd->p2 > 0) {
+                return io_send_sw(SW_WRONG_P1P2);
+            }
+
+            if (!cmd->data) {
+                return io_send_sw(SW_WRONG_DATA_LENGTH);
+            }
+
+            fill_buffer(&buf, cmd);
+
+            return handler_diffie_hellman(&buf, (bool) cmd->p1);
+
         default:
             return io_send_sw(SW_INS_NOT_SUPPORTED);
     }

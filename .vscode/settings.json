@@ -4,5 +4,6 @@
     },
     "C_Cpp.clang_format_path": "${workspaceRoot}/.clang-format",
     "editor.formatOnSave": true,
-    "clang-format.executable.osx": "/usr/local/bin/clang-format"
+    "clang-format.executable.osx": "/usr/local/bin/clang-format",
+    "python.formatting.provider": "black"
 }

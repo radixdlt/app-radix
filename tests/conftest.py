@@ -4,15 +4,13 @@ import pytest
 
 from ledgercomm import Transport
 
-from boilerplate_client.boilerplate_cmd import BoilerplateCommand
-from boilerplate_client.button import ButtonTCP, ButtonFake
+from radix_client.radix_cmd import RadixCommand
+from radix_client.button import ButtonTCP, ButtonFake
 
 
 def pytest_addoption(parser):
-    parser.addoption("--hid",
-                     action="store_true")
-    parser.addoption("--headless",
-                     action="store_true")
+    parser.addoption("--hid", action="store_true")
+    parser.addoption("--headless", action="store_true")
 
 
 @pytest.fixture(scope="module")
@@ -52,15 +50,12 @@ def button(headless):
 
 @pytest.fixture(scope="session")
 def cmd(hid):
-    transport = (Transport(interface="hid", debug=True)
-                 if hid else Transport(interface="tcp",
-                                       server="127.0.0.1",
-                                       port=9999,
-                                       debug=True))
-    command = BoilerplateCommand(
-        transport=transport,
-        debug=True
+    transport = (
+        Transport(interface="hid", debug=True)
+        if hid
+        else Transport(interface="tcp", server="127.0.0.1", port=9999, debug=True)
     )
+    command = RadixCommand(transport=transport, debug=True)
 
     yield command
 

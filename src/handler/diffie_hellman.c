@@ -15,21 +15,28 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include <stdint.h>  // uint*_t
+#include <stdint.h>   // uint*_t
+#include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
+#include <string.h>   // memset, explicit_bzero
 
-#include "get_app_name.h"
-#include "../constants.h"
+#include "os.h"
+#include "cx.h"
+
+#include "diffie_hellman.h"
 #include "../globals.h"
+#include "../types.h"
 #include "../io.h"
 #include "../sw.h"
-#include "../types.h"
-#include "common/buffer.h"
+#include "../crypto.h"
+#include "../common/buffer.h"
+#include "../ui/display.h"
+#include "../helper/send_response.h"
 
-int handler_get_app_name() {
-    PRINTF("GET_APP_NAME called.");
-    _Static_assert(APPNAME_LEN < MAX_APPNAME_LEN, "APPNAME must be at most 64 characters!");
-
-    buffer_t rdata = {.ptr = (uint8_t *) PIC(APPNAME), .size = APPNAME_LEN, .offset = 0};
-
-    return io_send_response(&rdata, SW_OK);
+int handler_diffie_hellman(buffer_t *cdata, bool display) {
+    PRINTF(
+        "DIFFIE_HELLMAN called. It is not implemented yet. Responding with 'SW_INS_NOT_SUPPORTED' "
+        "(%d)",
+        SW_INS_NOT_SUPPORTED);
+    return io_send_sw(SW_INS_NOT_SUPPORTED);
 }

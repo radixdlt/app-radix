@@ -1,5 +1,5 @@
 # ****************************************************************************
-#    Ledger App Boilerplate
+#    Ledger App Radix
 #    (c) 2020 Ledger SAS.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,9 +21,11 @@ endif
 
 include $(BOLOS_SDK)/Makefile.defines
 
+BIP44_COIN_TYPE_RADIX= "44'/536'"
+
 APP_LOAD_PARAMS  = --curve secp256k1
 APP_LOAD_PARAMS += --appFlags 0x240
-APP_LOAD_PARAMS += --path "536'"
+APP_LOAD_PARAMS += --path $(BIP44_COIN_TYPE_RADIX)
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
 APPNAME      = "Radix"
@@ -62,7 +64,7 @@ ifeq ($(TARGET_NAME),TARGET_NANOX)
     DEFINES += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
     DEFINES += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
 else
-    DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=256 # Boilerplate app uses 128
+    DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=256 # Radix app uses 128
 endif
 
 DEBUG = 0
