@@ -5,17 +5,12 @@
 #include "../common/macros.h"
 
 /**
- * Length of chain code.
- */
-#define CHAINCODE_LEN (MEMBER_SIZE(pubkey_ctx_t, chain_code))
-
-/**
  * Helper to send APDU response with public key and chain code.
  *
  * response = PUBLIC_KEY_UNCOMPRESSEED_LEN (1) ||
  *            G_context.pk_info.public_key (PUBLIC_KEY_UNCOMPRESSEED_LEN) ||
- *            CHAINCODE_LEN (1) ||
- *            G_context.pk_info.chain_code (CHAINCODE_LEN)
+ *            CHAIN_CODE_LEN (1) ||
+ *            G_context.pk_info.chain_code (CHAIN_CODE_LEN)
  *
  * @return zero or positive integer if success, -1 otherwise.
  *
@@ -34,3 +29,14 @@ int helper_send_response_pubkey(void);
  *
  */
 int helper_send_response_sig(void);
+
+/**
+ * Helper to send APDU response with shared ECDH key.
+ *
+ * response = SHARED_KEY_LEN (1) ||
+ *            G_context.ecdh_info.shared_pubkey_point (SHARED_KEY_LEN)
+ *
+ * @return zero or positive integer if success, -1 otherwise.
+ *
+ */
+int helper_send_response_sharedkey(void);

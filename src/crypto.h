@@ -2,6 +2,7 @@
 #pragma once
 
 #include <stdint.h>  // uint*_t
+#include <stdbool.h>
 
 #include "os.h"
 #include "cx.h"
@@ -77,3 +78,16 @@ int crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
  *
  */
 int crypto_sign_message(void);
+
+/**
+ * @brief Performs ECDH with provided public key.
+ *
+ * Performs an ECDH key echange with key at BIP32 path and provided publickey point of some other
+ * party.
+ *
+ *  * @see G_context.bip32_path, ecdh_info.other_party_pubkey_point,
+ * ecdh_info.shared_pubkey_point.
+ *
+ * @return `true` iff success, otherwise `false`.
+ */
+bool crypto_ecdh(void);

@@ -35,6 +35,7 @@
 #include "../helper/send_response.h"
 
 int handler_sign_hash(buffer_t *cdata) {
+    PRINTF("SIGN_HASH called.");
     explicit_bzero(&G_context, sizeof(G_context));
     G_context.req_type = CONFIRM_HASH;
     G_context.state = STATE_NONE;

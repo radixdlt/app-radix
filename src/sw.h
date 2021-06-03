@@ -63,3 +63,7 @@
  * Status word for signature fail.
  */
 #define SW_SIGNATURE_FAIL 0xB008
+/**
+ * Status word for ECDH key exchange fail.
+ */
+#define SW_ECDH_FAIL 0xB009

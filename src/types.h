@@ -54,6 +54,7 @@ typedef enum {
  */
 typedef enum {
     CONFIRM_ADDRESS,     /// confirm address derived from public key
+    CONFIRM_ECDH,        /// confirm ECDH key information
     CONFIRM_HASH,        /// confirm hash information
     CONFIRM_TRANSACTION  /// confirm transaction information
 } request_type_e;
@@ -65,8 +66,16 @@ typedef struct {
     uint8_t raw_uncompressed_public_key[PUBLIC_KEY_UNCOMPRESSEED_LEN];  /// x-coordinate (32),
                                                                         /// y-coodinate (32)
     uint8_t raw_compressed_public_key[PUBLIC_KEY_COMPRESSEED_LEN];
-    uint8_t chain_code[32];  /// for public key derivation
+    uint8_t chain_code[CHAIN_CODE_LEN];  /// for public key derivation
 } pubkey_ctx_t;
+
+/**
+ * Structure for ECDH key exchange context information.
+ */
+typedef struct {
+    uint8_t other_party_pubkey_point[PUBLIC_KEY_POINT_LEN];
+    uint8_t shared_pubkey_point[PUBLIC_KEY_POINT_LEN];
+} ecdh_ctx_t;
 
 /**
  * Structure for transaction information context.
@@ -98,6 +107,7 @@ typedef struct {
     state_e state;  /// state of the context
     union {
         pubkey_ctx_t pk_info;       /// public key context
+        ecdh_ctx_t ecdh_info;       /// ECDH key exchange context
         transaction_ctx_t tx_info;  /// transaction context
     };
     request_type_e req_type;              /// user request

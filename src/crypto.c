@@ -24,6 +24,8 @@
 
 #include "globals.h"
 
+#pragma GCC diagnostic ignored "-Wformat"  // snprintf
+
 int crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
                               uint8_t chain_code[static CHAIN_CODE_LEN],
                               const uint32_t *bip32_path,
@@ -122,7 +124,7 @@ int crypto_sign_message() {
                                     G_context.sig_info.signature,
                                     sizeof(G_context.sig_info.signature),
                                     &info);
-            PRINTF("Signature: %.*H\n", sig_len, G_context.sig_info.signature);
+            PRINTF("Signature: %.*h\n", sig_len, G_context.sig_info.signature);
         }
         CATCH_OTHER(e) {
             THROW(e);
@@ -141,4 +143,41 @@ int crypto_sign_message() {
     G_context.sig_info.v = (uint8_t) (info & CX_ECCINFO_PARITY_ODD);
 
     return 0;
+}
+
+bool crypto_ecdh(void) {
+    cx_ecfp_private_key_t private_key = {0};
+    uint8_t chain_code[CHAIN_CODE_LEN] = {0};
+    int sharedkey_len = 0;
+
+    // derive private key according to BIP32 path
+    crypto_derive_private_key(&private_key,
+                              chain_code,
+                              G_context.bip32_path,
+                              G_context.bip32_path_len);
+
+    BEGIN_TRY {
+        TRY {
+            sharedkey_len = cx_ecdh(&private_key,
+                                    CX_ECDH_POINT,  // or `CX_ECDH_X`
+                                    G_context.ecdh_info.other_party_pubkey_point,
+                                    sizeof(G_context.ecdh_info.other_party_pubkey_point),
+                                    G_context.ecdh_info.shared_pubkey_point,
+                                    sizeof(G_context.ecdh_info.shared_pubkey_point));
+            PRINTF("Derived shared key with length: %d\n", sharedkey_len);
+        }
+        CATCH_OTHER(e) {
+            THROW(e);
+        }
+        FINALLY {
+            explicit_bzero(&private_key, sizeof(private_key));
+        }
+    }
+    END_TRY;
+
+    if (sharedkey_len < 0) {
+        return false;
+    }
+
+    return true;
 }

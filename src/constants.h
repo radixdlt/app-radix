@@ -65,6 +65,12 @@
  */
 #define PUBLIC_KEY_UNCOMPRESSEED_LEN 64
 
+/**
+ * @brief Length of PublicKey POINT on uncompressed format
+ * Length of a PublicKey POINT (bytes).
+ */
+#define PUBLIC_KEY_POINT_LEN (PUBLIC_KEY_UNCOMPRESSEED_LEN + 1)  // 1 byte flag
+
 #define PUBKEY_FLAG_KEY_IS_UNCOMPRESSED         0x04
 #define PUBKEY_FLAG_KEY_IS_COMPRESSED_Y_IS_EVEN 0x02
 #define PUBKEY_FLAG_KEY_IS_COMPRESSED_Y_IS_ODD  0x03

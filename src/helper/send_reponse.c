@@ -27,21 +27,32 @@
 
 int helper_send_response_pubkey() {
     uint8_t resp[
-        /* One byte specifying length of PubKey */ 1 +
-        /* One byte specifying PubKeyFlag (0x04) */ 1 + PUBLIC_KEY_UNCOMPRESSEED_LEN +
-        /* One byte specifying length of CHAINCODE_LEN */ 1 + CHAINCODE_LEN] = {0};
+        /* One byte specifying length of PubKey */ 1 + PUBLIC_KEY_POINT_LEN +
+        /* One byte specifying length of CHAIN_CODE_LEN */ 1 + CHAIN_CODE_LEN] = {0};
 
     size_t offset = 0;
 
-    resp[offset++] = PUBLIC_KEY_UNCOMPRESSEED_LEN + 1;
+    resp[offset++] = PUBLIC_KEY_POINT_LEN;
     resp[offset++] = PUBKEY_FLAG_KEY_IS_UNCOMPRESSED;
     memmove(resp + offset,
             G_context.pk_info.raw_uncompressed_public_key,
             PUBLIC_KEY_UNCOMPRESSEED_LEN);
     offset += PUBLIC_KEY_UNCOMPRESSEED_LEN;
-    resp[offset++] = CHAINCODE_LEN;
-    memmove(resp + offset, G_context.pk_info.chain_code, CHAINCODE_LEN);
-    offset += CHAINCODE_LEN;
+    resp[offset++] = CHAIN_CODE_LEN;
+    memmove(resp + offset, G_context.pk_info.chain_code, CHAIN_CODE_LEN);
+    offset += CHAIN_CODE_LEN;
+
+    return io_send_response(&(const buffer_t){.ptr = resp, .size = offset, .offset = 0}, SW_OK);
+}
+
+int helper_send_response_sharedkey() {
+    uint8_t resp[
+        /* One byte specifying length of PubKey */ 1 + PUBLIC_KEY_POINT_LEN] = {0};
+    size_t offset = 0;
+
+    resp[offset++] = PUBLIC_KEY_POINT_LEN;
+    memmove(resp + offset, G_context.ecdh_info.shared_pubkey_point, PUBLIC_KEY_POINT_LEN);
+    offset += PUBLIC_KEY_POINT_LEN;
 
     return io_send_response(&(const buffer_t){.ptr = resp, .size = offset, .offset = 0}, SW_OK);
 }

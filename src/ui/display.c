@@ -52,6 +52,11 @@ static char g_hash[DISPLAYED_HASH_LEN];
 #define DISPLAYED_ACCOUNT_ADDR_LEN (ACCOUNT_ADDRESS_LEN + 1)  // +1 for Null terminator
 static char g_address[DISPLAYED_ACCOUNT_ADDR_LEN];
 
+#define DISPLAYED_OTHER_PUBKEY_LEN \
+    (PUBLIC_KEY_POINT_LEN * 2 +    \
+     1)  // x2 factor for 2chars per bytes in hex and +1 for Null terminator
+static char g_ecdh_other_party_key[DISPLAYED_OTHER_PUBKEY_LEN];
+
 /// #######################################
 /// ####                               ####
 /// ####           HELPERS             ####
@@ -276,6 +281,73 @@ int ui_display_sign_hash() {
 
     // Initialize (start) the UX flow for SIGN_HASH
     ux_flow_init(0, ux_display_sign_hash_flow, NULL);
+
+    return 0;
+}
+
+/// #######################################
+/// ####                               ####
+/// ####      ECDH Key Exchange        ####
+/// ####                               ####
+/// #######################################
+// Step with icon and text
+UX_STEP_NOCB(ux_display_confirm_other_pubkey_step, pn, {&C_icon_eye, "ECDH with?"});
+
+// Step with title/text for public key of other party
+UX_STEP_NOCB(ux_display_other_pubkey_step,
+             bnnn_paging,
+             {
+                 .title = "Pubkey other",
+                 .text = g_ecdh_other_party_key,
+             });
+
+// Step with title/text for BIP32 path
+UX_STEP_NOCB(ux_display_path_key_step,
+             bnnn_paging,
+             {
+                 .title = "Your key at",
+                 .text = g_bip32_path,
+             });
+
+// FLOW to display other party pubkey and BIP32 path:
+// #1 screen: eye icon + "ECDH with?"
+// #3 screen: display pubkey of other party
+// #2 screen: display BIP32 Path
+// #4 screen: approve button
+// #5 screen: reject button
+UX_FLOW(ux_display_ecdh_flow,
+        &ux_display_confirm_other_pubkey_step,
+        &ux_display_other_pubkey_step,
+        &ux_display_path_key_step,
+        &ux_display_approve_step,
+        &ux_display_reject_step);
+
+int ui_display_ecdh() {
+    if (G_context.req_type != CONFIRM_ECDH) {
+        return io_send_sw(SW_BAD_STATE);
+    }
+
+    // Prepare BIP32 path for display
+    memset(g_bip32_path, 0, sizeof(g_bip32_path));
+    if (!bip32_path_format(G_context.bip32_path,
+                           G_context.bip32_path_len,
+                           g_bip32_path,
+                           sizeof(g_bip32_path))) {
+        return io_send_sw(SW_DISPLAY_BIP32_PATH_FAIL);
+    }
+
+    // Prepare PubKey of other party for display
+    snprintf(g_ecdh_other_party_key,
+             sizeof(g_ecdh_other_party_key),
+             "%.*h",
+             sizeof(G_context.ecdh_info.other_party_pubkey_point),
+             G_context.ecdh_info.other_party_pubkey_point);
+
+    // Prepare send_response callback if user APPROVEs
+    g_validate_callback = &ui_action_validate_sharedkey;
+
+    // Initialize (start) the UX flow for DIFFIE_HELLMAN key exchange
+    ux_flow_init(0, ux_display_ecdh_flow, NULL);
 
     return 0;
 }
