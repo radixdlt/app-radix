@@ -36,6 +36,18 @@
 #define EXPONENT_SMALLEST_UNIT 3
 
 /**
+ * @brief Length of a PrivateKey
+ * Length of PrivateKey (bytes).
+ */
+#define PRIVATE_KEY_LEN 32
+
+/**
+ * @brief Length of Chain code
+ * Length of Chain code (bytes).
+ */
+#define CHAIN_CODE_LEN 32
+
+/**
  * @brief Length of PublicKey on compressed format
  * Length of a PublicKey on compressed format (bytes).
  */
@@ -46,3 +58,7 @@
  * Length of a PublicKey on uncompressed format (bytes).
  */
 #define PUBLIC_KEY_UNCOMPRESSEED_LEN 64
+
+#define PUBKEY_FLAG_KEY_IS_UNCOMPRESSED         0x04
+#define PUBKEY_FLAG_KEY_IS_COMPRESSED_Y_IS_EVEN 0x02
+#define PUBKEY_FLAG_KEY_IS_COMPRESSED_Y_IS_ODD  0x03

@@ -21,15 +21,14 @@
 
 #include "crypto.h"
 #include "sw.h"
-#include "constants.h"
 
 #include "globals.h"
 
 int crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
-                              uint8_t chain_code[static 32],
+                              uint8_t chain_code[static CHAIN_CODE_LEN],
                               const uint32_t *bip32_path,
                               uint8_t bip32_path_len) {
-    uint8_t raw_private_key[32] = {0};
+    uint8_t raw_private_key[PRIVATE_KEY_LEN] = {0};
 
     BEGIN_TRY {
         TRY {
@@ -61,9 +60,15 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
                            cx_ecfp_public_key_t *public_key,
                            uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]) {
     // generate corresponding public key
-    cx_ecfp_generate_pair(CX_CURVE_256K1, public_key, private_key, 1);
+    cx_ecfp_generate_pair(CX_CURVE_256K1,
+                          public_key,
+                          private_key,
+                          1  // KEEP private_key TRUE
+    );
 
-    memmove(raw_public_key, public_key->W + 1, 64);
+    memmove(raw_public_key,
+            public_key->W + 1,  // `1` is length of PUBKEY_FLAG_KEY
+            PUBLIC_KEY_UNCOMPRESSEED_LEN);
 
     return 0;
 }
@@ -71,21 +76,23 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
 int crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
                                uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSEED_LEN]) {
     // An uncompressed key has 0x04 + X (32 bytes) + Y (32 bytes).
-    if (public_key->W_len != 65 || public_key->W[0] != 0x04) {
+    if (public_key->W_len != (PUBLIC_KEY_UNCOMPRESSEED_LEN + 1) ||
+        public_key->W[0] != PUBKEY_FLAG_KEY_IS_UNCOMPRESSED) {
         PRINTF(
-            "Inputted public key is incorrect, either incorrect length or first byte is not 0x04 "
+            "Inputted public key is incorrect, either incorrect length or first byte is not "
+            "PUBKEY_FLAG_KEY_IS_UNCOMPRESSED "
             "as expected.\n");
         THROW(INVALID_PARAMETER);
     }
 
     // check if Y is even or odd. Assuming big-endian, just check the last byte.
-    size_t len = 1;
-    if (public_key->W[64] % 2 == 0) {
+    size_t len = 1;  // `1` iis length of PUBKEY_FLAG_KEY
+    if (public_key->W[PUBLIC_KEY_UNCOMPRESSEED_LEN] % 2 == 0) {
         // Even
-        memset(raw_public_key, 0x02, len);
+        memset(raw_public_key, PUBKEY_FLAG_KEY_IS_COMPRESSED_Y_IS_EVEN, len);
     } else {
         // Odd
-        memset(raw_public_key, 0x03, len);
+        memset(raw_public_key, PUBKEY_FLAG_KEY_IS_COMPRESSED_Y_IS_ODD, len);
     }
 
     memmove(raw_public_key + len, public_key->W + len, PUBLIC_KEY_UNCOMPRESSEED_LEN);
@@ -95,7 +102,7 @@ int crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
 
 int crypto_sign_message() {
     cx_ecfp_private_key_t private_key = {0};
-    uint8_t chain_code[32] = {0};
+    uint8_t chain_code[CHAIN_CODE_LEN] = {0};
     uint32_t info = 0;
     int sig_len = 0;
 
