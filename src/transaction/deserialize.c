@@ -33,7 +33,7 @@ parser_status_e transaction_deserialize(buffer_t *buf, transaction_t *tx) {
     tx->to = (uint8_t *) (buf->ptr + buf->offset);
 
     // TO address
-    if (!buffer_seek_cur(buf, ADDRESS_LEN)) {
+    if (!buffer_seek_cur(buf, ACCOUNT_ADDRESS_LEN)) {
         return TO_PARSING_ERROR;
     }
 
@@ -42,19 +42,19 @@ parser_status_e transaction_deserialize(buffer_t *buf, transaction_t *tx) {
         return VALUE_PARSING_ERROR;
     }
 
-    // length of memo
-    if (!buffer_read_varint(buf, &tx->memo_len) && tx->memo_len > MAX_MEMO_LEN) {
+    // length of message
+    if (!buffer_read_varint(buf, &tx->message_len) && tx->message_len > MAX_MSG_LEN) {
         return MEMO_LENGTH_ERROR;
     }
 
-    // memo
-    tx->memo = (uint8_t *) (buf->ptr + buf->offset);
+    // message
+    tx->message = (uint8_t *) (buf->ptr + buf->offset);
 
-    if (!buffer_seek_cur(buf, tx->memo_len)) {
+    if (!buffer_seek_cur(buf, tx->message_len)) {
         return MEMO_PARSING_ERROR;
     }
 
-    if (!transaction_utils_check_encoding(tx->memo, tx->memo_len)) {
+    if (!transaction_utils_check_encoding(tx->message, tx->message_len)) {
         return MEMO_ENCODING_ERROR;
     }
 

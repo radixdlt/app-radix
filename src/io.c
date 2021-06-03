@@ -33,6 +33,7 @@ void io_seproxyhal_display(const bagl_element_t *element) {
 }
 
 uint8_t io_event(uint8_t channel) {
+    UNUSED(channel);
     switch (G_io_seproxyhal_spi_buffer[0]) {
         case SEPROXYHAL_TAG_BUTTON_PUSH_EVENT:
             UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);

@@ -30,16 +30,18 @@
 #include "../globals.h"
 #include "../io.h"
 #include "../sw.h"
-#include "../address.h"
+#include "../account_address.h"
 #include "action/validate.h"
 #include "../transaction/types.h"
 #include "../common/bip32.h"
 #include "../common/format.h"
+#include "macros.h"  // ASSERT
 
 static action_validate_cb g_validate_callback;
 static char g_amount[30];
 static char g_bip32_path[60];
-static char g_address[43];
+#define DISPLAYED_ACCOUNT_ADDR_LEN (ACCOUNT_ADDRESS_LEN + 1)  // +1 for Null terminator
+static char g_address[DISPLAYED_ACCOUNT_ADDR_LEN];
 
 // Step with icon and text
 UX_STEP_NOCB(ux_display_confirm_addr_step, pn, {&C_icon_eye, "Confirm Address"});
@@ -87,6 +89,23 @@ UX_FLOW(ux_display_pubkey_flow,
         &ux_display_approve_step,
         &ux_display_reject_step);
 
+static int set_address(const uint8_t *raw_compressed_pubkey) {
+    memset(g_address, 0, sizeof(g_address));
+
+    char address[DISPLAYED_ACCOUNT_ADDR_LEN] = {0};
+    size_t address_size_expected = sizeof(address);
+    size_t address_size = address_size_expected;
+
+    if (!account_address_from_pubkey(raw_compressed_pubkey, address, &address_size)) {
+        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+    }
+
+    ASSERT(address_size == address_size_expected, "Incorrect length of account address.");
+    snprintf(g_address, sizeof(g_address), "%.*s", address_size, address);
+
+    return 0;
+}
+
 int ui_display_address() {
     if (G_context.req_type != CONFIRM_ADDRESS || G_context.state != STATE_NONE) {
         G_context.state = STATE_NONE;
@@ -101,12 +120,7 @@ int ui_display_address() {
         return io_send_sw(SW_DISPLAY_BIP32_PATH_FAIL);
     }
 
-    memset(g_address, 0, sizeof(g_address));
-    uint8_t address[ADDRESS_LEN] = {0};
-    if (!address_from_pubkey(G_context.pk_info.raw_public_key, address, sizeof(address))) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    }
-    snprintf(g_address, sizeof(g_address), "0x%.*H", sizeof(address), address);
+    set_address(G_context.pk_info.raw_compressed_public_key);
 
     g_validate_callback = &ui_action_validate_pubkey;
 
@@ -161,8 +175,7 @@ int ui_display_transaction() {
     snprintf(g_amount, sizeof(g_amount), "BOL %.*s", sizeof(amount), amount);
     PRINTF("Amount: %s\n", g_amount);
 
-    memset(g_address, 0, sizeof(g_address));
-    snprintf(g_address, sizeof(g_address), "0x%.*H", ADDRESS_LEN, G_context.tx_info.transaction.to);
+    set_address(G_context.tx_info.transaction.to);
 
     g_validate_callback = &ui_action_validate_transaction;
 

@@ -20,6 +20,8 @@
 #include <stdbool.h>  // bool
 
 #include "crypto.h"
+#include "sw.h"
+#include "constants.h"
 
 #include "globals.h"
 
@@ -62,6 +64,31 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
     cx_ecfp_generate_pair(CX_CURVE_256K1, public_key, private_key, 1);
 
     memmove(raw_public_key, public_key->W + 1, 64);
+
+    return 0;
+}
+
+int crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
+                               uint8_t raw_public_key[static 33]) {
+    // An uncompressed key has 0x04 + X (32 bytes) + Y (32 bytes).
+    if (public_key->W_len != 65 || public_key->W[0] != 0x04) {
+        PRINTF(
+            "Inputted public key is incorrect, either incorrect length or first byte is not 0x04 "
+            "as expected.\n");
+        THROW(INVALID_PARAMETER);
+    }
+
+    // check if Y is even or odd. Assuming big-endian, just check the last byte.
+    size_t len = 1;
+    if (public_key->W[64] % 2 == 0) {
+        // Even
+        memset(raw_public_key, 0x02, len);
+    } else {
+        // Odd
+        memset(raw_public_key, 0x03, len);
+    }
+
+    memmove(raw_public_key + len, public_key->W + len, PUBLIC_KEY_UNCOMPRESSEED_LEN);
 
     return 0;
 }

@@ -6,24 +6,24 @@
 #include "types.h"
 
 /**
- * Check if memo is encoded using ASCII characters.
+ * Check if message is encoded using ASCII characters.
  *
- * @param[in] memo
+ * @param[in] message
  *   Pointer to input byte buffer.
- * @param[in] memo_len
+ * @param[in] message_len
  *   Lenght of input byte buffer.
  *
  * @return true if success, false otherwise.
  *
  */
-bool transaction_utils_check_encoding(const uint8_t *memo, uint64_t memo_len);
+bool transaction_utils_check_encoding(const uint8_t *message, uint64_t message_len);
 
 /**
- * Format memo as string.
+ * Format message as string.
  *
- * @param[in]  memo
+ * @param[in]  message
  *   Pointer to input byte buffer.
- * @param[in]  memo_len
+ * @param[in]  message_len
  *   Lenght of input byte buffer.
  * @param[out] dst
  *   Pointer to output string.
@@ -33,7 +33,7 @@ bool transaction_utils_check_encoding(const uint8_t *memo, uint64_t memo_len);
  * @return true if success, false otherwise.
  *
  */
-bool transaction_utils_format_memo(const uint8_t *memo,
-                                   uint64_t memo_len,
+bool transaction_utils_format_memo(const uint8_t *message,
+                                   uint64_t message_len,
                                    char *dst,
                                    uint64_t dst_len);

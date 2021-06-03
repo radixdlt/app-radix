@@ -1,6 +1,17 @@
 {
     "files.associations": {
-        "*.h": "c"
+        "*.h": "c",
+        "cassert": "c",
+        "memory": "c",
+        "optional": "c",
+        "__bit_reference": "c",
+        "__hash_table": "c",
+        "__string": "c",
+        "algorithm": "c",
+        "cstring": "c",
+        "locale": "c",
+        "string": "c",
+        "vector": "c"
     },
     "C_Cpp.clang_format_path": "${workspaceRoot}/.clang-format",
     "editor.formatOnSave": true,

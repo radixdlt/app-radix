@@ -48,6 +48,21 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
                            uint8_t raw_public_key[static 64]);
 
 /**
+ * Compresses a public key and outputs to the provided buffer.
+ *
+ * @param[in] public_key
+ *   Pointer to an uncompressed public key.
+ * @param[out] raw_public_key
+ *   Pointer to raw public key.
+ *
+ * @return 0 if success, -1 otherwise.
+ *
+ * @throw INVALID_PARAMETER
+ *
+ */
+int crypto_compress_public_key(cx_ecfp_public_key_t *public_key, uint8_t raw_public_key[static 33]);
+
+/**
  * Sign message hash in global context.
  *
  * @see G_context.bip32_path, G_context.tx_info.m_hash,

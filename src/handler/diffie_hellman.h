@@ -11,7 +11,7 @@
  * Handler for DIFFIE_HELMAN key exchange command. If successfully parse BIP32 path,
  * public key of other party, we derive a shared public key and send APDU response.
  *
- * @see G_context.bip32_path, G_context.echd_info.raw_public_key and
+ * @see G_context.bip32_path, G_context.echd_info.raw_uncompressed_public_key and
  *      G_context.echd_info.chain_code.
  *
  * @param[in,out] cdata

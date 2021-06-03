@@ -34,6 +34,7 @@
 #include "../helper/send_response.h"
 
 int handler_sign_hash(buffer_t *cdata) {
+    UNUSED(cdata);
     PRINTF(
         "SIGN_HASH called. It is not implemented yet. Responding with 'SW_INS_NOT_SUPPORTED' (%d)",
         SW_INS_NOT_SUPPORTED);

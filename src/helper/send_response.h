@@ -5,10 +5,6 @@
 #include "../common/macros.h"
 
 /**
- * Length of public key.
- */
-#define PUBKEY_LEN (MEMBER_SIZE(pubkey_ctx_t, raw_public_key))
-/**
  * Length of chain code.
  */
 #define CHAINCODE_LEN (MEMBER_SIZE(pubkey_ctx_t, chain_code))
@@ -16,8 +12,8 @@
 /**
  * Helper to send APDU response with public key and chain code.
  *
- * response = PUBKEY_LEN (1) ||
- *            G_context.pk_info.public_key (PUBKEY_LEN) ||
+ * response = PUBLIC_KEY_UNCOMPRESSEED_LEN (1) ||
+ *            G_context.pk_info.public_key (PUBLIC_KEY_UNCOMPRESSEED_LEN) ||
  *            CHAINCODE_LEN (1) ||
  *            G_context.pk_info.chain_code (CHAINCODE_LEN)
  *

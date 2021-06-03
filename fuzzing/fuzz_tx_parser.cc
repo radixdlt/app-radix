@@ -27,7 +27,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (status == PARSING_OK) {
         format_u64(nonce, sizeof(nonce), tx.nonce);
         printf("nonce: %s\n", nonce);
-        format_hex(tx.to, ADDRESS_LEN, address, sizeof(address));
+        format_hex(tx.to, ACCOUNT_ADDRESS_LEN, address, sizeof(address));
         printf("address: %s\n", address);
         format_fpu64(amount, sizeof(amount), tx.value, 3);  // exponent of smallest unit is 3
         printf("amount: %s\n", amount);

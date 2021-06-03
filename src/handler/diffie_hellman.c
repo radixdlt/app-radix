@@ -15,25 +15,15 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include <stdint.h>   // uint*_t
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <string.h>   // memset, explicit_bzero
-
-#include "os.h"
-#include "cx.h"
-
 #include "diffie_hellman.h"
-#include "../globals.h"
-#include "../types.h"
-#include "../io.h"
-#include "../sw.h"
-#include "../crypto.h"
 #include "../common/buffer.h"
-#include "../ui/display.h"
-#include "../helper/send_response.h"
+
+#include "sw.h"     // SW_INS_NOT_SUPPORTED
+#include "../io.h"  // io_send_sw
 
 int handler_diffie_hellman(buffer_t *cdata, bool display) {
+    UNUSED(cdata);
+    UNUSED(display);
     PRINTF(
         "DIFFIE_HELLMAN called. It is not implemented yet. Responding with 'SW_INS_NOT_SUPPORTED' "
         "(%d)",
