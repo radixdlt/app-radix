@@ -51,6 +51,23 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
                            uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]);
 
 /**
+ * Initialize public key from an uncompressed raw key buffer.
+ *
+ * @param[in] raw_uncompressed_public_key
+ *   Pointer to raw public key on uncompressed format.
+ * @param[out] public_key
+ *   Pointer to public key.
+ *
+ * @return `true` iff success, otherwise `false.
+ *
+ * @throw INVALID_PARAMETER
+ *
+ */
+bool crypto_init_public_key_from_raw_uncompressed(
+    uint8_t raw_uncompressed_public_key[static PUBLIC_KEY_POINT_LEN],
+    cx_ecfp_public_key_t *public_key);
+
+/**
  * Compresses a public key and outputs to the provided buffer.
  *
  * @param[in] public_key
@@ -58,13 +75,13 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
  * @param[out] raw_public_key
  *   Pointer to raw public key.
  *
- * @return 0 if success, -1 otherwise.
+ * @return `true` iff success, otherwise `false.
  *
  * @throw INVALID_PARAMETER
  *
  */
-int crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
-                               uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSEED_LEN]);
+bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
+                                uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSED_LEN]);
 
 /**
  * Sign message hash in global context.
@@ -85,7 +102,7 @@ int crypto_sign_message(void);
  * Performs an ECDH key echange with key at BIP32 path and provided publickey point of some other
  * party.
  *
- *  * @see G_context.bip32_path, ecdh_info.other_party_pubkey_point,
+ *  * @see G_context.bip32_path, ecdh_info.other_party_public_key,
  * ecdh_info.shared_pubkey_point.
  *
  * @return `true` iff success, otherwise `false`.

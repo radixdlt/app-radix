@@ -56,10 +56,9 @@ void ui_action_validate_signature(bool choice) {
 void ui_action_validate_sharedkey(bool choice) {
     if (choice) {
         G_context.state = STATE_APPROVED;
-
         if (!crypto_ecdh()) {
             G_context.state = STATE_NONE;
-            io_send_sw(SW_ECDH_FAIL);
+            io_send_sw(SW_ECDH_FAILED_TO_PERFORM_ECDH);
         } else {
             helper_send_response_sharedkey();
         }

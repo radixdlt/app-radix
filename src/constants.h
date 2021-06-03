@@ -57,7 +57,7 @@
  * @brief Length of PublicKey on compressed format
  * Length of a PublicKey on compressed format (bytes).
  */
-#define PUBLIC_KEY_COMPRESSEED_LEN 33
+#define PUBLIC_KEY_COMPRESSED_LEN 33
 
 /**
  * @brief Length of PublicKey on uncompressed format

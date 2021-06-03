@@ -4,7 +4,7 @@
 #include <stddef.h>   // size_t
 #include <stdbool.h>  // bool
 
-#include "constants.h"  // PUBLIC_KEY_COMPRESSEED_LEN
+#include "constants.h"  // PUBLIC_KEY_COMPRESSED_LEN
 
 #define ACCOUNT_ADDRESS_VERSION_BYTE        0x04
 #define ACCOUNT_ADDRESS_VERSION_DATA_LENGTH 1  // one byte
@@ -31,6 +31,6 @@
  * @return true if success, false otherwise.
  *
  */
-bool account_address_from_pubkey(const uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSEED_LEN],
+bool account_address_from_pubkey(const uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSED_LEN],
                                  char *out,
                                  size_t *out_len);

@@ -26,6 +26,7 @@
 
 #include "display.h"
 #include "constants.h"
+#include "../crypto.h"
 #include "../globals.h"
 #include "../io.h"
 #include "../sw.h"
@@ -62,7 +63,9 @@ static char g_ecdh_other_party_key[DISPLAYED_OTHER_PUBKEY_LEN];
 /// ####           HELPERS             ####
 /// ####                               ####
 /// #######################################
-static bool set_address(const uint8_t *raw_compressed_pubkey) {
+static bool set_address_at(const uint8_t raw_compressed_pubkey[static PUBLIC_KEY_COMPRESSED_LEN],
+                           char *out,
+                           const size_t out_len) {
     memset(g_address, 0, sizeof(g_address));
 
     char address[DISPLAYED_ACCOUNT_ADDR_LEN] = {0};
@@ -74,9 +77,13 @@ static bool set_address(const uint8_t *raw_compressed_pubkey) {
     }
 
     ASSERT(address_size == address_size_expected, "Incorrect length of account address.");
-    snprintf(g_address, sizeof(g_address), "%.*s", address_size, address);
+    snprintf(out, out_len, "%.*s", address_size, address);
 
     return true;
+}
+
+static bool set_address(const uint8_t raw_compressed_pubkey[static PUBLIC_KEY_COMPRESSED_LEN]) {
+    return set_address_at(raw_compressed_pubkey, g_address, sizeof(g_address));
 }
 
 // Step with approve button
@@ -336,12 +343,27 @@ int ui_display_ecdh() {
         return io_send_sw(SW_DISPLAY_BIP32_PATH_FAIL);
     }
 
-    // Prepare PubKey of other party for display
-    snprintf(g_ecdh_other_party_key,
-             sizeof(g_ecdh_other_party_key),
-             "%.*h",
-             sizeof(G_context.ecdh_info.other_party_pubkey_point),
-             G_context.ecdh_info.other_party_pubkey_point);
+    // Prepare to display other party info
+    bool display_address_instead_of_raw_key = true;  // TODO send as option..
+    if (display_address_instead_of_raw_key) {
+        // Prepare Address for display
+
+        crypto_compress_public_key(&G_context.ecdh_info.other_party_public_key,
+                                   G_context.ecdh_info.other_party_compressed_pubkey);
+
+        if (!set_address_at(G_context.ecdh_info.other_party_compressed_pubkey,
+                            g_ecdh_other_party_key,
+                            sizeof(g_ecdh_other_party_key))) {
+            return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+        }
+    } else {
+        // Prepare PubKey of other party for display
+        snprintf(g_ecdh_other_party_key,
+                 sizeof(g_ecdh_other_party_key),
+                 "%.*h",
+                 G_context.ecdh_info.other_party_public_key.W_len,
+                 G_context.ecdh_info.other_party_public_key.W);
+    }
 
     // Prepare send_response callback if user APPROVEs
     g_validate_callback = &ui_action_validate_sharedkey;

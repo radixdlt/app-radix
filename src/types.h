@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "transaction/types.h"
 #include "common/bip32.h"
+#include "os.h"
 
 /**
  * Enumeration for the status of IO.
@@ -65,7 +66,7 @@ typedef enum {
 typedef struct {
     uint8_t raw_uncompressed_public_key[PUBLIC_KEY_UNCOMPRESSEED_LEN];  /// x-coordinate (32),
                                                                         /// y-coodinate (32)
-    uint8_t raw_compressed_public_key[PUBLIC_KEY_COMPRESSEED_LEN];
+    uint8_t raw_compressed_public_key[PUBLIC_KEY_COMPRESSED_LEN];
     uint8_t chain_code[CHAIN_CODE_LEN];  /// for public key derivation
 } pubkey_ctx_t;
 
@@ -73,7 +74,8 @@ typedef struct {
  * Structure for ECDH key exchange context information.
  */
 typedef struct {
-    uint8_t other_party_pubkey_point[PUBLIC_KEY_POINT_LEN];
+    cx_ecfp_public_key_t other_party_public_key;
+    uint8_t other_party_compressed_pubkey[PUBLIC_KEY_COMPRESSED_LEN];
     uint8_t shared_pubkey_point[PUBLIC_KEY_POINT_LEN];
 } ecdh_ctx_t;
 

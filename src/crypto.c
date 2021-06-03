@@ -75,10 +75,23 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
     return 0;
 }
 
-int crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
-                               uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSEED_LEN]) {
+bool crypto_init_public_key_from_raw_uncompressed(
+    uint8_t raw_uncompressed_public_key[static PUBLIC_KEY_POINT_LEN],
+    cx_ecfp_public_key_t *public_key) {
+    if (cx_ecfp_init_public_key(CX_CURVE_SECP256K1,
+                                raw_uncompressed_public_key,
+                                PUBLIC_KEY_POINT_LEN,
+                                public_key) != PUBLIC_KEY_POINT_LEN) {
+        PRINTF("Invalid public key");
+        THROW(INVALID_PARAMETER);
+    }
+    return true;
+}
+
+bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
+                                uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSED_LEN]) {
     // An uncompressed key has 0x04 + X (32 bytes) + Y (32 bytes).
-    if (public_key->W_len != (PUBLIC_KEY_UNCOMPRESSEED_LEN + 1) ||
+    if (public_key->W_len != (PUBLIC_KEY_POINT_LEN) ||
         public_key->W[0] != PUBKEY_FLAG_KEY_IS_UNCOMPRESSED) {
         PRINTF(
             "Inputted public key is incorrect, either incorrect length or first byte is not "
@@ -99,7 +112,7 @@ int crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
 
     memmove(raw_public_key + len, public_key->W + len, PUBLIC_KEY_UNCOMPRESSEED_LEN);
 
-    return 0;
+    return true;
 }
 
 int crypto_sign_message() {
@@ -160,8 +173,8 @@ bool crypto_ecdh(void) {
         TRY {
             sharedkey_len = cx_ecdh(&private_key,
                                     CX_ECDH_POINT,  // or `CX_ECDH_X`
-                                    G_context.ecdh_info.other_party_pubkey_point,
-                                    sizeof(G_context.ecdh_info.other_party_pubkey_point),
+                                    G_context.ecdh_info.other_party_public_key.W,
+                                    G_context.ecdh_info.other_party_public_key.W_len,
                                     G_context.ecdh_info.shared_pubkey_point,
                                     sizeof(G_context.ecdh_info.shared_pubkey_point));
             PRINTF("Derived shared key with length: %d\n", sharedkey_len);

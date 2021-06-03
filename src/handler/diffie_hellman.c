@@ -18,10 +18,12 @@
 #include "diffie_hellman.h"
 #include "../common/buffer.h"
 
+#include "os.h"
 #include "sw.h"     // SW_WRONG_DATA_LENGTH
 #include "../io.h"  // io_send_sw
 
 #include "../globals.h"               // G_context
+#include "../crypto.h"                // crypto_init_public_key_from_raw_uncompressed
 #include "../ui/display.h"            // ui_display_ecdh
 #include "../helper/send_response.h"  // helper_send_response_sharedkey
 
@@ -42,15 +44,21 @@ int handler_diffie_hellman(buffer_t *cdata, bool display) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
-    if (!buffer_move(cdata, G_context.ecdh_info.other_party_pubkey_point, pubkey_other_party_len)) {
+    uint8_t tmp_raw_key[PUBLIC_KEY_POINT_LEN];
+
+    if (!buffer_move(cdata, tmp_raw_key, pubkey_other_party_len)) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
-    PRINTF("Public key of other party: %.*H\n",
-           pubkey_other_party_len,
-           G_context.ecdh_info.other_party_pubkey_point);
+    if (!crypto_init_public_key_from_raw_uncompressed(
+            tmp_raw_key,
+            &G_context.ecdh_info.other_party_public_key)) {
+        return io_send_sw(SW_ECDH_FAILED_TO_PARSE_PUBKEY);
+    }
 
-    // return ui_display_ecdh();
+    PRINTF("Public key of other party: %.*H\n",
+           G_context.ecdh_info.other_party_public_key.W_len,
+           G_context.ecdh_info.other_party_public_key.W);
 
     if (display) {
         return ui_display_ecdh();
