@@ -15,8 +15,7 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#pragma GCC diagnostic ignored "-Wformat-invalid-specifier"  // snprintf
-#pragma GCC diagnostic ignored "-Wformat-extra-args"         // snprintf
+#pragma GCC diagnostic ignored "-Wformat"  // snprintf
 
 #include <stdbool.h>  // bool
 #include <string.h>   // memset
@@ -268,7 +267,7 @@ int ui_display_sign_hash() {
     // Prepare HASH for display
     snprintf(g_hash,
              sizeof(g_hash),
-             "%.*H",
+             "%.*h",
              sizeof(G_context.sig_info.m_hash),
              G_context.sig_info.m_hash);
 
