@@ -42,6 +42,12 @@
 #define PRIVATE_KEY_LEN 32
 
 /**
+ * @brief Length of a Hash
+ * Length of SHA256 Digest (bytes).
+ */
+#define HASH_LEN 32
+
+/**
  * @brief Length of Chain code
  * Length of Chain code (bytes).
  */

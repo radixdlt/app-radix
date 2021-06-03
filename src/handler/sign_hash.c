@@ -24,6 +24,7 @@
 #include "cx.h"
 
 #include "sign_hash.h"
+#include "../constants.h"
 #include "../globals.h"
 #include "../types.h"
 #include "../io.h"
@@ -34,9 +35,25 @@
 #include "../helper/send_response.h"
 
 int handler_sign_hash(buffer_t *cdata) {
-    UNUSED(cdata);
-    PRINTF(
-        "SIGN_HASH called. It is not implemented yet. Responding with 'SW_INS_NOT_SUPPORTED' (%d)",
-        SW_INS_NOT_SUPPORTED);
-    return io_send_sw(SW_INS_NOT_SUPPORTED);
+    explicit_bzero(&G_context, sizeof(G_context));
+    G_context.req_type = CONFIRM_HASH;
+    G_context.state = STATE_NONE;
+
+    if (!buffer_read_u8(cdata, &G_context.bip32_path_len) ||
+        !buffer_read_bip32_path(cdata, G_context.bip32_path, (size_t) G_context.bip32_path_len)) {
+        return io_send_sw(SW_WRONG_DATA_LENGTH);
+    }
+
+    uint8_t hash_len;
+    if (!buffer_read_u8(cdata, &hash_len) || hash_len != HASH_LEN) {
+        return io_send_sw(SW_WRONG_DATA_LENGTH);
+    }
+
+    if (!buffer_move(cdata, G_context.sig_info.m_hash, hash_len)) {
+        return io_send_sw(SW_WRONG_DATA_LENGTH);
+    }
+
+    PRINTF("Hash: %.*H\n", sizeof(G_context.sig_info.m_hash), G_context.sig_info.m_hash);
+
+    return ui_display_sign_hash();
 }

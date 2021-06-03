@@ -22,3 +22,11 @@ int ui_display_address(void);
  *
  */
 int ui_display_transaction(void);
+
+/**
+ * Display BIP32 and hash on the device and ask confirmation to sign hash with key at BIP32 path.
+ *
+ * @return 0 if success, negative integer otherwise.
+ *
+ */
+int ui_display_sign_hash(void);

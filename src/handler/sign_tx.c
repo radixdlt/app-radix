@@ -91,11 +91,11 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
                     CX_LAST,
                     G_context.tx_info.raw_tx,
                     G_context.tx_info.raw_tx_len,
-                    G_context.tx_info.m_hash,
-                    sizeof(G_context.tx_info.m_hash));
+                    G_context.sig_info.m_hash,
+                    sizeof(G_context.sig_info.m_hash));
 
-            PRINTF("Hash: %.*H\n", sizeof(G_context.tx_info.m_hash), G_context.tx_info.m_hash);
-
+            PRINTF("Hash: %.*H\n", sizeof(G_context.sig_info.m_hash), G_context.sig_info.m_hash);
+    
             return ui_display_transaction();
         }
     }

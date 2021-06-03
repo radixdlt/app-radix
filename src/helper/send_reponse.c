@@ -26,11 +26,15 @@
 #include "common/buffer.h"
 
 int helper_send_response_pubkey() {
-    uint8_t resp[1 + 1 + PUBLIC_KEY_UNCOMPRESSEED_LEN + 1 + CHAINCODE_LEN] = {0};
+    uint8_t resp[
+        /* One byte specifying length of PubKey */ 1 +
+        /* One byte specifying PubKeyFlag (0x04) */ 1 + PUBLIC_KEY_UNCOMPRESSEED_LEN +
+        /* One byte specifying length of CHAINCODE_LEN */ 1 + CHAINCODE_LEN] = {0};
+
     size_t offset = 0;
 
     resp[offset++] = PUBLIC_KEY_UNCOMPRESSEED_LEN + 1;
-    resp[offset++] = 0x04;
+    resp[offset++] = PUBKEY_FLAG_KEY_IS_UNCOMPRESSED;
     memmove(resp + offset,
             G_context.pk_info.raw_uncompressed_public_key,
             PUBLIC_KEY_UNCOMPRESSEED_LEN);
@@ -43,13 +47,16 @@ int helper_send_response_pubkey() {
 }
 
 int helper_send_response_sig() {
-    uint8_t resp[1 + MAX_DER_SIG_LEN + 1] = {0};
+    uint8_t resp[
+        /* One byte specifying length of SigLength */ 1 + MAX_DER_SIG_LEN +
+        /* One byte for Signature.V */ 1] = {0};
+
     size_t offset = 0;
 
-    resp[offset++] = G_context.tx_info.signature_len;
-    memmove(resp + offset, G_context.tx_info.signature, G_context.tx_info.signature_len);
-    offset += G_context.tx_info.signature_len;
-    resp[offset++] = (uint8_t) G_context.tx_info.v;
+    resp[offset++] = G_context.sig_info.signature_len;
+    memmove(resp + offset, G_context.sig_info.signature, G_context.sig_info.signature_len);
+    offset += G_context.sig_info.signature_len;
+    resp[offset++] = (uint8_t) G_context.sig_info.v;
 
     return io_send_response(&(const buffer_t){.ptr = resp, .size = offset, .offset = 0}, SW_OK);
 }

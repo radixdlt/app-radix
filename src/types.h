@@ -54,6 +54,7 @@ typedef enum {
  */
 typedef enum {
     CONFIRM_ADDRESS,     /// confirm address derived from public key
+    CONFIRM_HASH,        /// confirm hash information
     CONFIRM_TRANSACTION  /// confirm transaction information
 } request_type_e;
 
@@ -74,11 +75,21 @@ typedef struct {
     uint8_t raw_tx[MAX_TRANSACTION_LEN];  /// raw transaction serialized
     size_t raw_tx_len;                    /// length of raw transaction
     transaction_t transaction;            /// structured transaction
-    uint8_t m_hash[32];                   /// message hash digest
-    uint8_t signature[MAX_DER_SIG_LEN];   /// transaction signature encoded in DER
-    uint8_t signature_len;                /// length of transaction signature
-    uint8_t v;                            /// parity of y-coordinate of R in ECDSA signature
 } transaction_ctx_t;
+
+typedef struct {
+    uint8_t m_hash[HASH_LEN];            /// message hash digest
+    uint8_t signature[MAX_DER_SIG_LEN];  /// transaction signature encoded in DER
+    uint8_t signature_len;               /// length of transaction signature
+    uint8_t v;                           /// parity of y-coordinate of R in ECDSA signature
+} signature_ctx_t;
+
+/**
+ * Structure for public key context information.
+ */
+typedef struct {
+    uint8_t m_hash[HASH_LEN];  /// message hash digest
+} sign_hash_ctx_t;
 
 /**
  * Structure for global context.
@@ -92,4 +103,5 @@ typedef struct {
     request_type_e req_type;              /// user request
     uint32_t bip32_path[MAX_BIP32_PATH];  /// BIP32 path
     uint8_t bip32_path_len;               /// lenght of BIP32 path
+    signature_ctx_t sig_info;
 } global_ctx_t;
