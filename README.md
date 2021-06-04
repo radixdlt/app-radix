@@ -10,10 +10,10 @@ This is a [Radix DLT](https://www.radixdlt.com/) Ledger Nano S and X app.
 
 # Prerequisite
 
-Here is the official [Getting Started](https://ledger.readthedocs.io/en/latest/userspace/introduction.html)) guide for a dev environment. 
+Here is the official [Getting Started](https://ledger.readthedocs.io/en/latest/userspace/introduction.html) guide for a dev environment. 
 
 
-> ⚠️ The official guide is not updated and does not work properly for Nano S with firmware 2.0.0 nor with Ledger Nano X.  ⚠️
+> ⚠️ The official guide is not updated and does not work properly for Nano S with firmware 2.0.0 nor with Ledger Nano X. ⚠️
 > PLEASE FOLLOW THE GUIDE IN THIS `README`INSTEAD.
 
 
@@ -21,6 +21,7 @@ Here is the official [Getting Started](https://ledger.readthedocs.io/en/latest/u
 
 Create `/opt/bolos-devenv`
 
+This will be our `BOLOS_ENV` location, referenced to by all steps below.
 
 ## Two SDKS
 
@@ -33,28 +34,27 @@ Create `/opt/bolos-devenv`
 1. Download [`Nano S` SDK 2.0.0 (2.0.0-1)](https://github.com/LedgerHQ/nanos-secure-sdk/releases/tag/2.0.0-1), which only works with Ledger Nano S, and only with firmware SE 2.0.0.
 2. Unarchive.
 3. Change name of the folder to `nano_s_sdk_se200`.
-4. Move to the folder `/opt/bolos-devenv`, so that you have `/opt/bolos-devenv/nano_s_sdk_se200`
+4. Move the folder to the folder `/opt/bolos-devenv/`.
 
 ### `Nano X` SDK
 1. Download [`Nano X` SDK 1.2.4 (1.2.4-5.1)](https://github.com/LedgerHQ/nanox-secure-sdk/releases/tag/1.2.4-5.1), which only works with Ledger Nano X, and only with firmware SE 1.2.4.
 2. Unarchive.
 3. Change name of the folder to `nano_x_sdk_se124`.
-4. Move to the folder `/opt/bolos-devenv`, so that you have `/opt/bolos-devenv/nano_x_sdk_se124`
-
+4. Move the folder to the folder `/opt/bolos-devenv.`.
 
 ## Clang
 
 ### `Nano S` compatible `clang 10`
-1. Download [`clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04`](https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz) (works with Ubuntu 20.04), which we will use for Nano S, with firmware SE 2.0.0.
+1. Download [`clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04`](https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz) (works with Ubuntu 20.04), which we will use for Nano S, with firmware SE 2.0.0 (2.0.0-1).
 2. Unarchive.
 3. Change name of folder to `nanos_se200_clang_10`.
-4. Move to the folder `/opt/bolos-devenv`, so that you have `/opt/bolos-devenv/nanos_se200_clang_10`
+4. Move the folder to the folder `/opt/bolos-devenv.`.
 
 ### `Nano S` compatible `clang 9` 
 1. Download [`clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04`](https://releases.llvm.org/9.0.0/clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz) (works with Ubuntu 20.04), which we will use for Nano X, with firmware SE 1.2.4 (1.2.4-5.1).
 2. Unarchive.
 3. Change name of folder to `nanox_se124_clang_9`.
-4. Move to the folder `/opt/bolos-devenv`, so that you have `/opt/bolos-devenv/nanox_se124_clang_9`
+4. Move the folder to the folder `/opt/bolos-devenv.`.
 
 (There is also a verion available for Ubuntu 19.04, **this has not been tested**, but might work).
 
@@ -65,11 +65,8 @@ Create `/opt/bolos-devenv`
 
 1. Download [`gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux`](https://developer.arm.com/-/media/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2?revision=ca0cbf9c-9de2-491c-ac48-898b5bbc0443&la=en&hash=68760A8AE66026BCF99F05AC017A6A50C6FD832A)
 2. Unarchive
-3. Change the name of the folder to `gcc-arm-none-eabi-10-2020-q4-major-linux`.
-4. Move to the folder `/opt/bolos-devenv`, so that you have `/opt/bolos-devenv/gcc-arm-none-eabi-10-2020-q4-major-linux`
-
-
-> ⚠️ Do not forget to change the name of `gcc` according to ⬆️ ⚠️ 
+3. Change the name of the folder to `gcc_nano_s_se200_and_nano_x_se124_compatible`.
+4. Move the folder to the folder `/opt/bolos-devenv.`.
 
 ## Locations
 
@@ -77,16 +74,15 @@ Create `/opt/bolos-devenv`
 ➜  bolos-devenv pwd
 /opt/bolos-devenv
 ➜  bolos-devenv ls
-gcc-arm-none-eabi-10-2020-q4-major-linux
+gcc_nano_s_se200_and_nano_x_se124_compatible
 nano_s_sdk_se200
 nanos_se200_clang_10
 nano_x_sdk_se124
 nanox_se124_clang_9
 venv_ledger
-
 ```
 
-`venv_ledger` can be put anywhere really, more about venv_later.
+`venv_ledger` can be put anywhere really, more about that later.
 
 ## ENV
 
@@ -205,24 +201,29 @@ Call `make delete` to uninstall app.
 
 # Troubleshooting
 
-## USB connection
-Follow pthe offical troubleshooting guide for USB issues here](https://support.ledger.com/hc/en-us/articles/360019301813-Fix-USB-issues) (expand `Linux` section).
+### USB connection
+Follow [the offical troubleshooting guide for USB issues here](https://support.ledger.com/hc/en-us/articles/360019301813-Fix-USB-issues) (expand `Linux` section).
 
 Alternatively [the Ledger manual PDF here might give some clues](https://github.com/LedgerHQ/openpgp-card-app/blob/master/doc/user/blue-app-openpgp-card.pdf) (see section 0.3.2.1 for `Linux`)
 
-## ENV
+#### Quit Ledger Live on host machine
+Your computer (a.k.a. host machine) will fail to make a connection to the Ledger if you have the desktop app Ledger Live running.
+
+#### Quit Radix App on Ledger device
+Quit the Radix app on the Ledger device when you want to install a new version of it.
+
+
+### ENV
 Use `printenv` to display your ENV variables, if they are not correctly setup to match expected values of the [`Makefile`](./Makefile) in the root of this project, then compilation will not work.
 
 I had accidently set conflicing values in `/etc/environment` (I have no clue how...).
 
-## Firmware
+### Firmware
 1. Make sure you have Secure Elements (SE) Firmware 2.0.0 installed.
 2. Make sure you DO NOT install incompatible DEBUG Firmware on your Ledger. The [one mentioned in the guide](https://ledger.readthedocs.io/en/latest/userspace/debugging.html) is only for SE 1.6.0.
 
-## Quit Ledger Live
-Your computer (a.k.a. host machine) will fail to make a connection to the Ledger if you have Ledger Live active.
 
-## `targetID`
+### `targetID`
 Make sure you are using the correct `targetId` for Ledger Nano S/X.
 
 

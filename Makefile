@@ -118,7 +118,7 @@ endif
 
 ifneq ($(BOLOS_ENV),)
 $(info BOLOS_ENV=$(BOLOS_ENV))
-GCCPATH   := $(BOLOS_ENV)/gcc-arm-none-eabi-10-2020-q4-major-linux/bin/
+GCCPATH   := $(BOLOS_ENV)/gcc_nano_s_se200_and_nano_x_se124_compatible/bin/
 endif
 
 
