@@ -5,8 +5,7 @@ This is a [Radix DLT](https://www.radixdlt.com/) Ledger Nano S and X app.
 
 > ⚠️  Building the app from source is only confirmed to be working on Ubuntu 20.04, but should probably work on 18.04 as well ⚠️
 
-> ☣️ ONLY USE A DEDICATED DEVELOPMENT LEDGER DEVICE. DO NOT USE ONE WITH "FUNDS ON" ☣️
-
+> ☣️ ONLY Use a dedicated Ledger device for development. Don't use one with "funds on".  ☣️
 
 # Setup development
 
@@ -121,10 +120,20 @@ Install Python 3.
 
 Install [`ledgerblue`](https://github.com/LedgerHQ/blue-loader-python) by following the README guide.
 
+After having activated the virtual env, you probably want to run this:
+
+```sh
+python3 -m pip install ledgerblue
+```
 
 ## Set dev `mnemonic`
 
-> ☣️ ONLY USE A DEDICATED DEVELOPMENT LEDGER DEVICE. DO NOT USE ONE WITH "FUNDS ON" ☣️
+> ❌ ⬇️ SKIP THIS STEP IF YOU ARE INSTALLING A PRE-RELEASE, THIS IS ONLY FOR DEVELOPMENT! ⬇️ ❌
+
+<details>
+<summary>CLICK TO EXPAND (❌ only for development ❌)</summary>
+
+> ☣️ ONLY Use a dedicated Ledger device for development. Don't use one with "funds on".  ☣️
 
 With your Ledger device started in `recovery mode`, call `hostOnboard` below.
 
@@ -132,7 +141,9 @@ With your Ledger device started in `recovery mode`, call `hostOnboard` below.
 python3 -m ledgerblue.hostOnboard --apdu --id 0 --prefix "" --passphrase "" --pin 5555 --words "equip will roof matter pink blind book anxiety banner elbow sun young"
 ```
 
-Do this so that you will get the same HD wallet as the rest of the developers, so that integration tests will work (e.g. in TypeScript library).
+Do this so that you will get the same HD wallet as the rest of the developers, so that integration tests will work (e.g. in TypeScript library)
+</details>
+
 
 ## PIN bypass [Optional]
 Optionally, to skip having to enter PIN to opened the app you can [follow this guide](https://ledger.readthedocs.io/en/latest/userspace/debugging.html#pin-bypass)
@@ -152,7 +163,9 @@ python3 -m ledgerblue.setupCustomCA --targetId TARGET_ID_GOES_HERE --public 0422
 ### Pre-release
 
 #### Prerequisites
-If you want to install [a pre-built binary from _Releases_](github.com/radixdlt/app-radix/releases) make sure you have performed the steps beginning from [Installer](#Installer) above. **You should skip the `Set dev mnemonic` step!** 
+If you want to install [a pre-built binary from _Releases_](https://github.com/radixdlt/app-radix/releases) make sure you have performed the steps beginning from [Installer](#Installer) above. **You should skip the `Set dev mnemonic` step!** 
+
+> 💡 Download the zip with the name matching the version, and **not** the zips named "Source code" (<-- wrong!).
 
 Make sure you have:
 * ...sourced virtual env (see [virtualenv](#virtualenv) above).
@@ -160,6 +173,9 @@ Make sure you have:
 * Unzipped the two folder` _bin_ and _debug_ from the downloaded achive from Releases.
 * That your working directory contains the _bin_ and _debug_ folders.
 
+> 💡  Say "Allow Unsafe manager" when being prompted.
+
+> 💡  If you did not perform PIN bypass (`setupCustomCA`) you will be prmpted with more questions, say accept/perform and you will be prompted with `This app is not genuine` when you open the app, and you will need to input your PIN.
 
 #### Install
 (have you done everything according to [Prerequisites](#Prerequisites) above?)
@@ -176,7 +192,8 @@ python -m ledgerblue.loadApp \
 --fileName bin/app.hex \
 --appName Radix \
 --dataSize $((0x`cat debug/app.map |grep _envram_data | tr -s ' ' | cut -f2 -d' '|cut -f2 -d'x'` - 0x`cat debug/app.map |grep _nvram_data | tr -s ' ' | cut -f2 -d' '|cut -f2 -d'x'`)) \
---icon 010000000000ffffffffffffffffffffffffe1ffe1fffc7ffc47fe4ffe1fff3fffffffffffffffffff
+--icon 010000000000ffffffffffffffffffffffffe1ffe1fffc7ffc47fe4ffe1fff3fffffffffffffffffff \
+--rootPrivateKey b5b2eacb2debcf4903060e0fa2a139354fe29be9e4ac7c433f694a3d93297eaa
 ```
 
 Which will display scary warnings like: 
@@ -196,7 +213,8 @@ Which you can ignore.
 ```sh
 python -m ledgerblue.deleteApp \
 --targetId 0x31100004 \
---appName Radix
+--appName Radix \
+--rootPrivateKey b5b2eacb2debcf4903060e0fa2a139354fe29be9e4ac7c433f694a3d93297eaa
 ```
 
 
