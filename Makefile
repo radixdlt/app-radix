@@ -16,7 +16,44 @@
 # ****************************************************************************
 
 ifeq ($(BOLOS_SDK),)
-$(error Environment variable BOLOS_SDK is not set)
+else
+    $(error Environment variable 'BOLOS_SDK' is set, we expect it NOT to be. Instead set 'BOLOS_SDK_NANO_S' and 'BOLOS_SDK_NANO_X' respectively.\nTerminating build.)
+    exit 1;
+endif
+
+ifeq ($(BOLOS_SDK_NANO_S),)
+    ifeq ($(BOLOS_SDK_NANO_X),)
+        $(error Neither Environment variable 'BOLOS_SDK_NANO_S' nor 'BOLOS_SDK_NANO_X' is not set.\nTerminating build.)
+        exit 1;
+    endif
+endif
+
+ifeq ($(CLANGPATH_NANO_S),)
+    ifeq ($(CLANGPATH_NANO_X),)
+        $(error Neither Environment variable 'CLANGPATH_NANO_S' nor 'CLANGPATH_NANO_X' is not set.\nTerminating build.)
+        exit 1;
+    endif
+endif
+
+ifeq ($(BOLOS_ENV),)
+    $(error Environment variable 'BOLOS_ENV' was not found/is not set.\nTerminating build.)
+    exit 1;
+endif
+
+
+ifeq ($(TARGET),NANOX)
+TARGET_NAME=TARGET_NANOX
+BOLOS_SDK=$(BOLOS_SDK_NANO_X)
+$(info setting 'BOLOS_SDK' = 'BOLOS_SDK_NANO_X')
+else
+BOLOS_SDK=$(BOLOS_SDK_NANO_S)
+$(info setting 'BOLOS_SDK' = 'BOLOS_SDK_NANO_S')
+endif
+
+ifeq ($(BOLOS_SDK),)
+    $(error Environment variable 'BOLOS_SDK' was not found/is not set)
+else
+    $(info 'BOLOS_SDK' is set to: '$(BOLOS_SDK)')
 endif
 
 include $(BOLOS_SDK)/Makefile.defines
@@ -81,17 +118,18 @@ endif
 
 ifneq ($(BOLOS_ENV),)
 $(info BOLOS_ENV=$(BOLOS_ENV))
-CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
 GCCPATH   := $(BOLOS_ENV)/gcc-arm-none-eabi-10-2020-q4-major-linux/bin/
+endif
+
+
+ifeq ($(TARGET),NANOX)
+CLANGPATH := $(CLANGPATH_NANO_X)/bin/
+$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_X/bin')
 else
-$(info BOLOS_ENV is not set: falling back to CLANGPATH and GCCPATH)
+CLANGPATH := $(CLANGPATH_NANO_S)/bin/
+$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_S/bin')
 endif
-ifeq ($(CLANGPATH),)
-$(info CLANGPATH is not set: clang will be used from PATH)
-endif
-ifeq ($(GCCPATH),)
-$(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
-endif
+
 
 CC      := $(CLANGPATH)clang
 CFLAGS  += -O3 -Os
