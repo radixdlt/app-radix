@@ -8,7 +8,7 @@ This is a [Radix DLT](https://www.radixdlt.com/) Ledger Nano S and X app.
 > ☣️ ONLY USE A DEDICATED DEVELOPMENT LEDGER DEVICE. DO NOT USE ONE WITH "FUNDS ON" ☣️
 
 
-# Prerequisite
+# Setup development
 
 Here is the official [Getting Started](https://ledger.readthedocs.io/en/latest/userspace/introduction.html) guide for a dev environment. 
 
@@ -124,7 +124,6 @@ Install [`ledgerblue`](https://github.com/LedgerHQ/blue-loader-python) by follow
 
 ## Set dev `mnemonic`
 
-
 > ☣️ ONLY USE A DEDICATED DEVELOPMENT LEDGER DEVICE. DO NOT USE ONE WITH "FUNDS ON" ☣️
 
 With your Ledger device started in `recovery mode`, call `hostOnboard` below.
@@ -148,6 +147,56 @@ With your Ledger device started in `recovery mode`, call `setupCustomCA` below, 
 
 ```sh
 python3 -m ledgerblue.setupCustomCA --targetId TARGET_ID_GOES_HERE --public 0422c5e9a8156db284d660eca98cc849aa8326a33361068d2b6c394fd2a93cb3803175f5b35ec1bda4471895c4c002bd859ca8e08b69f555164ba5d8d35e2dbc7f --name RadixDev
+```
+
+### Pre-release
+
+#### Prerequisites
+If you want to install [a pre-built binary from _Releases_](github.com/radixdlt/app-radix/releases) make sure you have performed the steps beginning from [Installer](#Installer) above. **You should skip the `Set dev mnemonic` step!** 
+
+Make sure you have:
+* ...sourced virtual env (see [virtualenv](#virtualenv) above).
+* ...installed `ledgerblue` (see [ledgerblue](#ledgerblue) above).
+* Unzipped the two folder` _bin_ and _debug_ from the downloaded achive from Releases.
+* That your working directory contains the _bin_ and _debug_ folders.
+
+
+#### Install
+(have you done everything according to [Prerequisites](#Prerequisites) above?)
+
+Run:
+
+```sh
+python -m ledgerblue.loadApp \
+--path "44'/536'" \
+--curve secp256k1 \
+--tlv \
+--targetId 0x31100004 \
+--delete \
+--fileName bin/app.hex \
+--appName Radix \
+--dataSize $((0x`cat debug/app.map |grep _envram_data | tr -s ' ' | cut -f2 -d' '|cut -f2 -d'x'` - 0x`cat debug/app.map |grep _nvram_data | tr -s ' ' | cut -f2 -d' '|cut -f2 -d'x'`)) \
+--icon 010000000000ffffffffffffffffffffffffe1ffe1fffc7ffc47fe4ffe1fff3fffffffffffffffffff
+```
+
+Which will display scary warnings like: 
+```sh
+Generated random root public key : b'04792b376a72669727c910272b35a406b85e296ec947248e52dc73fdc9cf8878f3be857ae8b4436363a95681932a5ba65ed739dc5545160c3d404c600b2131425f'
+Using test master key b'04792b376a72669727c910272b35a406b85e296ec947248e52dc73fdc9cf8878f3be857ae8b4436363a95681932a5ba65ed739dc5545160c3d404c600b2131425f'
+Using ephemeral key b'040dd62506adf4b144406cb0318f85510e30da66552b167ed35ed2a513c0613c0e4d33d2122f88e9dd05134f4b056000d4ea5a71001829990d265b3a3e5bb5df31'
+Broken certificate chain - loading from user key
+Target version is not set, application hash will not match!
+```
+
+Which you can ignore.
+
+#### Uninstall
+(have you done everything according to [Prerequisites](#Prerequisites) above?)
+
+```sh
+python -m ledgerblue.deleteApp \
+--targetId 0x31100004 \
+--appName Radix
 ```
 
 
@@ -225,7 +274,6 @@ I had accidently set conflicing values in `/etc/environment` (I have no clue how
 
 ### `targetID`
 Make sure you are using the correct `targetId` for Ledger Nano S/X.
-
 
 # Documentation
 
