@@ -2,8 +2,6 @@
 
 #include "os.h"
 
-#include "../common/macros.h"
-
 /**
  * Helper to send APDU response with public key and chain code.
  *
