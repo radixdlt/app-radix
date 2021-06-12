@@ -1,14 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/types.h>
+#include <sys/state.h>
 
 extern "C" {
 #include "common/buffer.h"
 #include "common/format.h"
-#include "transaction/deserialize.h"
-#include "transaction/utils.h"
-#include "transaction/types.h"
+#include "state.h"
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {

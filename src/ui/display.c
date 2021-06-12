@@ -30,12 +30,11 @@
 #include "../globals.h"
 #include "../io.h"
 #include "../sw.h"
-#include "../account_address.h"
+#include "../instruction/re_address.h"
 #include "action/validate.h"
-#include "../transaction/types.h"
 #include "../common/bip32.h"
 #include "../common/format.h"
-#include "macros.h"  // ASSERT
+#include "../macros.h"  // ASSERT
 
 /// #######################################
 /// ####                               ####
@@ -43,8 +42,14 @@
 /// ####                               ####
 /// #######################################
 static action_validate_cb g_validate_callback;
-static char g_amount[30];
+
 static char g_bip32_path[60];
+
+#define DISPLAYED_AMOUNT_LEN              \
+    (UINT256_DEC_STRING_MAX_LENGTH + 10 + \
+     1)  // +10 for length of "E-18 XRD: ", +1 for Null terminator
+static char g_amount[DISPLAYED_AMOUNT_LEN];
+static char g_tx_fee[DISPLAYED_AMOUNT_LEN];
 
 #define DISPLAYED_HASH_LEN \
     (HASH_LEN * 2 + 1)  // x2 factor for 2chars per bytes in hex and +1 for Null terminator
@@ -53,37 +58,47 @@ static char g_hash[DISPLAYED_HASH_LEN];
 #define DISPLAYED_ACCOUNT_ADDR_LEN (ACCOUNT_ADDRESS_LEN + 1)  // +1 for Null terminator
 static char g_address[DISPLAYED_ACCOUNT_ADDR_LEN];
 
-#define DISPLAYED_OTHER_PUBKEY_LEN \
-    (PUBLIC_KEY_POINT_LEN * 2 +    \
-     1)  // x2 factor for 2chars per bytes in hex and +1 for Null terminator
-static char g_ecdh_other_party_key[DISPLAYED_OTHER_PUBKEY_LEN];
+#define DISPLAYED_RRI_LEN DISPLAYED_ACCOUNT_ADDR_LEN
+static char g_rri[DISPLAYED_RRI_LEN];
 
 /// #######################################
 /// ####                               ####
 /// ####           HELPERS             ####
 /// ####                               ####
 /// #######################################
-static bool set_address_at(const uint8_t raw_compressed_pubkey[static PUBLIC_KEY_COMPRESSED_LEN],
-                           char *out,
-                           const size_t out_len) {
-    memset(g_address, 0, sizeof(g_address));
-
-    char address[DISPLAYED_ACCOUNT_ADDR_LEN] = {0};
-    size_t address_size_expected = sizeof(address);
-    size_t address_size = address_size_expected;
-
-    if (!account_address_from_pubkey(raw_compressed_pubkey, address, &address_size)) {
-        return false;
-    }
-
-    ASSERT(address_size == address_size_expected, "Incorrect length of account address.");
-    snprintf(out, out_len, "%.*s", address_size, address);
-
-    return true;
+static void prepare_ui_for_new_flow(void) {
+    explicit_bzero(g_amount, sizeof(g_amount));
+    explicit_bzero(g_address, sizeof(g_amount));
+    explicit_bzero(g_rri, sizeof(g_rri));
+    explicit_bzero(g_hash, sizeof(g_hash));
+    explicit_bzero(g_tx_fee, sizeof(g_tx_fee));
+    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
 }
 
-static bool set_address(const uint8_t raw_compressed_pubkey[static PUBLIC_KEY_COMPRESSED_LEN]) {
-    return set_address_at(raw_compressed_pubkey, g_address, sizeof(g_address));
+static bool format_account_address_for_display(re_address_t *re_address) {
+    explicit_bzero(g_address, sizeof(g_address));
+    return format_account_address_from_re_address(re_address, g_address, sizeof(g_address));
+}
+
+static bool format_validator_address_for_display(re_address_t *re_address) {
+    explicit_bzero(g_address, sizeof(g_address));
+    return format_validator_address_from_re_address(re_address, g_address, sizeof(g_address));
+}
+
+static bool format_native_token_for_display(re_address_t *re_address) {
+    explicit_bzero(g_rri, sizeof(g_rri));
+    return format_native_token_from_re_address(re_address, g_rri, sizeof(g_rri));
+}
+
+static bool format_other_token_for_display(re_address_t *re_address,
+                                           char *rri_hrp,
+                                           const size_t rri_hrp_len) {
+    explicit_bzero(g_rri, sizeof(g_rri));
+    return format_other_token_from_re_address(re_address,
+                                              rri_hrp,
+                                              rri_hrp_len,
+                                              g_rri,
+                                              sizeof(g_rri));
 }
 
 // Step with approve button
@@ -93,6 +108,15 @@ UX_STEP_CB(ux_display_approve_step,
            {
                &C_icon_validate_14,
                "Approve",
+           });
+
+// Step with approve button (but with text "Sign tx?")
+UX_STEP_CB(ux_display_approve_sign_tx_step,
+           pb,
+           (*g_validate_callback)(true),
+           {
+               &C_icon_validate_14,
+               "Sign tx?",
            });
 // Step with reject button
 UX_STEP_CB(ux_display_reject_step,
@@ -138,24 +162,26 @@ UX_FLOW(ux_display_pubkey_flow,
         &ux_display_approve_step,
         &ux_display_reject_step);
 
-int ui_display_address() {
+int ui_display_address_from_get_pubkey_cmd() {
+    prepare_ui_for_new_flow();
+
     if (G_context.req_type != CONFIRM_ADDRESS || G_context.state != STATE_NONE) {
         G_context.state = STATE_NONE;
-        return io_send_sw(SW_BAD_STATE);
+        return io_send_sw(ERR_BAD_STATE);
     }
 
     // Prepare BIP32 path for display
-    memset(g_bip32_path, 0, sizeof(g_bip32_path));
+    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
     if (!bip32_path_format(G_context.bip32_path,
                            G_context.bip32_path_len,
                            g_bip32_path,
                            sizeof(g_bip32_path))) {
-        return io_send_sw(SW_DISPLAY_BIP32_PATH_FAIL);
+        return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
 
     // Prepare Address for display
-    if (!set_address(G_context.pk_info.raw_compressed_public_key)) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+    if (!format_account_address_for_display(&G_context.pk_info.my_address)) {
+        return io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
     }
 
     // Prepare send_response callback if user APPROVEs
@@ -163,72 +189,6 @@ int ui_display_address() {
 
     // Initialize (start) the UX flow for SIGN_TX
     ux_flow_init(0, ux_display_pubkey_flow, NULL);
-
-    return 0;
-}
-
-/// #######################################
-/// ####                               ####
-/// ####           SIGN TX             ####
-/// ####                               ####
-/// #######################################
-// Step with icon and text
-UX_STEP_NOCB(ux_display_review_step,
-             pnn,
-             {
-                 &C_icon_eye,
-                 "Review",
-                 "Transaction",
-             });
-// Step with title/text for amount
-UX_STEP_NOCB(ux_display_amount_step,
-             bnnn_paging,
-             {
-                 .title = "Amount",
-                 .text = g_amount,
-             });
-
-// FLOW to display transaction information:
-// #1 screen : eye icon + "Review Transaction"
-// #2 screen : display amount
-// #3 screen : display destination address
-// #4 screen : approve button
-// #5 screen : reject button
-UX_FLOW(ux_display_transaction_flow,
-        &ux_display_review_step,
-        &ux_display_address_step,
-        &ux_display_amount_step,
-        &ux_display_approve_step,
-        &ux_display_reject_step);
-
-int ui_display_transaction() {
-    if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
-        G_context.state = STATE_NONE;
-        return io_send_sw(SW_BAD_STATE);
-    }
-
-    // Prepare Amount for display
-    memset(g_amount, 0, sizeof(g_amount));
-    char amount[30] = {0};
-    if (!format_fpu64(amount,
-                      sizeof(amount),
-                      G_context.tx_info.transaction.value,
-                      EXPONENT_SMALLEST_UNIT)) {
-        return io_send_sw(SW_DISPLAY_AMOUNT_FAIL);
-    }
-    snprintf(g_amount, sizeof(g_amount), "BOL %.*s", sizeof(amount), amount);
-    PRINTF("Amount: %s\n", g_amount);
-
-    // Prepare Address for display
-    if (!set_address(G_context.tx_info.transaction.to)) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    }
-
-    // Prepare send_response callback if user APPROVEs
-    g_validate_callback = &ui_action_validate_signature;
-
-    // Initialize (start) the UX flow for SIGN_TX
-    ux_flow_init(0, ux_display_transaction_flow, NULL);
 
     return 0;
 }
@@ -263,17 +223,19 @@ UX_FLOW(ux_display_sign_hash_flow,
         &ux_display_reject_step);
 
 int ui_display_sign_hash() {
+    prepare_ui_for_new_flow();
+
     if (G_context.req_type != CONFIRM_HASH) {
-        return io_send_sw(SW_BAD_STATE);
+        return io_send_sw(ERR_BAD_STATE);
     }
 
     // Prepare BIP32 path for display
-    memset(g_bip32_path, 0, sizeof(g_bip32_path));
+    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
     if (!bip32_path_format(G_context.bip32_path,
                            G_context.bip32_path_len,
                            g_bip32_path,
                            sizeof(g_bip32_path))) {
-        return io_send_sw(SW_DISPLAY_BIP32_PATH_FAIL);
+        return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
 
     // Prepare HASH for display
@@ -284,7 +246,7 @@ int ui_display_sign_hash() {
              G_context.sig_info.m_hash);
 
     // Prepare send_response callback if user APPROVEs
-    g_validate_callback = &ui_action_validate_signature;
+    g_validate_callback = &ui_action_validate_sign_hash;
 
     // Initialize (start) the UX flow for SIGN_HASH
     ux_flow_init(0, ux_display_sign_hash_flow, NULL);
@@ -301,11 +263,11 @@ int ui_display_sign_hash() {
 UX_STEP_NOCB(ux_display_confirm_other_pubkey_step, pn, {&C_icon_eye, "ECDH with?"});
 
 // Step with title/text for public key of other party
-UX_STEP_NOCB(ux_display_other_pubkey_step,
+UX_STEP_NOCB(ux_display_other_party_address_step,
              bnnn_paging,
              {
                  .title = "Pubkey other",
-                 .text = g_ecdh_other_party_key,
+                 .text = g_address,
              });
 
 // Step with title/text for BIP32 path
@@ -318,58 +280,385 @@ UX_STEP_NOCB(ux_display_path_key_step,
 
 // FLOW to display other party pubkey and BIP32 path:
 // #1 screen: eye icon + "ECDH with?"
-// #3 screen: display pubkey of other party
+// #3 screen: display address of other party
 // #2 screen: display BIP32 Path
 // #4 screen: approve button
 // #5 screen: reject button
 UX_FLOW(ux_display_ecdh_flow,
         &ux_display_confirm_other_pubkey_step,
-        &ux_display_other_pubkey_step,
+        &ux_display_other_party_address_step,
         &ux_display_path_key_step,
         &ux_display_approve_step,
         &ux_display_reject_step);
 
 int ui_display_ecdh() {
+    prepare_ui_for_new_flow();
+
     if (G_context.req_type != CONFIRM_ECDH) {
-        return io_send_sw(SW_BAD_STATE);
+        return io_send_sw(ERR_BAD_STATE);
     }
 
     // Prepare BIP32 path for display
-    memset(g_bip32_path, 0, sizeof(g_bip32_path));
+    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
     if (!bip32_path_format(G_context.bip32_path,
                            G_context.bip32_path_len,
                            g_bip32_path,
                            sizeof(g_bip32_path))) {
-        return io_send_sw(SW_DISPLAY_BIP32_PATH_FAIL);
+        return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
 
-    // Prepare to display other party info
-    bool display_address_instead_of_raw_key = true;  // TODO send as option..
-    if (display_address_instead_of_raw_key) {
-        // Prepare Address for display
-
-        crypto_compress_public_key(&G_context.ecdh_info.other_party_public_key,
-                                   G_context.ecdh_info.other_party_compressed_pubkey);
-
-        if (!set_address_at(G_context.ecdh_info.other_party_compressed_pubkey,
-                            g_ecdh_other_party_key,
-                            sizeof(g_ecdh_other_party_key))) {
-            return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-        }
-    } else {
-        // Prepare PubKey of other party for display
-        snprintf(g_ecdh_other_party_key,
-                 sizeof(g_ecdh_other_party_key),
-                 "%.*h",
-                 G_context.ecdh_info.other_party_public_key.W_len,
-                 G_context.ecdh_info.other_party_public_key.W);
+    // Prepare to display other party address
+    if (!format_account_address_for_display(&G_context.ecdh_info.other_party_address)) {
+        return io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
     }
 
     // Prepare send_response callback if user APPROVEs
     g_validate_callback = &ui_action_validate_sharedkey;
 
-    // Initialize (start) the UX flow for DIFFIE_HELLMAN key exchange
+    // Initialize (start) the UX flow for ECDH key exchange
     ux_flow_init(0, ux_display_ecdh_flow, NULL);
+
+    return 0;
+}
+
+/// #######################################
+/// ####                               ####
+/// ####           SIGN TX             ####
+/// ####                               ####
+/// #######################################
+
+/// ******************
+/// **    SUMMARY   **
+/// ******************
+// Step with icon and text
+UX_STEP_NOCB(ux_display_review_tx_summary_step,
+             pnn,
+             {
+                 &C_icon_eye,
+                 "Review",
+                 "Transaction",
+             });
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_total_xrd_incl_fee_amount_step,
+             bnnn_paging,
+             {
+                 .title = "Total XRD",
+                 .text = g_amount,
+             });
+
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_tx_fee_amount_step,
+             bnnn_paging,
+             {
+                 .title = "Fee in XRD",
+                 .text = g_tx_fee,
+             });
+
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_tx_hash_step,
+             bnnn_paging,
+             {
+                 .title = "Hash of TX",
+                 .text = g_hash,
+             });
+
+// FLOW to display summary of transaction information:
+UX_FLOW(ux_display_tx_summary_flow,
+        &ux_display_review_tx_summary_step,          // #1 screen: eye icon + "Review Transaction"
+        &ux_display_tx_fee_amount_step,              // #2 screen: display tx fee amount
+        &ux_display_total_xrd_incl_fee_amount_step,  // #3 screen: display total XRD amount
+        &ux_display_tx_hash_step,                    // #4 screen: display tx hash
+        &ux_display_approve_sign_tx_step,            // #5 screen: approve button
+        &ux_display_reject_step);                    // #6 screen: reject button
+
+int ui_display_tx_summary() {
+    prepare_ui_for_new_flow();
+
+    bool is_last_apdu = G_context.tx_info.number_of_instructions_received ==
+                        G_context.tx_info.total_number_of_instructions;
+
+    if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED ||
+        !is_last_apdu ||
+        G_context.tx_info.parse_ins_state != STATE_PARSE_INS_FINISHED_PARSING_ALL_INS) {
+        G_context.state = STATE_NONE;
+        return io_send_sw(ERR_BAD_STATE);
+    }
+
+    char amount[DISPLAYED_AMOUNT_LEN] = {0};
+
+    if (!to_string_uint256(&G_context.tx_info.tx_fee, amount, sizeof(amount))) {
+        return io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
+    }
+    snprintf(g_tx_fee, sizeof(g_tx_fee), "E-18 XRD: %.*s", sizeof(amount), amount);
+    PRINTF("Tx fee: %s\n", g_tx_fee);
+
+    explicit_bzero(amount, sizeof(amount));
+    if (!to_string_uint256(&G_context.tx_info.total_xrd_amount_incl_fee, amount, sizeof(amount))) {
+        return io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
+    }
+
+    snprintf(g_amount, sizeof(g_amount), "E-18 XRD: %.*s", sizeof(amount), amount);
+    PRINTF("Amount: %s\n", g_amount);
+
+    // Prepare HASH for display
+    snprintf(g_hash,
+             sizeof(g_hash),
+             "%.*h",
+             sizeof(G_context.sig_info.m_hash),
+             G_context.sig_info.m_hash);
+
+    g_validate_callback = &ui_action_validate_sign_tx;
+
+    ux_flow_init(0, ux_display_tx_summary_flow, NULL);
+
+    return 0;
+}
+
+static void user_did_accept_instruction(bool did_accept_last_instruction) {
+    if (!did_accept_last_instruction) {
+        G_context.state = STATE_NONE;
+        io_send_sw(SW_DENY);
+        return;
+    }
+
+    bool is_last_apdu = G_context.tx_info.number_of_instructions_received ==
+                        G_context.tx_info.total_number_of_instructions;
+
+    if (is_last_apdu || G_context.tx_info.parse_ins_state != STATE_PARSE_INS_NEEDS_APPROVAL) {
+        PRINTF("Last APDU was not 'INS_END' which is required => abort sign tx.");
+        io_send_sw(ERR_CMD_SIGN_TX_LAST_INSTRUCTION_WAS_NOT_INS_END);
+        return;
+    }
+    G_parse_tx_state_did_approve_ins();
+    G_parse_tx_state_ready_to_parse();
+
+    // Not done yet => tell host machine to continue sending next RE instruction.
+    io_send_sw(SW_OK);
+    return;
+}
+
+/// $$$$$$$$$$$$$$$$$$$$$$
+/// $$  Token Transfer  $$
+/// $$$$$$$$$$$$$$$$$$$$$$
+// Step with icon and text
+UX_STEP_NOCB(ux_display_review_ins_up_tokens_step,
+             pnn,
+             {
+                 &C_icon_eye,
+                 "Review",
+                 "Transfer",
+             });
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_recipient_address_step,
+             bnnn_paging,
+             {
+                 .title = "To",
+                 .text = g_address,
+             });
+
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_token_rri_step,
+             bnnn_paging,
+             {
+                 .title = "Token (rri)",
+                 .text = g_rri,
+             });
+
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_amount_step,
+             bnnn_paging,
+             {
+                 .title = "Amount",
+                 .text = g_amount,
+             });
+
+// FLOW to display summary of UP(TOKENS) instruction information:
+UX_FLOW(ux_display_instruction_tokens_flow,
+        &ux_display_review_ins_up_tokens_step,  // #1 screen: eye icon + "Review Transfer"
+        &ux_display_recipient_address_step,     // #2 screen: display recipient address
+        &ux_display_token_rri_step,             // #3 screen: display token (rri)
+        &ux_display_amount_step,                // #4 screen: display amount
+        &ux_display_approve_step,               // #5 screen: approve button
+        &ux_display_reject_step);               // #6 screen: reject button
+
+static void ui_display_tokens() {
+    PRINTF("START: ui_display_tokens.\n");
+
+    prepare_ui_for_new_flow();
+
+    // Prepare 'recipient' address for display
+    if (!format_account_address_for_display(
+            &G_context.tx_info.instruction.ins_up.substate.tokens.owner)) {
+        io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
+        return;
+    }
+
+    // Prepare tokens RRI
+    if (G_context.tx_info.instruction.ins_up.substate.tokens.rri.address_type ==
+        RE_ADDRESS_HASHED_KEY_NONCE) {
+        if (G_context.tx_info.hrp_non_native_token_len == 0) {
+            io_send_sw(ERR_DISPLAY_RRI_FAIL);
+            return;
+        }
+
+        if (!format_other_token_for_display(
+                &G_context.tx_info.instruction.ins_up.substate.tokens.rri,
+                G_context.tx_info.hrp_non_native_token,
+                G_context.tx_info.hrp_non_native_token_len)) {
+            io_send_sw(ERR_DISPLAY_RRI_FAIL);
+            return;
+        }
+    } else {
+        if (!format_native_token_for_display(
+                &G_context.tx_info.instruction.ins_up.substate.tokens.rri)) {
+            io_send_sw(ERR_DISPLAY_RRI_FAIL);
+            return;
+        }
+    }
+
+    // Prepare 'amount' staked for display
+    char amount[DISPLAYED_AMOUNT_LEN] = {0};
+    if (!to_string_uint256(&G_context.tx_info.instruction.ins_up.substate.tokens.amount,
+                           amount,
+                           sizeof(amount))) {
+        io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
+        return;
+    }
+    snprintf(g_amount, sizeof(g_amount), "E-18: %.*s", sizeof(amount), amount);
+    PRINTF("Amount: %s\n", g_amount);
+
+    ux_flow_init(0, ux_display_instruction_tokens_flow, NULL);
+}
+
+/// $$$$$$$$$$$$$$$$$$$$$$
+/// $$  Stake Tokens    $$
+/// $$$$$$$$$$$$$$$$$$$$$$
+UX_STEP_NOCB(ux_display_review_ins_up_prepared_stake_step,
+             pnn,
+             {
+                 &C_icon_eye,
+                 "Review",
+                 "Stake",
+             });
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_to_validator_address_step,
+             bnnn_paging,
+             {
+                 .title = "To validator",
+                 .text = g_address,
+             });
+
+// FLOW to display summary of UP(PREPARED_STAKE) instruction information:
+UX_FLOW(ux_display_instruction_prepared_stake_flow,
+        &ux_display_review_ins_up_prepared_stake_step,  // #1 screen: eye icon + "Review Stake"
+        &ux_display_to_validator_address_step,          // #2 screen: display validator address
+        &ux_display_amount_step,                        // #3 screen: display amount
+        &ux_display_approve_step,                       // #4 screen: approve button
+        &ux_display_reject_step);                       // #5 screen: reject button
+
+static void ui_display_stake() {
+    PRINTF("START: ui_display_stake.\n");
+    prepare_ui_for_new_flow();
+    // Prepare 'to validator' address for display
+    if (!format_validator_address_for_display(
+            &G_context.tx_info.instruction.ins_up.substate.prepared_stake.delegate)) {
+        io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
+        return;
+    }
+
+    // Prepare 'amount' staked for display
+    char amount[DISPLAYED_AMOUNT_LEN] = {0};
+    if (!to_string_uint256(&G_context.tx_info.instruction.ins_up.substate.prepared_stake.amount,
+                           amount,
+                           sizeof(amount))) {
+        io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
+        return;
+    }
+    snprintf(g_amount, sizeof(g_amount), "XRD %.*s", sizeof(amount), amount);
+    PRINTF("Amount: %s\n", g_amount);
+
+    ux_flow_init(0, ux_display_instruction_prepared_stake_flow, NULL);
+}
+
+/// $$$$$$$$$$$$$$$$$$$$$$
+/// $$  Untake Tokens   $$
+/// $$$$$$$$$$$$$$$$$$$$$$
+UX_STEP_NOCB(ux_display_review_ins_up_prepared_unstake_step,
+             pnn,
+             {
+                 &C_icon_eye,
+                 "Review",
+                 "Unstake",
+             });
+// Step with title/text for amount
+UX_STEP_NOCB(ux_display_from_validator_address_step,
+             bnnn_paging,
+             {
+                 .title = "From validator",
+                 .text = g_address,
+             });
+
+// FLOW to display summary of UP(PREPARED_UNSTAKE) instruction information:
+UX_FLOW(ux_display_instruction_prepared_unstake_flow,
+        &ux_display_review_ins_up_prepared_unstake_step,  // #1 screen: eye icon + "Review Unstake"
+        &ux_display_from_validator_address_step,          // #2 screen: display validator address
+        &ux_display_amount_step,                          // #3 screen: display amount
+        &ux_display_approve_step,                         // #4 screen: approve button
+        &ux_display_reject_step);                         // #5 screen: reject button
+
+static void ui_display_unstake() {
+    PRINTF("START: ui_display_unstake.\n");
+    prepare_ui_for_new_flow();
+
+    // Prepare 'from validator' address for display
+    if (!format_validator_address_for_display(
+            &G_context.tx_info.instruction.ins_up.substate.prepared_unstake.delegate)) {
+        io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
+        return;
+    }
+
+    // Prepare 'amount' staked for display
+    char amount[DISPLAYED_AMOUNT_LEN] = {0};
+    if (!to_string_uint256(&G_context.tx_info.instruction.ins_up.substate.prepared_unstake.amount,
+                           amount,
+                           sizeof(amount))) {
+        io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
+        return;
+    }
+    snprintf(g_amount, sizeof(g_amount), "XRD %.*s", sizeof(amount), amount);
+    PRINTF("Amount: %s\n", g_amount);
+
+    ux_flow_init(0, ux_display_instruction_prepared_unstake_flow, NULL);
+}
+
+int ui_display_instruction(void) {
+    PRINTF("START: ui_display_instruction.\n");
+    prepare_ui_for_new_flow();
+
+    if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_NONE ||
+        G_context.tx_info.parse_ins_state != STATE_PARSE_INS_NEEDS_APPROVAL ||
+        G_context.tx_info.instruction.ins_type != INS_UP) {
+        G_context.state = STATE_NONE;
+        return io_send_sw(ERR_BAD_STATE);
+    }
+
+    g_validate_callback = &user_did_accept_instruction;
+
+    switch (G_context.tx_info.instruction.ins_up.substate.type) {
+        case SUBSTATE_TYPE_TOKENS:
+            ui_display_tokens();
+            break;
+        case SUBSTATE_TYPE_PREPARED_STAKE:
+            ui_display_stake();
+            break;
+        case SUBSTATE_TYPE_PREPARED_UNSTAKE:
+            ui_display_unstake();
+            break;
+        default:
+            PRINTF("Trying to display a substate type that should not be displayed\n");
+            print_re_substate_type(G_context.tx_info.instruction.ins_up.substate.type);
+            return io_send_sw(ERR_BAD_STATE);
+    }
 
     return 0;
 }

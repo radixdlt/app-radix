@@ -4,7 +4,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // uint*_t
 
-#include "../types.h"
+#include "../state.h"
 #include "../common/buffer.h"
 
 /**

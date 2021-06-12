@@ -22,11 +22,11 @@
 #include "../globals.h"
 #include "../io.h"
 #include "../sw.h"
-#include "../types.h"
+#include "../state.h"
 #include "common/buffer.h"
 
 int handler_get_app_name() {
-    PRINTF("GET_APP_NAME called.");
+    PRINTF("\n.-~=: GET_APP_NAME called :=~-.\n\n");
     _Static_assert(APPNAME_LEN < MAX_APPNAME_LEN, "APPNAME must be at most 64 characters!");
 
     buffer_t rdata = {.ptr = (uint8_t *) PIC(APPNAME), .size = APPNAME_LEN, .offset = 0};

@@ -34,7 +34,7 @@ class InsType(enum.IntEnum):
     INS_GET_PUBLIC_KEY = 0x05
     INS_SIGN_TX = 0x06
     INS_SIGN_HASH = 0x07
-    INS_DIFFIE_HELLMAN = 0x08
+    INS_ECDH = 0x08
 
 
 class RadixCommandBuilder:

@@ -13,15 +13,7 @@ typedef void (*action_validate_cb)(bool);
  * @return 0 if success, negative integer otherwise.
  *
  */
-int ui_display_address(void);
-
-/**
- * Display transaction information on the device and ask confirmation to sign.
- *
- * @return 0 if success, negative integer otherwise.
- *
- */
-int ui_display_transaction(void);
+int ui_display_address_from_get_pubkey_cmd(void);
 
 /**
  * Display BIP32 and hash on the device and ask confirmation to sign hash with key at BIP32 path.
@@ -39,3 +31,6 @@ int ui_display_sign_hash(void);
  *
  */
 int ui_display_ecdh(void);
+
+int ui_display_instruction(void);
+int ui_display_tx_summary(void);

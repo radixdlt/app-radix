@@ -4,7 +4,7 @@
 #include <stdint.h>   // uint*_t
 #include <stdbool.h>  // bool
 
-#include "../types.h"
+#include "../state.h"
 
 /**
  * Parse APDU command from byte buffer.

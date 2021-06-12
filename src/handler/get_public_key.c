@@ -25,16 +25,17 @@
 
 #include "get_public_key.h"
 #include "../globals.h"
-#include "../types.h"
+#include "../state.h"
 #include "../io.h"
 #include "../sw.h"
 #include "../crypto.h"
 #include "../common/buffer.h"
 #include "../ui/display.h"
 #include "../helper/send_response.h"
+#include "../instruction/re_address.h"
 
 int handler_get_public_key(buffer_t *cdata, bool display) {
-    PRINTF("GET_PUBLIC_KEY called.");
+    PRINTF("\n.-~=: GET_PUBLIC_KEY called :=~-.\n\n");
     explicit_bzero(&G_context, sizeof(G_context));
     G_context.req_type = CONFIRM_ADDRESS;
     G_context.state = STATE_NONE;
@@ -56,12 +57,17 @@ int handler_get_public_key(buffer_t *cdata, bool display) {
     crypto_init_public_key(&private_key,
                            &public_key,
                            G_context.pk_info.raw_uncompressed_public_key);
-    crypto_compress_public_key(&public_key, G_context.pk_info.raw_compressed_public_key);
+
+    if (!crypto_compress_public_key(&public_key, &G_context.pk_info.my_address.public_key)) {
+        return io_send_sw(ERR_CMD_GET_PUBLIC_KEY_FAILED_TO_COMPRESS_KEY);
+    }
+    G_context.pk_info.my_address.address_type = RE_ADDRESS_PUBLIC_KEY;
+
     // reset private key
     explicit_bzero(&private_key, sizeof(private_key));
 
     if (display) {
-        return ui_display_address();
+        return ui_display_address_from_get_pubkey_cmd();
     }
 
     return helper_send_response_pubkey();

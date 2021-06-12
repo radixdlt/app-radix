@@ -110,38 +110,38 @@ static void test_buffer_read(void **state) {
     assert_false(buffer_read_varint(&buf_varint, &varint));
 }
 
-static void test_buffer_copy(void **state) {
+static void test_buffer_copy_fill_target(void **state) {
     (void) state;
 
     uint8_t output[5] = {0};
     uint8_t temp[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
     buffer_t buf = {.ptr = temp, .size = sizeof(temp), .offset = 0};
 
-    assert_true(buffer_copy(&buf, output, sizeof(output)));
+    assert_true(buffer_copy_fill_target(&buf, output, sizeof(output)));
     assert_memory_equal(output, temp, sizeof(output));
 
     uint8_t output2[3] = {0};
     assert_true(buffer_seek_set(&buf, 2));
-    assert_true(buffer_copy(&buf, output2, sizeof(output2)));
+    assert_true(buffer_copy_fill_target(&buf, output2, sizeof(output2)));
     assert_memory_equal(output2, ((uint8_t[3]){0x03, 0x04, 0x05}), 3);
     assert_true(buffer_seek_set(&buf, 0));                      // seek at offset 0
-    assert_false(buffer_copy(&buf, output2, sizeof(output2)));  // can't read 5 bytes
+    assert_false(buffer_copy_fill_target(&buf, output2, sizeof(output2)));  // can't read 5 bytes
 }
 
-static void test_buffer_move(void **state) {
+static void test_buffer_move_fill_target(void **state) {
     (void) state;
 
     uint8_t output[5] = {0};
     uint8_t temp[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
     buffer_t buf = {.ptr = temp, .size = sizeof(temp), .offset = 0};
 
-    assert_true(buffer_move(&buf, output, sizeof(output)));
+    assert_true(buffer_move_fill_target(&buf, output, sizeof(output)));
     assert_memory_equal(output, temp, sizeof(output));
     assert_int_equal(buf.offset, sizeof(output));
 
     uint8_t output2[3] = {0};
     assert_true(buffer_seek_set(&buf, 0));                      // seek at offset 0
-    assert_false(buffer_move(&buf, output2, sizeof(output2)));  // can't read 5 bytes
+    assert_false(buffer_move_fill_target(&buf, output2, sizeof(output2)));  // can't read 5 bytes
 }
 
 int main() {

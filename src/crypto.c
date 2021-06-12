@@ -26,10 +26,12 @@
 
 #pragma GCC diagnostic ignored "-Wformat"  // snprintf
 
-int crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
-                              uint8_t chain_code[static CHAIN_CODE_LEN],
-                              const uint32_t *bip32_path,
-                              uint8_t bip32_path_len) {
+/// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
+/// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
+static int __crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
+                                       uint8_t chain_code[static CHAIN_CODE_LEN],
+                                       const uint32_t *bip32_path,
+                                       uint8_t bip32_path_len) {
     uint8_t raw_private_key[PRIVATE_KEY_LEN] = {0};
 
     BEGIN_TRY {
@@ -57,10 +59,19 @@ int crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
 
     return 0;
 }
+bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
+                               uint8_t chain_code[static CHAIN_CODE_LEN],
+                               const uint32_t *bip32_path,
+                               uint8_t bip32_path_len) {
+    return __crypto_derive_private_key(private_key, chain_code, bip32_path, bip32_path_len) == 0;
+}
 
-int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
-                           cx_ecfp_public_key_t *public_key,
-                           uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]) {
+/// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
+/// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
+
+static int __crypto_init_public_key(cx_ecfp_private_key_t *private_key,
+                                    cx_ecfp_public_key_t *public_key,
+                                    uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]) {
     // generate corresponding public key
     cx_ecfp_generate_pair(CX_CURVE_256K1,
                           public_key,
@@ -74,8 +85,16 @@ int crypto_init_public_key(cx_ecfp_private_key_t *private_key,
 
     return 0;
 }
+bool crypto_init_public_key(cx_ecfp_private_key_t *private_key,
+                            cx_ecfp_public_key_t *public_key,
+                            uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]) {
+    return __crypto_init_public_key(private_key, public_key, raw_public_key) == 0;
+}
 
-bool crypto_init_public_key_from_raw_uncompressed(
+/// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
+/// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
+
+static int __crypto_init_public_key_from_raw_uncompressed(
     uint8_t raw_uncompressed_public_key[static PUBLIC_KEY_POINT_LEN],
     cx_ecfp_public_key_t *public_key) {
     if (cx_ecfp_init_public_key(CX_CURVE_SECP256K1,
@@ -83,13 +102,19 @@ bool crypto_init_public_key_from_raw_uncompressed(
                                 PUBLIC_KEY_POINT_LEN,
                                 public_key) != PUBLIC_KEY_POINT_LEN) {
         PRINTF("Invalid public key");
-        THROW(INVALID_PARAMETER);
+        return -1;
     }
-    return true;
+    return 0;
+}
+bool crypto_init_public_key_from_raw_uncompressed(
+    uint8_t raw_uncompressed_public_key[static PUBLIC_KEY_POINT_LEN],
+    cx_ecfp_public_key_t *public_key) {
+    return __crypto_init_public_key_from_raw_uncompressed(raw_uncompressed_public_key,
+                                                          public_key) == 0;
 }
 
-bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
-                                uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSED_LEN]) {
+bool crypto_compress_public_key_raw(cx_ecfp_public_key_t *public_key,
+                                    uint8_t raw_public_key[static PUBLIC_KEY_COMPRESSED_LEN]) {
     // An uncompressed key has 0x04 + X (32 bytes) + Y (32 bytes).
     if (public_key->W_len != (PUBLIC_KEY_POINT_LEN) ||
         public_key->W[0] != PUBKEY_FLAG_KEY_IS_UNCOMPRESSED) {
@@ -115,7 +140,15 @@ bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
     return true;
 }
 
-int crypto_sign_message() {
+bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
+                                public_key_t *public_key_compressed) {
+    return crypto_compress_public_key_raw(public_key, public_key_compressed->compressed);
+}
+
+/// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
+/// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
+
+static int __crypto_sign_message() {
     cx_ecfp_private_key_t private_key = {0};
     uint8_t chain_code[CHAIN_CODE_LEN] = {0};
     uint32_t info = 0;
@@ -157,8 +190,14 @@ int crypto_sign_message() {
 
     return 0;
 }
+bool crypto_sign_message() {
+    return __crypto_sign_message() == 0;
+}
 
-bool crypto_ecdh(void) {
+/// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
+/// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
+
+static int __crypto_ecdh(void) {
     cx_ecfp_private_key_t private_key = {0};
     uint8_t chain_code[CHAIN_CODE_LEN] = {0};
     int sharedkey_len = 0;
@@ -189,7 +228,81 @@ bool crypto_ecdh(void) {
     END_TRY;
 
     if (sharedkey_len < 0) {
+        return -1;
+    }
+
+    return 0;
+}
+bool crypto_ecdh(void) {
+    return __crypto_ecdh() == 0;
+}
+
+/// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
+/// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
+static int __sha256_hash(cx_sha256_t *hash_context,
+                         const uint8_t *in,
+                         const size_t in_len,
+
+                         bool should_finalize,  // if `false` then `out` is not used
+                         uint8_t *out,
+                         const size_t out_len) {
+    if (!in) {
+        PRINTF("'sha256_hash': variable 'in' is NULL, returning 'false'\n");
         return false;
+    }
+
+    if (in_len <= 0) {
+        PRINTF("'sha256_hash': variable 'in_len' LEQ 0, returning 'false'\n");
+        return false;
+    }
+
+    if (!out) {
+        PRINTF("'sha256_hash': variable 'out' is null, returning 'false'\n");
+        return false;
+    }
+
+    cx_hash((cx_hash_t *) hash_context,
+            should_finalize ? CX_LAST : 0,
+            in,
+            in_len,
+            should_finalize ? out : NULL,
+            should_finalize ? out_len : 0);
+
+    return 0;
+}
+
+static bool sha256_hash(cx_sha256_t *hash_context,
+                        const uint8_t *in,
+                        const size_t in_len,
+
+                        bool should_finalize,  // if `false` then `out` is not used
+                        uint8_t *out,
+                        const size_t out_len) {
+    return __sha256_hash(hash_context, in, in_len, should_finalize, out, out_len) == 0;
+}
+
+bool update_hash(cx_sha256_t *hasher,
+                 const uint8_t *in,
+                 const size_t in_len,
+                 bool should_finalize,
+                 uint8_t *out,
+                 const size_t out_len) {
+    if (!sha256_hash(hasher, in, in_len, should_finalize, out, out_len)) {
+        return false;
+    }
+
+    if (should_finalize) {
+        cx_sha256_init(hasher);
+
+        // tmp copy of firstHash
+        uint8_t hashed_once[HASH_LEN];
+        memmove(hashed_once, out, HASH_LEN);
+
+        if (!sha256_hash(hasher, hashed_once, HASH_LEN, true, out, out_len)) {
+            return false;
+        }
+
+        PRINTF("Finalized hash to: '%.*h'\n", HASH_LEN, out);
     }
 
     return true;

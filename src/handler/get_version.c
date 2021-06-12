@@ -25,11 +25,11 @@
 #include "../io.h"
 #include "../sw.h"
 
-#include "../types.h"
+#include "../state.h"
 #include "common/buffer.h"
 
 int handler_get_version() {
-    PRINTF("GET_VERSION called.");
+    PRINTF("\n.-~=: GET_VERSION called :=~-.\n\n");
     _Static_assert(APPVERSION_LEN == 3, "Length of (MAJOR || MINOR || PATCH) must be 3!");
     _Static_assert(MAJOR_VERSION >= 0 && MAJOR_VERSION <= UINT8_MAX,
                    "MAJOR version must be between 0 and 255!");
