@@ -35,15 +35,20 @@ void ui_action_validate_pubkey(bool choice) {
     ui_menu_main();
 }
 
-void ui_action_validate_signature(bool choice) {
-    if (choice) {
+static void __ui_action_validate_sign_hash_cmd(bool user_approved, bool include_hash_in_response) {
+    if (user_approved) {
         G_context.state = STATE_APPROVED;
 
-        if (crypto_sign_message() < 0) {
+        if (!crypto_sign_message()) {
             G_context.state = STATE_NONE;
-            io_send_sw(SW_SIGNATURE_FAIL);
+            if (include_hash_in_response) {
+                io_send_sw(ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL);
+            } else {
+                io_send_sw(ERR_CMD_SIGN_HASH_ECDSA_SIGN_FAIL);
+            }
+
         } else {
-            helper_send_response_sig();
+            helper_send_response_signature(include_hash_in_response);
         }
     } else {
         G_context.state = STATE_NONE;
@@ -52,13 +57,20 @@ void ui_action_validate_signature(bool choice) {
 
     ui_menu_main();
 }
+void ui_action_validate_sign_hash(bool choice) {
+    return __ui_action_validate_sign_hash_cmd(choice, false);
+}
+
+void ui_action_validate_sign_tx(bool choice) {
+    return __ui_action_validate_sign_hash_cmd(choice, true);
+}
 
 void ui_action_validate_sharedkey(bool choice) {
     if (choice) {
         G_context.state = STATE_APPROVED;
         if (!crypto_ecdh()) {
             G_context.state = STATE_NONE;
-            io_send_sw(SW_ECDH_FAILED_TO_PERFORM_ECDH);
+            io_send_sw(ERR_CMD_ECDH_COMPUTE_SHARED_KEY_FAILURE);
         } else {
             helper_send_response_sharedkey();
         }

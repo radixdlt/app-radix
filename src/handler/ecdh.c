@@ -15,7 +15,7 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include "diffie_hellman.h"
+#include "ecdh.h"
 #include "../common/buffer.h"
 
 #include "os.h"
@@ -27,8 +27,8 @@
 #include "../ui/display.h"            // ui_display_ecdh
 #include "../helper/send_response.h"  // helper_send_response_sharedkey
 
-int handler_diffie_hellman(buffer_t *cdata, bool display) {
-    PRINTF("DIFFIE_HELLMAN key exchange (ECDH) called.");
+int handler_ecdh(buffer_t *cdata, bool display) {
+    PRINTF("\n.-~=: ECDH (Diffie-Hellman) called :=~-.\n\n");
     explicit_bzero(&G_context, sizeof(G_context));
     G_context.req_type = CONFIRM_ECDH;
     G_context.state = STATE_NONE;
@@ -46,15 +46,21 @@ int handler_diffie_hellman(buffer_t *cdata, bool display) {
 
     uint8_t tmp_raw_key[PUBLIC_KEY_POINT_LEN];
 
-    if (!buffer_move(cdata, tmp_raw_key, pubkey_other_party_len)) {
+    if (!buffer_move_fill_target(cdata, tmp_raw_key, pubkey_other_party_len)) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
     if (!crypto_init_public_key_from_raw_uncompressed(
             tmp_raw_key,
             &G_context.ecdh_info.other_party_public_key)) {
-        return io_send_sw(SW_ECDH_FAILED_TO_PARSE_PUBKEY);
+        return io_send_sw(ERR_CMD_ECDH_OTHER_PARTY_PUBLIC_KEY_PARSE_FAILURE);
     }
+
+    if (!crypto_compress_public_key(&G_context.ecdh_info.other_party_public_key,
+                                    &G_context.ecdh_info.other_party_address.public_key)) {
+        return io_send_sw(ERR_CMD_ECDH_FAILED_TO_COMPRESS_OTHER_PARTY_KEY);
+    }
+    G_context.ecdh_info.other_party_address.address_type = RE_ADDRESS_PUBLIC_KEY;
 
     PRINTF("Public key of other party: %.*H\n",
            G_context.ecdh_info.other_party_public_key.W_len,

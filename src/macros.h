@@ -4,17 +4,15 @@
 #include "os.h"
 
 // MACROS
-#define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
 
-#define FATAL_ERROR(...)     \
-    {                        \
-        PLOC();              \
-        PRINTF(__VA_ARGS__); \
-        THROW(SW_BAD_STATE); \
+#define FATAL_ERROR(...)        \
+    {                           \
+        PRINTF(__VA_ARGS__);    \
+        THROW(ERR_FATAL_ERROR); \
     }
 
-#define ASSERT(x, msg)    \
-    if (x) {              \
-    } else {              \
-        FATAL_ERROR(msg); \
+#define ASSERT(x, msg)               \
+    if (x) {                         \
+    } else {                         \
+        THROW(ERR_ASSERTION_FAILED); \
     }

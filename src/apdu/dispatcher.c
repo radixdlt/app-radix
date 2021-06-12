@@ -21,7 +21,7 @@
 #include "dispatcher.h"
 #include "../constants.h"
 #include "../globals.h"
-#include "../types.h"
+#include "../state.h"
 #include "../io.h"
 #include "../sw.h"
 #include "../common/buffer.h"
@@ -30,7 +30,7 @@
 #include "../handler/get_public_key.h"
 #include "../handler/sign_tx.h"
 #include "../handler/sign_hash.h"
-#include "../handler/diffie_hellman.h"
+#include "../handler/ecdh.h"
 
 static void fill_buffer(buffer_t *buf, const command_t *cmd) {
     buf->ptr = cmd->data;
@@ -44,6 +44,17 @@ int apdu_dispatcher(const command_t *cmd) {
     }
 
     buffer_t buf = {0};
+
+    // Sign TX variables
+    uint8_t P1_FIRST_METADATA_APDU = 77;  // (Ascii code for 'M', as in "Metadata")
+    uint8_t P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU = 73;
+    // (Ascii code for 'I' as in "Instruction")
+
+    uint8_t P2_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU_BITMASK_DISPLAY_SUBSTATE_CONTENT = 0b00000001;
+    uint8_t P2_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU_BITMASK_DISPLAY_TX_SUMMARY = 0b00000010;
+
+    bool valid_p1p2 = true;
+
     switch (cmd->ins) {
         case GET_VERSION:
             if (cmd->p1 != 0 || cmd->p2 != 0) {
@@ -70,9 +81,13 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_get_public_key(&buf, (bool) cmd->p1);
         case SIGN_TX:
-            if ((cmd->p1 == P1_START && cmd->p2 != P2_MORE) ||  //
-                cmd->p1 > P1_MAX ||                             //
-                (cmd->p2 != P2_LAST && cmd->p2 != P2_MORE)) {
+            if (cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU) {
+                valid_p1p2 = cmd->p2 < 4;
+            } else {
+                valid_p1p2 = cmd->p1 == P1_FIRST_METADATA_APDU;
+            }
+
+            if (!valid_p1p2) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
 
@@ -82,7 +97,19 @@ int apdu_dispatcher(const command_t *cmd) {
 
             fill_buffer(&buf, cmd);
 
-            return handler_sign_tx(&buf, cmd->p1, (bool) (cmd->p2 & P2_MORE));
+            bool is_first_metadata_apdu = cmd->p1 == P1_FIRST_METADATA_APDU;
+            bool display_substate_contents =
+                cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU &&
+                (cmd->p2 &
+                 P2_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU_BITMASK_DISPLAY_SUBSTATE_CONTENT);
+            bool display_tx_summary =
+                cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU &&
+                (cmd->p2 & P2_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU_BITMASK_DISPLAY_TX_SUMMARY);
+
+            G_context.tx_info.display_substate_contents = display_substate_contents;
+            G_context.tx_info.display_tx_summary = display_tx_summary;
+
+            return handler_sign_tx(&buf, is_first_metadata_apdu);
         case SIGN_HASH:
             if (cmd->p1 > 1 || cmd->p2 > 0) {
                 return io_send_sw(SW_WRONG_P1P2);
@@ -95,7 +122,7 @@ int apdu_dispatcher(const command_t *cmd) {
             fill_buffer(&buf, cmd);
 
             return handler_sign_hash(&buf);
-        case DIFFIE_HELLMAN:
+        case ECDH:
             if (cmd->p1 > 1 || cmd->p2 > 0) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
@@ -106,7 +133,7 @@ int apdu_dispatcher(const command_t *cmd) {
 
             fill_buffer(&buf, cmd);
 
-            return handler_diffie_hellman(&buf, (bool) cmd->p1);
+            return handler_ecdh(&buf, (bool) cmd->p1);
 
         default:
             return io_send_sw(SW_INS_NOT_SUPPORTED);

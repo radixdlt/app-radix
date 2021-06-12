@@ -4,11 +4,11 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // uint*_t
 
-#include "../types.h"
+#include "../state.h"
 #include "../common/buffer.h"
 
 /**
- * Handler for DIFFIE_HELMAN key exchange command. If successfully parse BIP32 path,
+ * Handler for ECDH (Diffie-Hellman) key exchange command. If successfully parse BIP32 path,
  * public key of other party, we derive a shared public key and send APDU response.
  *
  * @see G_context.bip32_path, G_context.echd_info.raw_uncompressed_public_key and
@@ -22,4 +22,4 @@
  * @return zero or positive integer if success, negative integer otherwise.
  *
  */
-int handler_diffie_hellman(buffer_t *cdata, bool display);
+int handler_ecdh(buffer_t *cdata, bool display);

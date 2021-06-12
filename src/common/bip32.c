@@ -57,7 +57,7 @@ bool bip32_path_format(const uint32_t *bip32_path,
         snprintf(out + offset, out_len - offset, "%d", bip32_path[i] & 0x7FFFFFFFu);
         written = strlen(out + offset);
         if (written == 0 || written >= out_len - offset) {
-            memset(out, 0, out_len);
+            explicit_bzero(out, out_len);
             return false;
         }
         offset += written;
@@ -66,7 +66,7 @@ bool bip32_path_format(const uint32_t *bip32_path,
             snprintf(out + offset, out_len - offset, "'");
             written = strlen(out + offset);
             if (written == 0 || written >= out_len - offset) {
-                memset(out, 0, out_len);
+                explicit_bzero(out, out_len);
                 return false;
             }
             offset += written;
@@ -76,7 +76,7 @@ bool bip32_path_format(const uint32_t *bip32_path,
             snprintf(out + offset, out_len - offset, "/");
             written = strlen(out + offset);
             if (written == 0 || written >= out_len - offset) {
-                memset(out, 0, out_len);
+                explicit_bzero(out, out_len);
                 return false;
             }
             offset += written;

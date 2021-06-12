@@ -26,6 +26,9 @@
 #include <stdint.h>  //
 #include <stdbool.h>
 
+#define MAX_BECH32_DATA_PART_BYTE_COUNT 65  // arbitrarily chosen
+#define MAX_BECH32_HRP_PART_LEN         50  // arbitrarily chosen
+
 /**
  * @brief Bech32 encode data.
  *

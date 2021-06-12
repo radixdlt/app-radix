@@ -46,10 +46,10 @@ bool bech32_encode(char* output, const char* hrp, const uint8_t* data, size_t* d
     while (hrp[i] != 0) {
         char ch = hrp[i];
         if (ch < 33 || ch > 126) {
-            return 0;
+            return false;
         }
 
-        if (ch >= 'A' && ch <= 'Z') return 0;
+        if (ch >= 'A' && ch <= 'Z') return false;
         chk = bech32_polymod_step(chk) ^ (ch >> 5u);
         ++i;
     }
@@ -64,7 +64,7 @@ bool bech32_encode(char* output, const char* hrp, const uint8_t* data, size_t* d
     *(output++) = '1';
     actual_size++;
     for (i = 0; i < *data_len; ++i) {
-        if (*data >> 5u) return 0;
+        if (*data >> 5u) return false;
         chk = bech32_polymod_step(chk) ^ (*data);
         *(output++) = charset[*(data++)];
         actual_size++;

@@ -21,7 +21,7 @@
 #include "os.h"
 #include "ux.h"
 
-#include "types.h"
+#include "state.h"
 #include "globals.h"
 #include "io.h"
 #include "sw.h"
@@ -55,7 +55,7 @@ void app_main() {
         BEGIN_TRY {
             TRY {
                 // Reset structured APDU command
-                memset(&cmd, 0, sizeof(cmd));
+                explicit_bzero(&cmd, sizeof(cmd));
 
                 // Receive command bytes in G_io_apdu_buffer
                 if ((input_len = io_recv_command()) < 0) {
@@ -120,7 +120,7 @@ __attribute__((section(".boot"))) int main() {
 
     for (;;) {
         // Reset UI
-        memset(&G_ux, 0, sizeof(G_ux));
+        explicit_bzero(&G_ux, sizeof(G_ux));
 
         BEGIN_TRY {
             TRY {

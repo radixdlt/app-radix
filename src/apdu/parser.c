@@ -20,7 +20,7 @@
 #include <stdbool.h>  // bool
 
 #include "parser.h"
-#include "../types.h"
+#include "../state.h"
 #include "../offsets.h"
 
 bool apdu_parser(command_t *cmd, uint8_t *buf, size_t buf_len) {

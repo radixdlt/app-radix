@@ -21,6 +21,8 @@ typedef struct {
     size_t offset;       /// Offset in byte buffer
 } buffer_t;
 
+void debug_print_buffer(const buffer_t *buffer);
+
 /**
  * Tell whether buffer can read bytes or not.
  *
@@ -162,7 +164,7 @@ bool buffer_read_varint(buffer_t *buffer, uint64_t *value);
 bool buffer_read_bip32_path(buffer_t *buffer, uint32_t *out, size_t out_len);
 
 /**
- * Copy bytes from buffer without moving offset.
+ * Copy \p bytes_to_copy_count bytes from \p buffer without moving offset.
  *
  * @param[in]  buffer
  *   Pointer to input buffer struct.
@@ -170,23 +172,81 @@ bool buffer_read_bip32_path(buffer_t *buffer, uint32_t *out, size_t out_len);
  *   Pointer to output byte buffer.
  * @param[in]  out_len
  *   Length of output byte buffer.
+ *  @param[in]  bytes_to_copy_count
+ *   Number of bytes to copy.
  *
  * @return true if success, false otherwise.
  *
  */
-bool buffer_copy(const buffer_t *buffer, uint8_t *out, size_t out_len);
+bool buffer_copy_some(const buffer_t *buffer,
+                      uint8_t *out,
+                      const size_t out_len,
+                      const size_t bytes_to_copy_count);
+
+/**
+ * Copy all bytes from \p buffer without moving offset.
+ *
+ * @param[in]  buffer
+ *   Pointer to input buffer struct.
+ * @param[out] target
+ *   Pointer to target output byte buffer to fill with bytes from \p buffer.
+ * @param[in]  target_len
+ *   Length of target output byte buffer.
+ *
+ * @return true if success, false otherwise.
+ *
+ */
+bool buffer_copy_fill_target(const buffer_t *buffer, uint8_t *target, const size_t target_len);
+
+/**
+ * @brief Copies the remaining bytes from \p buffer to \p out output buffer.
+ *
+ * @param buffer
+ * @param out
+ * @param out_len
+ * @return true if success, false otherwise.
+ */
+bool buffer_copy_remaining(const buffer_t *buffer, uint8_t *out, const size_t out_len);
+
+size_t number_of_remaining_bytes_in_buffer(const buffer_t *buffer);
 
 /**
  * Move bytes from buffer.
+ *
+ * \p out_len must be >= \p bytes_to_move_count, and number of remaining bytes in \p buffer must be
+ * >= \p bytes_to_move_count. You can use method \code number_of_remaining_bytes_in_buffer to get
+ * number of remaining bytes.
+ *
+ * It is also useful to \code debug_print_buffer.
  *
  * @param[in,out]  buffer
  *   Pointer to input buffer struct.
  * @param[out]     out
  *   Pointer to output byte buffer.
- * @param[in]      out_len
+ * @param[in]  out_len
  *   Length of output byte buffer.
+ * @param[in]      bytes_to_move_count
+ *   Numberf of bytes to move.
  *
  * @return true if success, false otherwise.
  *
  */
-bool buffer_move(buffer_t *buffer, uint8_t *out, size_t out_len);
+bool buffer_move_some(buffer_t *buffer,
+                      uint8_t *out,
+                      const size_t out_len,
+                      const size_t bytes_to_move_count);
+
+/**
+ * Move bytes from \p buffer to fill \p target.
+ *
+ * @param[in,out]  buffer
+ *   Pointer to input buffer struct.
+ * @param[out]     target
+ *   Pointer to target output byte buffer.
+ * @param[in]  target_len
+ *   Length of target output byte buffer.
+ *
+ * @return true if success, false otherwise.
+ *
+ */
+bool buffer_move_fill_target(buffer_t *buffer, uint8_t *target, const size_t target_len);

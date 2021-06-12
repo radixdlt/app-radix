@@ -113,8 +113,8 @@ int io_send_response(const buffer_t *rdata, uint16_t sw) {
 
     if (rdata != NULL) {
         if (rdata->size - rdata->offset > IO_APDU_BUFFER_SIZE - 2 ||  //
-            !buffer_copy(rdata, G_io_apdu_buffer, sizeof(G_io_apdu_buffer))) {
-            return io_send_sw(SW_WRONG_RESPONSE_LENGTH);
+            !buffer_copy_remaining(rdata, G_io_apdu_buffer, sizeof(G_io_apdu_buffer))) {
+            return io_send_sw(ERR_CMD_PARSE_APDU_RESPONSE_LENGTH);
         }
         G_output_len = rdata->size - rdata->offset;
         PRINTF("<= SW=%04X | RData=%.*H\n", sw, rdata->size, rdata->ptr);

@@ -14,12 +14,11 @@
  *
  * @param[in,out] cdata
  *   Command data with BIP32 path and raw transaction serialized.
- * @param[in]     chunk
- *   Index number of the APDU chunk.
- * @param[in]       more
- *   Whether more APDU chunk to be received or not.
+ * @param[in] is_first_metadata_apdu
+ *   If this APDU is the first, containing metadata about the signing of
+ *  this tx, e.g. BIP32 Path and number of Radix Engine instructions to parse.
  *
  * @return zero or positive integer if success, negative integer otherwise.
  *
  */
-int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more);
+int handler_sign_tx(buffer_t *cdata, bool is_first_metadata_apdu);

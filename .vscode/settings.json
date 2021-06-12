@@ -11,7 +11,9 @@
         "cstring": "c",
         "locale": "c",
         "string": "c",
-        "vector": "c"
+        "vector": "c",
+        "__locale": "c",
+        "cstdio": "c"
     },
     "C_Cpp.clang_format_path": "${workspaceRoot}/.clang-format",
     "editor.formatOnSave": true,
