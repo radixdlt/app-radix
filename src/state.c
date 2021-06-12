@@ -95,6 +95,7 @@ void G_parse_tx_state_ins_needs_approval() {
 void G_parse_tx_state_did_approve_ins() {
     G_update_parse_tx_ins_state(STATE_PARSE_INS_APPROVED);
 }
+
 void G_parse_tx_state_finished_parsing_all() {
     G_update_parse_tx_ins_state(STATE_PARSE_INS_FINISHED_PARSING_ALL_INS);
 }

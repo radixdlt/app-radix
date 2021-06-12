@@ -69,31 +69,6 @@ bool format_fpu64(char *dst, size_t dst_len, const uint64_t value, uint8_t decim
 int format_hex(const uint8_t *in, size_t in_len, char *out, size_t out_len);
 
 /**
- * @brief Formats bytes as a decimal string.
- *
- * Convert \p in bytes of length \p in_len into digits of base 10 and put into \p out. The
- * resulting length is put in \p out_len.
- *
- * In order to not mutate \p in bytes we need to provide a \p tmp buffer having length \p tmp_len
- * being greater than or equal to \p in_len.
- *
- * @param[in] in
- * @param[in] in_len
- * @param[in] tmp
- * @param[in] tmp_len
- * @param[out] out
- * @param[in,out] out_len
- * @return true
- * @return false
- */
-bool convert_byte_buffer_into_decimal(const uint8_t *in,
-                                      const size_t in_len,
-                                      uint8_t *tmp,
-                                      const size_t tmp_len,
-                                      char *out,
-                                      size_t *out_len);
-
-/**
  * @brief Formats a UInt256 as a decimal string
  *
  * @param[int] uint256

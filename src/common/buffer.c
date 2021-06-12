@@ -21,7 +21,6 @@
 
 #include "buffer.h"
 #include "read.h"
-#include "varint.h"
 #include "bip32.h"
 #include "os.h"
 
@@ -128,19 +127,6 @@ bool buffer_read_u64(buffer_t *buffer, uint64_t *value, endianness_t endianness)
     return true;
 }
 
-bool buffer_read_varint(buffer_t *buffer, uint64_t *value) {
-    int length = varint_read(buffer->ptr + buffer->offset, buffer->size - buffer->offset, value);
-
-    if (length < 0) {
-        *value = 0;
-
-        return false;
-    }
-
-    buffer_seek_cur(buffer, (size_t) length);
-
-    return true;
-}
 
 bool buffer_read_bip32_path(buffer_t *buffer, uint32_t *out, size_t out_len) {
     if (!bip32_path_read(buffer->ptr + buffer->offset,
@@ -216,6 +202,7 @@ bool buffer_move_fill_target(buffer_t *buffer, uint8_t *target, const size_t tar
 
 void debug_print_buffer(const buffer_t *buffer) {
     size_t remaining_byte_count = number_of_remaining_bytes_in_buffer(buffer);
+    UNUSED(remaining_byte_count);  // If debug build 'remaining_byte_count' is considered unused.
     PRINTF("\n\n~~~ BUFFER ~~~\n");
 
     PRINTF("Size: #%d bytes\n", buffer->size);
@@ -223,6 +210,5 @@ void debug_print_buffer(const buffer_t *buffer) {
     PRINTF("Bytes left: #%d bytes\n", remaining_byte_count);
 
     PRINTF("Remaining bytes: %.*h\n", remaining_byte_count, (buffer->ptr + buffer->offset));
-    // PRINTF("All bytes: %.*h\n", buffer->size, buffer->ptr);
     PRINTF("~~~ END ~~~\n\n\n");
 }
