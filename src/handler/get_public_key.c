@@ -49,14 +49,14 @@ int handler_get_public_key(buffer_t *cdata, bool display) {
     }
 
     // derive private key according to BIP32 path
-    crypto_derive_private_key(&private_key,
-                              G_context.pk_info.chain_code,
-                              G_context.bip32_path,
-                              G_context.bip32_path_len);
+    crypto_derive_private_key_and_chain_code(&private_key,
+                                             G_context.pk_info.chain_code,
+                                             G_context.bip32_path,
+                                             G_context.bip32_path_len);
     // generate corresponding public key
-    crypto_init_public_key(&private_key,
-                           &public_key,
-                           G_context.pk_info.raw_uncompressed_public_key);
+    crypto_init_and_export_public_key(&private_key,
+                                      &public_key,
+                                      G_context.pk_info.raw_uncompressed_public_key);
 
     if (!crypto_compress_public_key(&public_key, &G_context.pk_info.my_address.public_key)) {
         return io_send_sw(ERR_CMD_GET_PUBLIC_KEY_FAILED_TO_COMPRESS_KEY);

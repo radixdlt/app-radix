@@ -26,7 +26,7 @@ int helper_send_response_pubkey(void);
  * @return zero or positive integer if success, -1 otherwise.
  *
  */
-int helper_send_response_signature(bool include_hash_in_response);
+int helper_send_response_signature(bool include_hash_in_response, const uint8_t *hash);
 
 /**
  * Helper to send APDU response with shared ECDH key.

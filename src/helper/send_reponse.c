@@ -57,7 +57,7 @@ int helper_send_response_sharedkey() {
     return io_send_response(&(const buffer_t){.ptr = resp, .size = offset, .offset = 0}, SW_OK);
 }
 
-int helper_send_response_signature(bool include_hash_in_response) {
+int helper_send_response_signature(bool include_hash_in_response, const uint8_t *hash) {
     uint8_t resp[
         /* One byte specifying length of SigLength */ 1 + MAX_DER_SIG_LEN +
         /* One byte for Signature.V */ 1 +
@@ -71,7 +71,7 @@ int helper_send_response_signature(bool include_hash_in_response) {
     resp[offset++] = (uint8_t) G_context.sig_info.v;
 
     if (include_hash_in_response) {
-        memmove(resp + offset, G_context.sig_info.m_hash, HASH_LEN);
+        memmove(resp + offset, hash, HASH_LEN);
         offset += HASH_LEN;
     }
 

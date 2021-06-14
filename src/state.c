@@ -28,7 +28,8 @@ static void print_parse_tx_ins_state(parse_tx_ins_state_e state) {
 }
 
 void G_update_parse_tx_ins_state(parse_tx_ins_state_e new_state) {
-    parse_tx_ins_state_e current_state = G_context.tx_info.parse_ins_state;
+    parse_tx_ins_state_e current_state =
+        G_context.tx_info.transaction_parser.instruction_parser.state;
 
     bool valid_transition = false;
 
@@ -77,7 +78,7 @@ void G_update_parse_tx_ins_state(parse_tx_ins_state_e new_state) {
         return;
     }
 
-    G_context.tx_info.parse_ins_state = new_state;
+    G_context.tx_info.transaction_parser.instruction_parser.state = new_state;
 }
 
 void G_parse_tx_state_ready_to_parse() {

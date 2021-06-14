@@ -25,8 +25,8 @@
 #include "../../globals.h"
 #include "../../helper/send_response.h"
 
-void ui_action_validate_pubkey(bool choice) {
-    if (choice) {
+void ui_action_validate_pubkey(user_accepted_t user_accepted) {
+    if (user_accepted) {
         helper_send_response_pubkey();
     } else {
         io_send_sw(SW_DENY);
@@ -35,11 +35,14 @@ void ui_action_validate_pubkey(bool choice) {
     ui_menu_main();
 }
 
-static void __ui_action_validate_sign_hash_cmd(bool user_approved, bool include_hash_in_response) {
-    if (user_approved) {
+static void __ui_action_validate_sign_hash_cmd(user_accepted_t user_accepted,
+                                               bool include_hash_in_response,
+                                               const uint8_t *hash,
+                                               size_t hash_len) {
+    if (user_accepted) {
         G_context.state = STATE_APPROVED;
 
-        if (!crypto_sign_message()) {
+        if (!crypto_sign_message(hash, hash_len)) {
             G_context.state = STATE_NONE;
             if (include_hash_in_response) {
                 io_send_sw(ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL);
@@ -48,7 +51,7 @@ static void __ui_action_validate_sign_hash_cmd(bool user_approved, bool include_
             }
 
         } else {
-            helper_send_response_signature(include_hash_in_response);
+            helper_send_response_signature(include_hash_in_response, hash);
         }
     } else {
         G_context.state = STATE_NONE;
@@ -57,16 +60,40 @@ static void __ui_action_validate_sign_hash_cmd(bool user_approved, bool include_
 
     ui_menu_main();
 }
-void ui_action_validate_sign_hash(bool choice) {
-    return __ui_action_validate_sign_hash_cmd(choice, false);
+
+void ui_action_validate_instruction(user_accepted_t user_accepted) {
+    if (!user_accepted) {
+        G_context.state = STATE_NONE;
+        io_send_sw(SW_DENY);
+        ui_menu_main();
+        return;
+    }
+
+    G_parse_tx_state_did_approve_ins();
+    G_parse_tx_state_ready_to_parse();
+
+    // Not done yet => tell host machine to continue sending next RE instruction.
+    io_send_sw(SW_OK);
+    return;
 }
 
-void ui_action_validate_sign_tx(bool choice) {
-    return __ui_action_validate_sign_hash_cmd(choice, true);
+void ui_action_validate_sign_hash(user_accepted_t user_accepted) {
+    return __ui_action_validate_sign_hash_cmd(user_accepted,
+                                              false,
+                                              G_context.sig_info.digest,
+                                              HASH_LEN);
 }
 
-void ui_action_validate_sharedkey(bool choice) {
-    if (choice) {
+void ui_action_validate_sign_tx(user_accepted_t user_accepted) {
+    // TODO refactor to avoid GLOBAL state/variable access. Hmm, maybe we can
+    return __ui_action_validate_sign_hash_cmd(user_accepted,
+                                              true,
+                                              G_context.tx_info.transaction_parser.digest,
+                                              HASH_LEN);
+}
+
+void ui_action_validate_sharedkey(user_accepted_t user_accepted) {
+    if (user_accepted) {
         G_context.state = STATE_APPROVED;
         if (!crypto_ecdh()) {
             G_context.state = STATE_NONE;

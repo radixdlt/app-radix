@@ -11,7 +11,7 @@
 #include "common/public_key.h"
 
 /**
- * Derive private key given BIP32 path.
+ * Derive private key given BIP32 path, outputs resulting chain code.
  *
  * @param[out] private_key
  *   Pointer to private key.
@@ -27,8 +27,27 @@
  * @throw INVALID_PARAMETER
  *
  */
+bool crypto_derive_private_key_and_chain_code(cx_ecfp_private_key_t *private_key,
+                                              uint8_t chain_code[static CHAIN_CODE_LEN],
+                                              const uint32_t *bip32_path,
+                                              uint8_t bip32_path_len);
+
+/**
+ * Derive private key given BIP32 path, but discards chain code.
+ *
+ * @param[out] private_key
+ *   Pointer to private key.
+ * @param[in]  bip32_path
+ *   Pointer to buffer with BIP32 path.
+ * @param[in]  bip32_path_len
+ *   Number of path in BIP32 path.
+ *
+ * @return `true` iff success, otherwise `false.
+ *
+ * @throw INVALID_PARAMETER
+ *
+ */
 bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
-                               uint8_t chain_code[static CHAIN_CODE_LEN],
                                const uint32_t *bip32_path,
                                uint8_t bip32_path_len);
 
@@ -39,17 +58,32 @@ bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
  *   Pointer to private key.
  * @param[out] public_key
  *   Pointer to public key.
- * @param[out] raw_public_key
- *   Pointer to raw public key.
  *
  * @return `true` iff success, otherwise `false.
  *
  * @throw INVALID_PARAMETER
  *
  */
-bool crypto_init_public_key(cx_ecfp_private_key_t *private_key,
-                            cx_ecfp_public_key_t *public_key,
-                            uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]);
+bool crypto_init_public_key(cx_ecfp_private_key_t *private_key, cx_ecfp_public_key_t *public_key);
+
+/**
+ * Initialize public key given private key.
+ *
+ * @param[in]  private_key
+ *   Pointer to private key.
+ * @param[out] public_key
+ *   Pointer to public key.
+ * @param[out] raw_public_key
+ *  Pointer to a raw bytes buffer to export the public key to.
+ *
+ * @return `true` iff success, otherwise `false.
+ *
+ * @throw INVALID_PARAMETER
+ *
+ */
+bool crypto_init_and_export_public_key(cx_ecfp_private_key_t *private_key,
+                                       cx_ecfp_public_key_t *public_key,
+                                       uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]);
 
 /**
  * Initialize public key from an uncompressed raw key buffer.
@@ -97,7 +131,7 @@ bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
  * @throw INVALID_PARAMETER
  *
  */
-bool crypto_sign_message(void);
+bool crypto_sign_message(const uint8_t *hash, size_t hash_len);
 
 /**
  * @brief Performs ECDH with provided public key.

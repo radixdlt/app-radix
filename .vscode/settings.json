@@ -13,7 +13,8 @@
         "string": "c",
         "vector": "c",
         "__locale": "c",
-        "cstdio": "c"
+        "cstdio": "c",
+        "system_error": "c"
     },
     "C_Cpp.clang_format_path": "${workspaceRoot}/.clang-format",
     "editor.formatOnSave": true,

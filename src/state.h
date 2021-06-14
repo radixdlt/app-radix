@@ -10,6 +10,8 @@
 #include "common/public_key.h"
 #include "common/bech32_encode.h"
 
+typedef bool user_accepted_t;
+
 /**
  * Enumeration for the status of IO.
  */
@@ -40,7 +42,7 @@ typedef struct {
     uint8_t p1;     /// Instruction parameter 1
     uint8_t p2;     /// Instruction parameter 2
     uint8_t lc;     /// Lenght of command data
-    uint8_t *data;  /// Command data
+    uint8_t* data;  /// Command data
 } command_t;
 
 /**
@@ -96,19 +98,41 @@ typedef struct {
     uint8_t shared_pubkey_point[PUBLIC_KEY_POINT_LEN];
 } ecdh_ctx_t;
 
+typedef uint16_t status_word_t;
+
 /**
- * Structure for transaction information context.
+ * Function to display a parsed transactino
+ */
+typedef status_word_t (*display_tx_fn)(void);
+
+/**
+ * Function to display a parsed transactino
+ */
+typedef status_word_t (*display_ins_fn)(void);
+
+/**
+ * @brief Parser of one instruction inside a transaction.
+ *
  */
 typedef struct {
-    parse_tx_ins_state_e parse_ins_state;
+    parse_tx_ins_state_e state;
+    re_instruction_t instruction;  /// latest parsed Radix Engine instruction
+} instruction_parser_t;
+
+typedef struct {
     bool display_substate_contents;  /// If a parsed UP:ed substate should be display, convenient to
                                      /// use 'false' for testing.
     bool display_tx_summary;  /// If a summary of the contents of a transaction should be displayed,
                               /// convenient to use 'false' for testing.
+} parsed_instruction_display_config_t;
 
-    char hrp_non_native_token[MAX_BECH32_HRP_PART_LEN];
-    uint8_t hrp_non_native_token_len;
+typedef struct {
+    uint32_t bip32_path[MAX_BIP32_PATH];  /// BIP32 path
+    uint8_t bip32_path_len;
+    re_address_t address;
+} derived_public_key_t;
 
+typedef struct {
     uint32_t tx_byte_count;            /// Number of bytes in the while transaction to receive.
     uint32_t tx_bytes_received_count;  /// Number of tx bytes received
 
@@ -116,19 +140,52 @@ typedef struct {
     uint16_t number_of_instructions_received;  /// Number of Radix Engine instructions that has been
                                                /// received.
 
-    cx_sha256_t hasher;
+    char hrp_non_native_token[MAX_BECH32_HRP_PART_LEN];
+    uint8_t hrp_non_native_token_len;
+
+} transaction_metadata_t;
+
+typedef struct {
+    transaction_metadata_t transaction_metadata;
+    parsed_instruction_display_config_t parsed_instruction_display_config;
+} transaction_parser_config_t;
+
+typedef struct {
     uint256_t tx_fee;  /// The tee of this transaction, measured in XRD.
     uint256_t total_xrd_amount_incl_fee;
+
     bool have_asserted_no_mint_or_burn;
 
-    public_key_t my_public_key;  /// The public key corresponding to the provided BIP32 path, used
-                                 /// to determine if some tokens are "change back to myself"
+} transaction_t;
 
-    re_instruction_t instruction;  /// lasest parsed Radix Engine instruction
+/**
+ * @brief Parser of transaction to sign.
+ *
+ */
+typedef struct {
+    cx_sha256_t hasher;
+    uint8_t digest[HASH_LEN];
+    transaction_parser_config_t config;
+    instruction_parser_t instruction_parser;
+    derived_public_key_t
+        my_derived_public_key;  /// The public key corresponding to the provided BIP32 path, used
+                                /// to determine if some tokens are "change back to myself"
+
+    transaction_t transaction;  /// State of parsed transaction so far.
+
+    display_ins_fn display_instruction;
+    display_tx_fn display_transaction;
+} transaction_parser_t;
+
+/**
+ * Structure for transaction information context.
+ */
+typedef struct {
+    transaction_parser_t transaction_parser;
 } sign_transaction_ctx_t;
 
 typedef struct {
-    uint8_t m_hash[HASH_LEN];            /// message hash digest
+    uint8_t digest[HASH_LEN];            /// message hash digest
     uint8_t signature[MAX_DER_SIG_LEN];  /// transaction signature encoded in DER
     uint8_t signature_len;               /// length of transaction signature
     uint8_t v;                           /// parity of y-coordinate of R in ECDSA signature

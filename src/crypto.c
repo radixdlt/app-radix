@@ -29,7 +29,7 @@
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
 /// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
 static int __crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
-                                       uint8_t chain_code[static CHAIN_CODE_LEN],
+                                       uint8_t *chain_code,  // NULLable
                                        const uint32_t *bip32_path,
                                        uint8_t bip32_path_len) {
     uint8_t raw_private_key[PRIVATE_KEY_LEN] = {0};
@@ -59,19 +59,30 @@ static int __crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
 
     return 0;
 }
+bool crypto_derive_private_key_and_chain_code(cx_ecfp_private_key_t *private_key,
+                                              uint8_t chain_code[static CHAIN_CODE_LEN],
+                                              const uint32_t *bip32_path,
+                                              uint8_t bip32_path_len) {
+    return __crypto_derive_private_key(private_key, chain_code, bip32_path, bip32_path_len) == 0;
+}
+
 bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
-                               uint8_t chain_code[static CHAIN_CODE_LEN],
                                const uint32_t *bip32_path,
                                uint8_t bip32_path_len) {
-    return __crypto_derive_private_key(private_key, chain_code, bip32_path, bip32_path_len) == 0;
+    return __crypto_derive_private_key(private_key, NULL, bip32_path, bip32_path_len) == 0;
 }
 
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
 /// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
 
-static int __crypto_init_public_key(cx_ecfp_private_key_t *private_key,
-                                    cx_ecfp_public_key_t *public_key,
-                                    uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]) {
+static int __crypto_init_and_export_public_key(cx_ecfp_private_key_t *private_key,
+                                               cx_ecfp_public_key_t *public_key,
+                                               uint8_t *exported_raw_key,  // NULLable
+                                               uint8_t exported_raw_key_len) {
+    if (exported_raw_key && exported_raw_key_len < PUBLIC_KEY_UNCOMPRESSEED_LEN) {
+        return -1;
+    }
+
     // generate corresponding public key
     cx_ecfp_generate_pair(CX_CURVE_256K1,
                           public_key,
@@ -79,16 +90,26 @@ static int __crypto_init_public_key(cx_ecfp_private_key_t *private_key,
                           1  // KEEP private_key TRUE
     );
 
-    memmove(raw_public_key,
-            public_key->W + 1,  // `1` is length of PUBKEY_FLAG_KEY
-            PUBLIC_KEY_UNCOMPRESSEED_LEN);
+    if (exported_raw_key) {
+        memmove(exported_raw_key,
+                public_key->W + 1,  // `1` is length of PUBKEY_FLAG_KEY
+                PUBLIC_KEY_UNCOMPRESSEED_LEN);
+    }
 
     return 0;
 }
-bool crypto_init_public_key(cx_ecfp_private_key_t *private_key,
-                            cx_ecfp_public_key_t *public_key,
-                            uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]) {
-    return __crypto_init_public_key(private_key, public_key, raw_public_key) == 0;
+bool crypto_init_public_key(cx_ecfp_private_key_t *private_key, cx_ecfp_public_key_t *public_key) {
+    return __crypto_init_and_export_public_key(private_key, public_key, NULL, 0) == 0;
+}
+
+bool crypto_init_and_export_public_key(
+    cx_ecfp_private_key_t *private_key,
+    cx_ecfp_public_key_t *public_key,
+    uint8_t raw_public_key[static PUBLIC_KEY_UNCOMPRESSEED_LEN]) {
+    return __crypto_init_and_export_public_key(private_key,
+                                               public_key,
+                                               raw_public_key,
+                                               PUBLIC_KEY_UNCOMPRESSEED_LEN) == 0;
 }
 
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
@@ -148,25 +169,21 @@ bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
 /// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
 
-static int __crypto_sign_message() {
+static int __crypto_sign_message(const uint8_t *hash, size_t hash_len) {
     cx_ecfp_private_key_t private_key = {0};
-    uint8_t chain_code[CHAIN_CODE_LEN] = {0};
     uint32_t info = 0;
     int sig_len = 0;
 
     // derive private key according to BIP32 path
-    crypto_derive_private_key(&private_key,
-                              chain_code,
-                              G_context.bip32_path,
-                              G_context.bip32_path_len);
+    crypto_derive_private_key(&private_key, G_context.bip32_path, G_context.bip32_path_len);
 
     BEGIN_TRY {
         TRY {
             sig_len = cx_ecdsa_sign(&private_key,
                                     CX_RND_RFC6979 | CX_LAST,
                                     CX_SHA256,
-                                    G_context.sig_info.m_hash,
-                                    sizeof(G_context.sig_info.m_hash),
+                                    hash,
+                                    hash_len,
                                     G_context.sig_info.signature,
                                     sizeof(G_context.sig_info.signature),
                                     &info);
@@ -190,8 +207,8 @@ static int __crypto_sign_message() {
 
     return 0;
 }
-bool crypto_sign_message() {
-    return __crypto_sign_message() == 0;
+bool crypto_sign_message(const uint8_t *hash, size_t hash_len) {
+    return __crypto_sign_message(hash, hash_len) == 0;
 }
 
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
@@ -199,14 +216,10 @@ bool crypto_sign_message() {
 
 static int __crypto_ecdh(void) {
     cx_ecfp_private_key_t private_key = {0};
-    uint8_t chain_code[CHAIN_CODE_LEN] = {0};
     int sharedkey_len = 0;
 
     // derive private key according to BIP32 path
-    crypto_derive_private_key(&private_key,
-                              chain_code,
-                              G_context.bip32_path,
-                              G_context.bip32_path_len);
+    crypto_derive_private_key(&private_key, G_context.bip32_path, G_context.bip32_path_len);
 
     BEGIN_TRY {
         TRY {

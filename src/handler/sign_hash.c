@@ -50,11 +50,11 @@ int handler_sign_hash(buffer_t *cdata) {
         return io_send_sw(ERR_CMD_SIGN_HASH_PARSE_HASH_FAILURE_BAD_LENGTH);
     }
 
-    if (!buffer_move_fill_target(cdata, G_context.sig_info.m_hash, hash_len)) {
+    if (!buffer_move_fill_target(cdata, G_context.sig_info.digest, hash_len)) {
         return io_send_sw(ERR_CMD_SIGN_HASH_PARSE_HASH_FAILURE_TOO_SHORT);
     }
 
-    PRINTF("Hash: %.*H\n", sizeof(G_context.sig_info.m_hash), G_context.sig_info.m_hash);
+    PRINTF("Hash: %.*H\n", sizeof(G_context.sig_info.digest), G_context.sig_info.digest);
 
-    return ui_display_sign_hash();
+    return ui_display_sign_hash(G_context.sig_info.digest, sizeof(G_context.sig_info.digest));
 }
