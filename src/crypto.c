@@ -214,9 +214,7 @@ static int __crypto_sign_message(const uint8_t *hash,
     return 0;
 }
 bool crypto_sign_message(signing_t *signing) {
-    if (!signing->signature.der_len) {
         signing->signature.der_len = MAX_DER_SIG_LEN;
-    }
     return __crypto_sign_message(signing->digest,
                                  sizeof(signing->digest),
                                  &signing->my_derived_public_key.bip32_path,

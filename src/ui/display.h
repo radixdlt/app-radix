@@ -34,4 +34,6 @@ int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_le
 int ui_display_ecdh(derived_public_key_t *my_derived_public_key, re_address_t *other_party_address);
 
 int ui_display_instruction(re_instruction_t *instruction);
-int ui_display_tx_summary(transaction_t *transaction, uint8_t hash[static HASH_LEN]);
+int ui_display_tx_summary(transaction_t *transaction,
+                          bip32_path_t *bip32_path,
+                          uint8_t hash[static HASH_LEN]);

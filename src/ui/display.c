@@ -210,6 +210,13 @@ UX_STEP_NOCB(ux_display_hash_step,
                  .text = g_hash,
              });
 
+UX_STEP_NOCB(ux_display_sign_with_key_at_path_step,
+             bnnn_paging,
+             {
+                 .title = "Signing key path",
+                 .text = g_bip32_path,
+             });
+
 // FLOW to display hash and BIP32 path:
 // #1 screen: eye icon + "Sign hash?"
 // #2 screen: display BIP32 Path
@@ -218,7 +225,7 @@ UX_STEP_NOCB(ux_display_hash_step,
 // #5 screen: reject button
 UX_FLOW(ux_display_sign_hash_flow,
         &ux_display_confirm_hash_step,
-        &ux_display_path_step,
+        &ux_display_sign_with_key_at_path_step,
         &ux_display_hash_step,
         &ux_display_approve_step,
         &ux_display_reject_step);
@@ -353,20 +360,29 @@ UX_STEP_NOCB(ux_display_tx_hash_step,
              });
 
 // FLOW to display summary of transaction information:
-UX_FLOW(ux_display_tx_summary_flow,
-        &ux_display_review_tx_summary_step,          // #1 screen: eye icon + "Review Transaction"
-        &ux_display_tx_fee_amount_step,              // #2 screen: display tx fee amount
-        &ux_display_total_xrd_incl_fee_amount_step,  // #3 screen: display total XRD amount
-        &ux_display_tx_hash_step,                    // #4 screen: display tx hash
-        &ux_display_approve_sign_tx_step,            // #5 screen: approve button
-        &ux_display_reject_step);                    // #6 screen: reject button
+UX_FLOW(
+    ux_display_tx_summary_flow,
+    &ux_display_review_tx_summary_step,          // #1 screen: eye icon + "Review Transaction"
+    &ux_display_tx_fee_amount_step,              // #2 screen: display tx fee amount
+    &ux_display_total_xrd_incl_fee_amount_step,  // #3 screen: display total XRD amount
+    &ux_display_tx_hash_step,                    // #4 screen: display tx hash
+    &ux_display_sign_with_key_at_path_step,  // # 5 screen: display Bip32 path for key to sign with
+    &ux_display_approve_sign_tx_step,        // #6 screen: approve button
+    &ux_display_reject_step);                // #7 screen: reject button
 
-int ui_display_tx_summary(transaction_t *transaction, uint8_t hash[static HASH_LEN]) {
+int ui_display_tx_summary(transaction_t *transaction,
+                          bip32_path_t *bip32_path,
+                          uint8_t hash[static HASH_LEN]) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
         G_context.state = STATE_NONE;
         return io_send_sw(ERR_BAD_STATE);
+    }
+
+    // Prepare BIP32 path for display
+    if (!format_bip32_path(bip32_path)) {
+        return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
 
     char amount[DISPLAYED_AMOUNT_LEN] = {0};

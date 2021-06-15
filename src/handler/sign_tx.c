@@ -218,7 +218,9 @@ static int parse_and_process_instruction_from_buffer(buffer_t *buffer,
             }
         }
 
-        return ui_display_tx_summary(&tx_parser->transaction, tx_parser->signing.digest);
+        return ui_display_tx_summary(&tx_parser->transaction,
+                                     &tx_parser->signing.my_derived_public_key.bip32_path,
+                                     tx_parser->signing.digest);
 
     } else {
         G_parse_tx_state_did_parse_new();

@@ -88,7 +88,7 @@ void ui_action_validate_sign_tx(user_accepted_t user_accepted) {
     // TODO refactor to avoid GLOBAL state/variable access. Hmm, maybe we can
     return __ui_action_validate_sign_hash_cmd(user_accepted,
                                               true,
-                                              &G_context.sign_hash_info.signing);
+                                              &G_context.sign_tx_info.transaction_parser.signing);
 }
 
 void ui_action_validate_sharedkey(user_accepted_t user_accepted) {
