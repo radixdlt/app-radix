@@ -47,4 +47,6 @@ bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *t
 
 uint16_t status_word_for_failed_to_parse_tokens(parse_tokens_outcome_e failure_reason);
 
+void print_parse_tokens_outcome(parse_tokens_outcome_t *outcome);
+
 bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key);

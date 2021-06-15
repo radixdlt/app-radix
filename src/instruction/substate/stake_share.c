@@ -6,8 +6,8 @@ bool parse_stake_share(buffer_t *buffer,
                        stake_share_t *stake_share) {
     // Parse field 'publickey'
     if (!buffer_move_fill_target(buffer,
-                     (uint8_t *) &stake_share->public_key.compressed,
-                     PUBLIC_KEY_COMPRESSED_LEN)) {
+                                 (uint8_t *) &stake_share->public_key.compressed,
+                                 PUBLIC_KEY_COMPRESSED_LEN)) {
         PRINTF("Failed to parse 'publickey' in substate 'STAKE_SHARE'.\n");
         outcome->outcome_type = PARSE_STAKE_SHARE_FAILURE_PARSE_PUBLICKEY;
         return false;
@@ -45,4 +45,24 @@ uint16_t status_word_for_failed_to_parse_stake_share(parse_stake_share_outcome_e
         case PARSE_STAKE_SHARE_FAILURE_PARSE_AMOUNT:
             return ERR_CMD_SIGN_TX_STAKE_SHARE_PARSE_AMOUNT_FAILURE;
     }
+}
+
+void print_parse_stake_share_outcome(parse_stake_share_outcome_t *outcome) {
+    PRINTF("parse stake share outcome: ");
+    switch (outcome->outcome_type) {
+        case PARSE_STAKE_SHARE_OK:
+            PRINTF("'OK'");
+            break;
+        case PARSE_STAKE_SHARE_FAILURE_PARSE_PUBLICKEY:
+            PRINTF("'FAILURE_PARSE_PUBLICKEY'");
+            break;
+        case PARSE_STAKE_SHARE_FAILURE_PARSE_OWNER:
+            PRINTF("'FAILURE_PARSE_OWNER' - printing reason:\n");
+            print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
+            break;
+        case PARSE_STAKE_SHARE_FAILURE_PARSE_AMOUNT:
+            PRINTF("'FAILURE_PARSE_AMOUNT'");
+            break;
+    }
+    PRINTF("\n");
 }

@@ -121,5 +121,7 @@ bool parse_instruction(buffer_t *buffer,
 
 uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failure);
 
+void print_parse_instruction_outcome(parse_instruction_outcome_t *outcome);
+
 bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
                                            public_key_t *my_public_key);

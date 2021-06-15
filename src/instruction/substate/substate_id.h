@@ -25,3 +25,5 @@ bool parse_substate_id(buffer_t *buffer,
                        substate_id_t *substate_id);
 
 uint16_t status_word_for_failed_to_parse_substate_id(parse_substate_id_outcome_e outcome);
+
+void print_parse_substate_id_outcome(parse_substate_id_outcome_e outcome);

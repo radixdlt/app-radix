@@ -66,8 +66,6 @@ typedef enum {
     CONFIRM_TRANSACTION,  /// confirm transaction information
 } request_type_e;
 
-typedef uint16_t status_word_t;
-
 /**
  * Structure for public key context information.
  */

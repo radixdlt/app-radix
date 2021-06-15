@@ -37,3 +37,19 @@ uint16_t status_word_for_failed_to_parse_substate_id(parse_substate_id_outcome_e
             return ERR_CMD_SIGN_TX_SUBSTATE_ID_INDEX_PARSE_FAILURE;
     }
 }
+
+void print_parse_substate_id_outcome(parse_substate_id_outcome_e outcome) {
+    PRINTF("Parse substate id outcome tpye:");
+    switch (outcome) {
+        case PARSE_SUBSTATE_ID_OK:
+            PRINTF("'OK'");
+            break;
+        case PARSE_SUBSTATE_ID_FAILED_HASH:
+            PRINTF("'FAILED_HASH'");
+            break;
+        case PARSE_SUBSTATE_ID_FAILED_INDEX:
+            PRINTF("'FAILED_INDEX'");
+            break;
+    }
+    PRINTF("\n");
+}

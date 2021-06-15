@@ -33,3 +33,5 @@ bool parse_prepared_unstake(buffer_t *buffer,
 
 uint16_t status_word_for_failed_to_parse_prepared_unstake(
     parse_prepared_unstake_outcome_e failure_reason);
+
+void print_parse_prepared_unstake_outcome(parse_prepared_unstake_outcome_t *outcome);

@@ -20,3 +20,4 @@ typedef enum {
 bool parse_re_bytes(buffer_t *buffer, parse_bytes_outcome_e *outcome, re_bytes_t *bytes);
 
 uint16_t status_word_for_failed_to_parse_bytes(parse_bytes_outcome_e outcome);
+void print_parse_bytes_outcome(parse_bytes_outcome_e outcome);

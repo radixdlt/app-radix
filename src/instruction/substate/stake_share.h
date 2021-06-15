@@ -30,3 +30,5 @@ bool parse_stake_share(buffer_t *buffer,
                        stake_share_t *stake_share);
 
 uint16_t status_word_for_failed_to_parse_stake_share(parse_stake_share_outcome_e failure_reason);
+
+void print_parse_stake_share_outcome(parse_stake_share_outcome_t *outcome);

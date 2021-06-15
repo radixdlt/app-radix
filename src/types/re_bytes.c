@@ -29,3 +29,19 @@ uint16_t status_word_for_failed_to_parse_bytes(parse_bytes_outcome_e outcome) {
             return ERR_CMD_SIGN_TX_PARSE_BYTES_WRONG_LENGTH;
     }
 }
+
+void print_parse_bytes_outcome(parse_bytes_outcome_e outcome) {
+    PRINTF("parse_bytes_outcome\n");
+    switch (outcome) {
+        case PARSE_BYTES_OK:
+            PRINTF("'OK'");
+            break;
+        case PARSE_BYTES_FAILED_TO_PARSE_LENGTH:
+            PRINTF("'FAILED_TO_PARSE_LENGTH'");
+            break;
+        case PARSE_BYTES_FAIL_WRONG_LENGTH:
+            PRINTF("'FAIL_WRONG_LENGTH'");
+            break;
+    }
+    PRINTF("\n");
+}

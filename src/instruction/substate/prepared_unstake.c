@@ -7,8 +7,8 @@ bool parse_prepared_unstake(buffer_t *buffer,
                             prepared_unstake_t *prepared_unstake) {
     // Parse field 'delegate'
     if (!buffer_move_fill_target(buffer,
-                     (uint8_t *) &prepared_unstake->delegate.public_key.compressed,
-                     PUBLIC_KEY_COMPRESSED_LEN)) {
+                                 (uint8_t *) &prepared_unstake->delegate.public_key.compressed,
+                                 PUBLIC_KEY_COMPRESSED_LEN)) {
         PRINTF("Failed to parse 'delegate' in substate 'PREPARED_UNSTAKE'.\n");
         outcome->outcome_type = PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_DELEGATE;
         return false;
@@ -48,4 +48,24 @@ uint16_t status_word_for_failed_to_parse_prepared_unstake(
         case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_AMOUNT:
             return ERR_CMD_SIGN_TX_PREPARED_UNSTAKE_PARSE_AMOUNT_FAILURE;
     }
+}
+
+void print_parse_prepared_unstake_outcome(parse_prepared_unstake_outcome_t *outcome) {
+    PRINTF("parse prepared unstake outcome: ");
+    switch (outcome->outcome_type) {
+        case PARSE_PREPARED_UNSTAKE_OK:
+            PRINTF("'OK'");
+            break;
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_DELEGATE:
+            PRINTF("'FAILURE_PARSE_DELEGATE'");
+            break;
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_OWNER:
+            PRINTF("'FAILURE_PARSE_OWNER' - printing reason:\n");
+            print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
+            break;
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_AMOUNT:
+            PRINTF("'FAILURE_PARSE_AMOUNT'");
+            break;
+    }
+    PRINTF("\n");
 }
