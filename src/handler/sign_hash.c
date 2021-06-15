@@ -30,7 +30,7 @@
 #include "../io.h"
 #include "../sw.h"
 #include "../crypto.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 #include "../ui/display.h"
 #include "../helper/send_response.h"
 
@@ -40,8 +40,12 @@ int handler_sign_hash(buffer_t *cdata) {
     G_context.req_type = CONFIRM_HASH;
     G_context.state = STATE_NONE;
 
-    if (!buffer_read_u8(cdata, &G_context.bip32_path_len) ||
-        !buffer_read_bip32_path(cdata, G_context.bip32_path, (size_t) G_context.bip32_path_len)) {
+    if (!buffer_read_u8(
+            cdata,
+            &G_context.sign_hash_info.signing.my_derived_public_key.bip32_path.path_len) ||
+        !buffer_read_bip32_path(
+            cdata,
+            &G_context.sign_hash_info.signing.my_derived_public_key.bip32_path)) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
@@ -50,11 +54,15 @@ int handler_sign_hash(buffer_t *cdata) {
         return io_send_sw(ERR_CMD_SIGN_HASH_PARSE_HASH_FAILURE_BAD_LENGTH);
     }
 
-    if (!buffer_move_fill_target(cdata, G_context.sig_info.digest, hash_len)) {
+    if (!buffer_move_fill_target(cdata, G_context.sign_hash_info.signing.digest, hash_len)) {
         return io_send_sw(ERR_CMD_SIGN_HASH_PARSE_HASH_FAILURE_TOO_SHORT);
     }
 
-    PRINTF("Hash: %.*H\n", sizeof(G_context.sig_info.digest), G_context.sig_info.digest);
+    PRINTF("Hash: %.*H\n",
+           sizeof(G_context.sign_hash_info.signing.digest),
+           G_context.sign_hash_info.signing.digest);
 
-    return ui_display_sign_hash(G_context.sig_info.digest, sizeof(G_context.sig_info.digest));
+    return ui_display_sign_hash(&G_context.sign_hash_info.signing.my_derived_public_key.bip32_path,
+                                G_context.sign_hash_info.signing.digest,
+                                sizeof(G_context.sign_hash_info.signing.digest));
 }

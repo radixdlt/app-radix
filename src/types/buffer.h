@@ -4,6 +4,8 @@
 #include <stddef.h>   // size_t
 #include <stdbool.h>  // bool
 
+#include "bip32_path.h"
+
 /**
  * Enumeration for endianness.
  */
@@ -133,21 +135,18 @@ bool buffer_read_u32(buffer_t *buffer, uint32_t *value, endianness_t endianness)
  */
 bool buffer_read_u64(buffer_t *buffer, uint64_t *value, endianness_t endianness);
 
-
 /**
  * Read BIP32 path from buffer.
  *
  * @param[in,out]  buffer
  *   Pointer to input buffer struct.
- * @param[out]     out
- *   Pointer to output 32-bit integer buffer.
- * @param[in]      out_len
- *   Number of BIP32 paths read in the output buffer.
+ * @param[out]     target
+ *   Pointer to output resulting path.
  *
  * @return true if success, false otherwise.
  *
  */
-bool buffer_read_bip32_path(buffer_t *buffer, uint32_t *out, size_t out_len);
+bool buffer_read_bip32_path(buffer_t *buffer, bip32_path_t *target);
 
 /**
  * Copy \p bytes_to_copy_count bytes from \p buffer without moving offset.
@@ -199,9 +198,10 @@ size_t number_of_remaining_bytes_in_buffer(const buffer_t *buffer);
 /**
  * Move bytes from buffer.
  *
- * \p out_len must be >= \p bytes_to_move_count, and number of remaining bytes in \p buffer must be
- * >= \p bytes_to_move_count. You can use method \code number_of_remaining_bytes_in_buffer to get
- * number of remaining bytes.
+ * \p out_len must be >= \p bytes_to_move_count, and number of remaining bytes in \p buffer must
+ * be
+ * >= \p bytes_to_move_count. You can use method \code number_of_remaining_bytes_in_buffer to
+ * get number of remaining bytes.
  *
  * It is also useful to \code debug_print_buffer.
  *

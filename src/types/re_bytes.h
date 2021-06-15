@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 
 #define MAX_BYTES_LEN 255
 

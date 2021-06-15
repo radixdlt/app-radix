@@ -30,7 +30,7 @@
 #include "../globals.h"
 #include "../crypto.h"
 #include "../ui/display.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 #include "../instruction/instruction.h"
 #include "../common/bech32_encode.h"
 #include "../helper/send_response.h"
@@ -77,7 +77,7 @@ static int parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fe
 static int parse_and_process_instruction_from_buffer(buffer_t *buffer,
                                                      transaction_parser_t *tx_parser) {
     instruction_parser_t *instruction_parser =
-        &G_context.tx_info.transaction_parser.instruction_parser;
+        &G_context.sign_tx_info.transaction_parser.instruction_parser;
 
     // Important to reset memory between subsequent instructions.
     explicit_bzero(&instruction_parser->instruction, sizeof(instruction_parser->instruction));
@@ -143,20 +143,30 @@ static int parse_and_process_instruction_from_buffer(buffer_t *buffer,
         add256(&tx_parser->transaction.tx_fee,
                &tx_parser->transaction.total_xrd_amount_incl_fee,
                &tx_parser->transaction.total_xrd_amount_incl_fee);
-    } else if (instruction_parser->instruction.ins_up.substate.type == SUBSTATE_TYPE_TOKENS &&
-               !public_key_equals(
-                   &tx_parser->my_derived_public_key.address.public_key,
-                   &instruction_parser->instruction.ins_up.substate.tokens.owner.public_key) &&
-               instruction_parser->instruction.ins_up.substate.tokens.rri.address_type ==
-                   RE_ADDRESS_NATIVE_TOKEN) {
-        PRINTF("Sending XRD in tokens transfer, will add to total cost:");
-        print_uint256(&instruction_parser->instruction.ins_up.substate.tokens.amount);
-        PRINTF("\n");
+    }
 
-        // Spending XRD => increment total XRD spent counter
-        add256(&instruction_parser->instruction.ins_up.substate.tokens.amount,
-               &tx_parser->transaction.total_xrd_amount_incl_fee,
-               &tx_parser->transaction.total_xrd_amount_incl_fee);
+    if (instruction_parser->instruction.ins_up.substate.type == SUBSTATE_TYPE_TOKENS) {
+        // My public key matches owner of tokens
+        bool token_amount_is_change_back_to_me = public_key_equals(
+            &tx_parser->signing.my_derived_public_key.address.public_key,
+            &instruction_parser->instruction.ins_up.substate.tokens.owner.public_key);
+
+        // I own the tokens and the rri matches XRD
+        bool increment_xrd_grand_total =
+            !token_amount_is_change_back_to_me &&
+            instruction_parser->instruction.ins_up.substate.tokens.rri.address_type ==
+                RE_ADDRESS_NATIVE_TOKEN;
+
+        if (increment_xrd_grand_total) {
+            PRINTF("Spending XRD in tokens transfer, will add to total cost:");
+            print_uint256(&instruction_parser->instruction.ins_up.substate.tokens.amount);
+            PRINTF("\n");
+
+            // Spending XRD => increment total XRD spent counter
+            add256(&instruction_parser->instruction.ins_up.substate.tokens.amount,
+                   &tx_parser->transaction.total_xrd_amount_incl_fee,
+                   &tx_parser->transaction.total_xrd_amount_incl_fee);
+        }
     }
 
     bool was_last_apdu = tx_parser->config.transaction_metadata.number_of_instructions_received ==
@@ -182,7 +192,7 @@ static int parse_and_process_instruction_from_buffer(buffer_t *buffer,
                 buffer->ptr,
                 buffer->size,
                 was_last_apdu,
-                tx_parser->digest,
+                tx_parser->signing.digest,
                 HASH_LEN);
 
     if (was_last_apdu) {
@@ -198,17 +208,17 @@ static int parse_and_process_instruction_from_buffer(buffer_t *buffer,
             PRINTF(
                 "You have specified to skip displaying TX summary UI => sign tx hash "
                 "immediately.\n");
-            if (!crypto_sign_message(tx_parser->digest, HASH_LEN)) {
+            if (!crypto_sign_message(&tx_parser->signing)) {
                 G_context.state = STATE_NONE;
                 return io_send_sw(ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL);
             } else {
                 return helper_send_response_signature(
                     true,
-                    tx_parser->digest);  // also respond with `hash`: true
+                    &tx_parser->signing);  // also respond with `hash`: true
             }
         }
 
-        return ui_display_tx_summary(&tx_parser->transaction, tx_parser->digest, HASH_LEN);
+        return ui_display_tx_summary(&tx_parser->transaction, tx_parser->signing.digest);
 
     } else {
         G_parse_tx_state_did_parse_new();
@@ -216,7 +226,7 @@ static int parse_and_process_instruction_from_buffer(buffer_t *buffer,
         // Not done yet => tell host machine to continue sending next RE instruction.
         if (does_instruction_need_to_be_displayed(
                 &instruction_parser->instruction,
-                &tx_parser->my_derived_public_key.address.public_key)) {
+                &tx_parser->signing.my_derived_public_key.address.public_key)) {
             if (tx_parser->config.parsed_instruction_display_config.display_substate_contents) {
                 PRINTF("Newly parsed instruction needs to be displayed to user.\n");
                 G_parse_tx_state_ins_needs_approval();
@@ -254,9 +264,7 @@ static bool derive_my_public_key(derived_public_key_t *my_derived_pubkey) {
 
     // SHOULD _NOT_ return early if `crypto_derive_private_key` or `crypto_init_public_key` fails,
     // because we SHOULD zero out `private_key`.
-    bool success = crypto_derive_private_key(&private_key,
-                                             my_derived_pubkey->bip32_path,
-                                             my_derived_pubkey->bip32_path_len) &&
+    bool success = crypto_derive_private_key(&private_key, &my_derived_pubkey->bip32_path) &&
                    crypto_init_public_key(&private_key, &public_key);
 
     explicit_bzero(&private_key, sizeof(private_key));
@@ -273,10 +281,8 @@ static bool parse_tx_parser_config_tx_metadata(buffer_t *buffer,
                                                transaction_metadata_t *metadata,
                                                derived_public_key_t *my_derived_public_key) {
     // PARSE BIP32
-    if (!buffer_read_u8(buffer, &my_derived_public_key->bip32_path_len) ||
-        !buffer_read_bip32_path(buffer,
-                                my_derived_public_key->bip32_path,
-                                (size_t) my_derived_public_key->bip32_path_len)) {
+    if (!buffer_read_u8(buffer, &my_derived_public_key->bip32_path.path_len) ||
+        !buffer_read_bip32_path(buffer, &my_derived_public_key->bip32_path)) {
         *outcome = PARSE_TX_METADATA_PARSE_BIP32_FAILURE;
         return false;
     }
@@ -369,14 +375,14 @@ static bool init_tx_parser(buffer_t *buffer,
     if (!parse_tx_parser_config(buffer,
                                 &outcome->metadata_failure,
                                 &tx_parser->config,
-                                &tx_parser->my_derived_public_key)) {
+                                &tx_parser->signing.my_derived_public_key)) {
         outcome->outcome_type = SETUP_SIGN_TX_FAILED_TO_PARSE_METADATA;
         return false;
     }
 
     // Need our public key to compare against recipient addresses in transfer/stake to identify
     // spent amount and amounts being change back to ourselves
-    if (!derive_my_public_key(&tx_parser->my_derived_public_key)) {
+    if (!derive_my_public_key(&tx_parser->signing.my_derived_public_key)) {
         outcome->outcome_type = SETUP_SIGN_TX_FAILED_TO_DERIVE_MY_PUBLIC_KEY;
         return false;
     }
@@ -400,7 +406,7 @@ static bool init_tx_parser(buffer_t *buffer,
  * @return false
  */
 static bool init_sign_transaction_flow(buffer_t *buffer, setup_sign_tx_outcome_t *outcome) {
-    if (!init_tx_parser(buffer, outcome, &G_context.tx_info.transaction_parser)) {
+    if (!init_tx_parser(buffer, outcome, &G_context.sign_tx_info.transaction_parser)) {
         PRINTF("Failed to initialize transaction parser.\n");
         return false;
     }
@@ -427,7 +433,8 @@ static int handle_initial_setup_apdu(buffer_t *buffer) {
 }
 
 static int handle_single_re_ins_apdu(buffer_t *buffer) {
-    return parse_and_process_instruction_from_buffer(buffer, &G_context.tx_info.transaction_parser);
+    return parse_and_process_instruction_from_buffer(buffer,
+                                                     &G_context.sign_tx_info.transaction_parser);
 }
 
 int handler_sign_tx(buffer_t *cdata, bool is_initial_setup_apdu) {

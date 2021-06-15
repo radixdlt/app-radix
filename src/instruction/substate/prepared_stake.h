@@ -1,8 +1,12 @@
-#include "../re_address.h"
-#include "../uint256.h"
-#include "../../constants.h"
+#pragma once
+
 #include "../../sw.h"
-#include "../../common/public_key.h"
+#include "../../constants.h"
+
+#include "../../types/re_address.h"
+#include "../../types/uint256.h"
+#include "../../types/public_key.h"
+#include "../../types/buffer.h"
 
 typedef struct {
     re_address_t owner;

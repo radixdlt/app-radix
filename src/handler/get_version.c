@@ -26,7 +26,7 @@
 #include "../sw.h"
 
 #include "../state.h"
-#include "common/buffer.h"
+#include "types/buffer.h"
 
 int handler_get_version() {
     PRINTF("\n.-~=: GET_VERSION called :=~-.\n\n");

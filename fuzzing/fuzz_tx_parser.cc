@@ -4,7 +4,7 @@
 #include <sys/state.h>
 
 extern "C" {
-#include "common/buffer.h"
+#include "types/buffer.h"
 #include "common/format.h"
 #include "state.h"
 }

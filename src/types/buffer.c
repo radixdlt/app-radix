@@ -21,7 +21,6 @@
 
 #include "buffer.h"
 #include "read.h"
-#include "bip32.h"
 #include "os.h"
 
 size_t number_of_remaining_bytes_in_buffer(const buffer_t *buffer) {
@@ -127,16 +126,12 @@ bool buffer_read_u64(buffer_t *buffer, uint64_t *value, endianness_t endianness)
     return true;
 }
 
-
-bool buffer_read_bip32_path(buffer_t *buffer, uint32_t *out, size_t out_len) {
-    if (!bip32_path_read(buffer->ptr + buffer->offset,
-                         buffer->size - buffer->offset,
-                         out,
-                         out_len)) {
+bool buffer_read_bip32_path(buffer_t *buffer, bip32_path_t *target) {
+    if (!bip32_path_read(buffer->ptr + buffer->offset, buffer->size - buffer->offset, target)) {
         return false;
     }
 
-    buffer_seek_cur(buffer, sizeof(*out) * out_len);
+    buffer_seek_cur(buffer, sizeof(*target->path) * target->path_len);
 
     return true;
 }

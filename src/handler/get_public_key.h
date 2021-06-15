@@ -5,7 +5,7 @@
 #include <stdint.h>   // uint*_t
 
 #include "../state.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 
 /**
  * Handler for GET_PUBLIC_KEY command. If successfully parse BIP32 path,

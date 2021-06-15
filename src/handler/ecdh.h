@@ -5,7 +5,7 @@
 #include <stdint.h>   // uint*_t
 
 #include "../state.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 
 /**
  * Handler for ECDH (Diffie-Hellman) key exchange command. If successfully parse BIP32 path,

@@ -30,9 +30,9 @@
 #include "../globals.h"
 #include "../io.h"
 #include "../sw.h"
-#include "../instruction/re_address.h"
 #include "action/validate.h"
-#include "../common/bip32.h"
+#include "../types/re_address.h"
+#include "../types/bip32_path.h"
 #include "../common/format.h"
 #include "../macros.h"  // ASSERT
 
@@ -101,6 +101,11 @@ static bool format_other_token_for_display(re_address_t *re_address,
                                               sizeof(g_rri));
 }
 
+static bool format_bip32_path(bip32_path_t *bip32) {
+    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
+    return bip32_path_format(bip32, g_bip32_path, sizeof(g_bip32_path));
+}
+
 // Step with approve button
 UX_STEP_CB(ux_display_approve_step,
            pb,
@@ -162,7 +167,7 @@ UX_FLOW(ux_display_pubkey_flow,
         &ux_display_approve_step,
         &ux_display_reject_step);
 
-int ui_display_address_from_get_pubkey_cmd() {
+int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_public_key) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_ADDRESS || G_context.state != STATE_NONE) {
@@ -171,16 +176,12 @@ int ui_display_address_from_get_pubkey_cmd() {
     }
 
     // Prepare BIP32 path for display
-    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
-    if (!bip32_path_format(G_context.bip32_path,
-                           G_context.bip32_path_len,
-                           g_bip32_path,
-                           sizeof(g_bip32_path))) {
+    if (!format_bip32_path(&my_derived_public_key->bip32_path)) {
         return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
 
     // Prepare Address for display
-    if (!format_account_address_for_display(&G_context.pk_info.my_address)) {
+    if (!format_account_address_for_display(&my_derived_public_key->address)) {
         return io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
     }
 
@@ -222,7 +223,7 @@ UX_FLOW(ux_display_sign_hash_flow,
         &ux_display_approve_step,
         &ux_display_reject_step);
 
-int ui_display_sign_hash(uint8_t *hash, size_t hash_len) {
+int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_len) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_HASH) {
@@ -230,11 +231,7 @@ int ui_display_sign_hash(uint8_t *hash, size_t hash_len) {
     }
 
     // Prepare BIP32 path for display
-    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
-    if (!bip32_path_format(G_context.bip32_path,
-                           G_context.bip32_path_len,
-                           g_bip32_path,
-                           sizeof(g_bip32_path))) {
+    if (!format_bip32_path(bip32_path)) {
         return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
 
@@ -287,7 +284,8 @@ UX_FLOW(ux_display_ecdh_flow,
         &ux_display_approve_step,
         &ux_display_reject_step);
 
-int ui_display_ecdh() {
+int ui_display_ecdh(derived_public_key_t *my_derived_public_key,
+                    re_address_t *other_party_address) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_ECDH) {
@@ -295,16 +293,12 @@ int ui_display_ecdh() {
     }
 
     // Prepare BIP32 path for display
-    explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
-    if (!bip32_path_format(G_context.bip32_path,
-                           G_context.bip32_path_len,
-                           g_bip32_path,
-                           sizeof(g_bip32_path))) {
+    if (!format_bip32_path(&my_derived_public_key->bip32_path)) {
         return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
 
     // Prepare to display other party address
-    if (!format_account_address_for_display(&G_context.ecdh_info.other_party_address)) {
+    if (!format_account_address_for_display(other_party_address)) {
         return io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
     }
 
@@ -367,7 +361,7 @@ UX_FLOW(ux_display_tx_summary_flow,
         &ux_display_approve_sign_tx_step,            // #5 screen: approve button
         &ux_display_reject_step);                    // #6 screen: reject button
 
-int ui_display_tx_summary(transaction_t *transaction, uint8_t *hash, size_t hash_len) {
+int ui_display_tx_summary(transaction_t *transaction, uint8_t hash[static HASH_LEN]) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
@@ -392,7 +386,7 @@ int ui_display_tx_summary(transaction_t *transaction, uint8_t *hash, size_t hash
     PRINTF("Amount: %s\n", g_amount);
 
     // Prepare HASH for display
-    snprintf(g_hash, sizeof(g_hash), "%.*h", hash_len, hash);
+    snprintf(g_hash, sizeof(g_hash), "%.*h", HASH_LEN, hash);
 
     g_validate_callback = &ui_action_validate_sign_tx;
 
@@ -458,7 +452,7 @@ static void ui_display_tokens(tokens_t *tokens) {
 
     // Prepare tokens RRI
     transaction_metadata_t *tx_metadata =
-        &G_context.tx_info.transaction_parser.config.transaction_metadata;
+        &G_context.sign_tx_info.transaction_parser.config.transaction_metadata;
     if (tokens->rri.address_type == RE_ADDRESS_HASHED_KEY_NONCE) {
         // Would be nice to avoid this global state access...
         if (tx_metadata->hrp_non_native_token_len == 0) {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../common/buffer.h"
+#include "buffer.h"
 #include "re_address_type.h"
 #include "../constants.h"
-#include "../common/public_key.h"
+#include "public_key.h"
 
 #define RE_ADDR_HASHED_KEY_LEN 26
 

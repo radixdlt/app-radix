@@ -19,7 +19,7 @@
 #include <string.h>     // strncpy, memmove
 #include <stdbool.h>    // bool
 #include "../macros.h"  // ASSERT
-#include "../instruction/uint256.h"
+#include "../types/uint256.h"
 
 #include "format.h"
 

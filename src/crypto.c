@@ -61,15 +61,16 @@ static int __crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
 }
 bool crypto_derive_private_key_and_chain_code(cx_ecfp_private_key_t *private_key,
                                               uint8_t chain_code[static CHAIN_CODE_LEN],
-                                              const uint32_t *bip32_path,
-                                              uint8_t bip32_path_len) {
-    return __crypto_derive_private_key(private_key, chain_code, bip32_path, bip32_path_len) == 0;
+                                              bip32_path_t *bip32_path) {
+    return __crypto_derive_private_key(private_key,
+                                       chain_code,
+                                       bip32_path->path,
+                                       bip32_path->path_len) == 0;
 }
 
-bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
-                               const uint32_t *bip32_path,
-                               uint8_t bip32_path_len) {
-    return __crypto_derive_private_key(private_key, NULL, bip32_path, bip32_path_len) == 0;
+bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key, bip32_path_t *bip32_path) {
+    return __crypto_derive_private_key(private_key, NULL, bip32_path->path, bip32_path->path_len) ==
+           0;
 }
 
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
@@ -169,13 +170,18 @@ bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
 /// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
 
-static int __crypto_sign_message(const uint8_t *hash, size_t hash_len) {
+static int __crypto_sign_message(const uint8_t *hash,
+                                 size_t hash_len,
+                                 bip32_path_t *bip32_path,
+                                 uint8_t *der,
+                                 uint8_t *der_len,
+                                 uint8_t *v) {
     cx_ecfp_private_key_t private_key = {0};
     uint32_t info = 0;
     int sig_len = 0;
 
     // derive private key according to BIP32 path
-    crypto_derive_private_key(&private_key, G_context.bip32_path, G_context.bip32_path_len);
+    crypto_derive_private_key(&private_key, bip32_path);
 
     BEGIN_TRY {
         TRY {
@@ -184,10 +190,10 @@ static int __crypto_sign_message(const uint8_t *hash, size_t hash_len) {
                                     CX_SHA256,
                                     hash,
                                     hash_len,
-                                    G_context.sig_info.signature,
-                                    sizeof(G_context.sig_info.signature),
+                                    der,
+                                    *der_len,
                                     &info);
-            PRINTF("Signature: %.*h\n", sig_len, G_context.sig_info.signature);
+            PRINTF("Signature: %.*h\n", sig_len, der);
         }
         CATCH_OTHER(e) {
             THROW(e);
@@ -202,33 +208,43 @@ static int __crypto_sign_message(const uint8_t *hash, size_t hash_len) {
         return -1;
     }
 
-    G_context.sig_info.signature_len = sig_len;
-    G_context.sig_info.v = (uint8_t) (info & CX_ECCINFO_PARITY_ODD);
+    *der_len = sig_len;
+    *v = (uint8_t) (info & CX_ECCINFO_PARITY_ODD);
 
     return 0;
 }
-bool crypto_sign_message(const uint8_t *hash, size_t hash_len) {
-    return __crypto_sign_message(hash, hash_len) == 0;
+bool crypto_sign_message(signing_t *signing) {
+    if (!signing->signature.der_len) {
+        signing->signature.der_len = MAX_DER_SIG_LEN;
+    }
+    return __crypto_sign_message(signing->digest,
+                                 sizeof(signing->digest),
+                                 &signing->my_derived_public_key.bip32_path,
+                                 signing->signature.der,
+                                 &signing->signature.der_len,
+                                 &signing->signature.v) == 0;
 }
 
 /// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
 /// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
-
-static int __crypto_ecdh(void) {
+static int __crypto_ecdh(bip32_path_t *bip32_path,
+                         cx_ecfp_public_key_t *other_party_public_key,
+                         uint8_t *shared_pubkey_point,
+                         size_t shared_pubkey_point_len) {
     cx_ecfp_private_key_t private_key = {0};
     int sharedkey_len = 0;
 
     // derive private key according to BIP32 path
-    crypto_derive_private_key(&private_key, G_context.bip32_path, G_context.bip32_path_len);
+    crypto_derive_private_key(&private_key, bip32_path);
 
     BEGIN_TRY {
         TRY {
             sharedkey_len = cx_ecdh(&private_key,
                                     CX_ECDH_POINT,  // or `CX_ECDH_X`
-                                    G_context.ecdh_info.other_party_public_key.W,
-                                    G_context.ecdh_info.other_party_public_key.W_len,
-                                    G_context.ecdh_info.shared_pubkey_point,
-                                    sizeof(G_context.ecdh_info.shared_pubkey_point));
+                                    other_party_public_key->W,
+                                    other_party_public_key->W_len,
+                                    shared_pubkey_point,
+                                    shared_pubkey_point_len);
             PRINTF("Derived shared key with length: %d\n", sharedkey_len);
         }
         CATCH_OTHER(e) {
@@ -246,12 +262,19 @@ static int __crypto_ecdh(void) {
 
     return 0;
 }
-bool crypto_ecdh(void) {
-    return __crypto_ecdh() == 0;
+
+bool crypto_ecdh(bip32_path_t *bip32_path,
+                 cx_ecfp_public_key_t *other_party_public_key,
+                 uint8_t shared_pubkey_point[static PUBLIC_KEY_POINT_LEN]) {
+    return __crypto_ecdh(bip32_path,
+                         other_party_public_key,
+                         shared_pubkey_point,
+                         PUBLIC_KEY_POINT_LEN) == 0;
 }
 
-/// Return int, and let correspondng method that returns bool call this and compare vs 0. Probably
-/// some Ledger SDK magic happning here. This is what Ledgers Boilerplate app does.
+/// Return int, and let correspondng method that returns bool call this and compare
+/// vs 0. Probably some Ledger SDK magic happning here. This is what Ledgers
+/// Boilerplate app does.
 static int __sha256_hash(cx_sha256_t *hash_context,
                          const uint8_t *in,
                          const size_t in_len,

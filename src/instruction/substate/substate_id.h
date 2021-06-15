@@ -2,7 +2,7 @@
 
 #include <stdint.h>        // uint8_t, uint32_t
 #include "../constants.h"  // HASH_LEN
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 
 #define SUBSTATE_ID_HASH_LEN HASH_LEN
 

@@ -6,7 +6,7 @@
 
 #include <cmocka.h>
 
-#include "common/buffer.h"
+#include "types/buffer.h"
 
 static void test_buffer_can_read(void **state) {
     (void) state;

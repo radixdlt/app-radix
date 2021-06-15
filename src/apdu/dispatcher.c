@@ -24,7 +24,7 @@
 #include "../state.h"
 #include "../io.h"
 #include "../sw.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 #include "../handler/get_version.h"
 #include "../handler/get_app_name.h"
 #include "../handler/get_public_key.h"

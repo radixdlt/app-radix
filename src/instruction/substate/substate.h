@@ -1,15 +1,14 @@
-
 #pragma once
 
 #include "substate_type.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 #include "tokens.h"
 #include "prepared_stake.h"
 #include "prepared_unstake.h"
 #include "stake_share.h"
 #include "cx.h"
 
-#include "../../common/public_key.h"
+#include "../../types/public_key.h"
 
 typedef struct {
     re_substate_type_e type;

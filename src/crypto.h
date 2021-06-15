@@ -8,7 +8,8 @@
 #include "cx.h"
 
 #include "constants.h"
-#include "common/public_key.h"
+#include "state.h"  // `signing_t`, `bip32_path_t`
+#include "types/public_key.h"
 
 /**
  * Derive private key given BIP32 path, outputs resulting chain code.
@@ -19,8 +20,6 @@
  *   Pointer to 32 bytes array for chain code.
  * @param[in]  bip32_path
  *   Pointer to buffer with BIP32 path.
- * @param[in]  bip32_path_len
- *   Number of path in BIP32 path.
  *
  * @return `true` iff success, otherwise `false.
  *
@@ -29,8 +28,7 @@
  */
 bool crypto_derive_private_key_and_chain_code(cx_ecfp_private_key_t *private_key,
                                               uint8_t chain_code[static CHAIN_CODE_LEN],
-                                              const uint32_t *bip32_path,
-                                              uint8_t bip32_path_len);
+                                              bip32_path_t *bip32_path);
 
 /**
  * Derive private key given BIP32 path, but discards chain code.
@@ -39,17 +37,13 @@ bool crypto_derive_private_key_and_chain_code(cx_ecfp_private_key_t *private_key
  *   Pointer to private key.
  * @param[in]  bip32_path
  *   Pointer to buffer with BIP32 path.
- * @param[in]  bip32_path_len
- *   Number of path in BIP32 path.
  *
  * @return `true` iff success, otherwise `false.
  *
  * @throw INVALID_PARAMETER
  *
  */
-bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key,
-                               const uint32_t *bip32_path,
-                               uint8_t bip32_path_len);
+bool crypto_derive_private_key(cx_ecfp_private_key_t *private_key, bip32_path_t *bip32_path);
 
 /**
  * Initialize public key given private key.
@@ -120,31 +114,21 @@ bool crypto_compress_public_key_raw(cx_ecfp_public_key_t *public_key,
 bool crypto_compress_public_key(cx_ecfp_public_key_t *public_key,
                                 public_key_t *public_key_compressed);
 
-/**
- * Sign message hash in global context.
- *
- * @see G_context.bip32_path, G_context.tx_info.m_hash,
- * G_context.tx_info.signature.
- *
- * @return `true` iff success, otherwise `false.
- *
- * @throw INVALID_PARAMETER
- *
- */
-bool crypto_sign_message(const uint8_t *hash, size_t hash_len);
+bool crypto_sign_message(signing_t *signing);
 
 /**
- * @brief Performs ECDH with provided public key.
+ * @brief Performs ECDH key exchange between your key at \p bip32_path and \p
+ * other_party_public_key and put result in \p shared_pubkey_point.
  *
- * Performs an ECDH key echange with key at BIP32 path and provided publickey point of some other
- * party.
- *
- *  * @see G_context.bip32_path, ecdh_info.other_party_public_key,
- * ecdh_info.shared_pubkey_point.
- *
- * @return `true` iff success, otherwise `false`.
+ * @param bip32_path
+ * @param other_party_public_key
+ * @param shared_pubkey_point
+ * @return true
+ * @return false
  */
-bool crypto_ecdh(void);
+bool crypto_ecdh(bip32_path_t *bip32_path,
+                 cx_ecfp_public_key_t *other_party_public_key,
+                 uint8_t shared_pubkey_point[static PUBLIC_KEY_POINT_LEN]);
 
 /**
  * @brief Updates hasher.

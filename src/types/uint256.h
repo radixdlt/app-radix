@@ -73,7 +73,7 @@ bool tostring256(uint256_t *number, uint32_t base, char *out, uint32_t outLength
 // Extension by Alexander Cyon @ Radix DLT
 #define UINT256_DEC_STRING_MAX_LENGTH 78
 #define UINT256_BYTE_COUNT            32
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 
 /**
  * @brief Parse a \struct uint256_t from \p buffer.

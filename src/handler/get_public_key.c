@@ -29,10 +29,10 @@
 #include "../io.h"
 #include "../sw.h"
 #include "../crypto.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
+#include "../types/re_address.h"
 #include "../ui/display.h"
 #include "../helper/send_response.h"
-#include "../instruction/re_address.h"
 
 int handler_get_public_key(buffer_t *cdata, bool display) {
     PRINTF("\n.-~=: GET_PUBLIC_KEY called :=~-.\n\n");
@@ -43,31 +43,33 @@ int handler_get_public_key(buffer_t *cdata, bool display) {
     cx_ecfp_private_key_t private_key = {0};
     cx_ecfp_public_key_t public_key = {0};
 
-    if (!buffer_read_u8(cdata, &G_context.bip32_path_len) ||
-        !buffer_read_bip32_path(cdata, G_context.bip32_path, (size_t) G_context.bip32_path_len)) {
+    if (!buffer_read_u8(cdata, &G_context.ecdh_info.my_derived_public_key.bip32_path.path_len) ||
+        !buffer_read_bip32_path(
+            cdata,
+            &G_context.ecdh_info.my_derived_public_key.bip32_path)) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
     // derive private key according to BIP32 path
     crypto_derive_private_key_and_chain_code(&private_key,
                                              G_context.pk_info.chain_code,
-                                             G_context.bip32_path,
-                                             G_context.bip32_path_len);
+                                             &G_context.ecdh_info.my_derived_public_key.bip32_path);
     // generate corresponding public key
     crypto_init_and_export_public_key(&private_key,
                                       &public_key,
                                       G_context.pk_info.raw_uncompressed_public_key);
 
-    if (!crypto_compress_public_key(&public_key, &G_context.pk_info.my_address.public_key)) {
+    if (!crypto_compress_public_key(&public_key,
+                                    &G_context.pk_info.my_derived_public_key.address.public_key)) {
         return io_send_sw(ERR_CMD_GET_PUBLIC_KEY_FAILED_TO_COMPRESS_KEY);
     }
-    G_context.pk_info.my_address.address_type = RE_ADDRESS_PUBLIC_KEY;
+    G_context.pk_info.my_derived_public_key.address.address_type = RE_ADDRESS_PUBLIC_KEY;
 
     // reset private key
     explicit_bzero(&private_key, sizeof(private_key));
 
     if (display) {
-        return ui_display_address_from_get_pubkey_cmd();
+        return ui_display_address_from_get_pubkey_cmd(&G_context.pk_info.my_derived_public_key);
     }
 
     return helper_send_response_pubkey();

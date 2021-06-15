@@ -37,12 +37,13 @@ void ui_action_validate_pubkey(user_accepted_t user_accepted) {
 
 static void __ui_action_validate_sign_hash_cmd(user_accepted_t user_accepted,
                                                bool include_hash_in_response,
-                                               const uint8_t *hash,
-                                               size_t hash_len) {
+                                               signing_t *signing
+
+) {
     if (user_accepted) {
         G_context.state = STATE_APPROVED;
 
-        if (!crypto_sign_message(hash, hash_len)) {
+        if (!crypto_sign_message(signing)) {
             G_context.state = STATE_NONE;
             if (include_hash_in_response) {
                 io_send_sw(ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL);
@@ -51,7 +52,7 @@ static void __ui_action_validate_sign_hash_cmd(user_accepted_t user_accepted,
             }
 
         } else {
-            helper_send_response_signature(include_hash_in_response, hash);
+            helper_send_response_signature(include_hash_in_response, signing);
         }
     } else {
         G_context.state = STATE_NONE;
@@ -80,22 +81,22 @@ void ui_action_validate_instruction(user_accepted_t user_accepted) {
 void ui_action_validate_sign_hash(user_accepted_t user_accepted) {
     return __ui_action_validate_sign_hash_cmd(user_accepted,
                                               false,
-                                              G_context.sig_info.digest,
-                                              HASH_LEN);
+                                              &G_context.sign_hash_info.signing);
 }
 
 void ui_action_validate_sign_tx(user_accepted_t user_accepted) {
     // TODO refactor to avoid GLOBAL state/variable access. Hmm, maybe we can
     return __ui_action_validate_sign_hash_cmd(user_accepted,
                                               true,
-                                              G_context.tx_info.transaction_parser.digest,
-                                              HASH_LEN);
+                                              &G_context.sign_hash_info.signing);
 }
 
 void ui_action_validate_sharedkey(user_accepted_t user_accepted) {
     if (user_accepted) {
         G_context.state = STATE_APPROVED;
-        if (!crypto_ecdh()) {
+        if (!crypto_ecdh(&G_context.ecdh_info.my_derived_public_key.bip32_path,
+                         &G_context.ecdh_info.other_party_public_key,
+                         G_context.ecdh_info.shared_pubkey_point)) {
             G_context.state = STATE_NONE;
             io_send_sw(ERR_CMD_ECDH_COMPUTE_SHARED_KEY_FAILURE);
         } else {
