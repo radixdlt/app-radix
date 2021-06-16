@@ -39,30 +39,32 @@ include_directories(../src)
 
 add_executable(test_tx_parser test_tx_parser.c)
 
-# add_library(base58 SHARED ../src/common/base58.c)
-# add_library(bip32 SHARED ../src/common/bip32.c)
-# add_library(buffer SHARED ../src/common/buffer.c)
-# add_library(read SHARED ../src/common/read.c)
-# add_library(write SHARED ../src/common/write.c)
-# add_library(format SHARED ../src/common/format.c)
-# add_library(varint SHARED ../src/common/varint.c)
-# add_library(apdu_parser SHARED ../src/apdu/parser.c)
+add_library(bip32 SHARED ../src/types/bip32_path.c)
+add_library(format SHARED ../src/common/format.c)
 
 add_library(transaction ../src/transaction/transaction.c)
+add_library(transaction_parser ../src/transaction/transaction_parser.c)
+add_library(transaction_metadata ../src/transaction/transaction_metadata.c)
+add_library(instruction_display_config ../src/transaction/instruction_display_config.c)
+add_library(init_transaction_parser_config ../src/transaction/init_transaction_parser_config.c)
+
+
+add_library(instruction_type ../src/instruction/instruction_type.c)
+add_library(substate_type ../src/instruction/substate/substate_type.c)
 
 
 target_link_libraries(test_tx_parser PUBLIC
                       cmocka
                       gcov
-                      # write
-                      # bip32
-                      # buffer
-                      # read
-                      # varint
-                      # transaction_deserialize
-                      # transaction_serialize
-                      # transaction_utils
-
+                      transaction
+                      transaction_parser
+                      transaction_metadata
+                      instruction_type
+                      instruction_display_config
+                      init_transaction_parser_config
+                      substate_type
+                      bip32
+                      format
                       )
 
 add_test(test_tx_parser test_tx_parser)
