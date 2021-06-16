@@ -58,7 +58,7 @@ endif
 
 include $(BOLOS_SDK)/Makefile.defines
 
-BIP44_COIN_TYPE_RADIX= "44'/536'"
+BIP44_COIN_TYPE_RADIX= "44'/1022'"
 
 APP_LOAD_PARAMS  = --curve secp256k1
 APP_LOAD_PARAMS += --appFlags 0x240
