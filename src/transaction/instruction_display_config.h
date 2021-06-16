@@ -7,4 +7,4 @@ typedef struct {
                                      /// use 'false' for testing.
     bool display_tx_summary;  /// If a summary of the contents of a transaction should be displayed,
                               /// convenient to use 'false' for testing.
-} parsed_instruction_display_config_t;
+} instruction_display_config_t;

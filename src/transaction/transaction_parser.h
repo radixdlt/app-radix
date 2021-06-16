@@ -3,7 +3,7 @@
 #include "os.h"  // cx_sha256_t
 
 #include "signing.h"
-#include "transaction_parser_config.h"
+#include "init_transaction_parser_config.h"
 #include "instruction_parser.h"
 #include "transaction.h"
 #include "../types/status_word.h"
@@ -39,7 +39,8 @@ typedef struct {
 typedef struct {
     cx_sha256_t hasher;
     signing_t signing;
-    transaction_parser_config_t config;  ///
+    transaction_metadata_t transaction_metadata;
+    instruction_display_config_t instruction_display_config;
     instruction_parser_t
         instruction_parser;  /// Parsing of individual instructions in the transaction to sign
 
@@ -67,3 +68,17 @@ void print_parse_process_instruction_outcome(parse_and_process_instruction_outco
  * @return false if fail
  */
 bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee);
+
+typedef enum {
+    INIT_TX_PARSER_OK,
+    INIT_TX_PARSER_INVALID_TX_METADATA_IN_CONFIG,
+    INIT_TX_PARSER_FAILED_TO_DERIVE_MY_PUBLIC_KEY,
+} init_tx_parser_outcome_e;
+
+typedef struct {
+    init_tx_parser_outcome_e outcome_type;
+} init_tx_parser_outcome_t;
+
+bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
+                                init_transaction_parser_config_t *config,
+                                init_tx_parser_outcome_t *outcome);

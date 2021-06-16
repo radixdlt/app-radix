@@ -221,14 +221,14 @@ static void test_parse_tx(void **state) {
     assert_true(format_bip32_successful);
     assert_string_equal(output, "m/44'/536'/2'/1/3");
 
-    const parsed_instruction_display_config_t ins_display_config = (const parsed_instruction_display_config_t){
+    const instruction_display_config_t ins_display_config = (const instruction_display_config_t){
         .display_substate_contents = true,
         .display_tx_summary = true,
     };
 
-	const transaction_parser_config_t tx_parser_config = (const transaction_parser_config_t){
+	const init_transaction_parser_config_t tx_parser_config = (const init_transaction_parser_config_t){
 		.transaction_metadata = transaction_metadata,
-		.parsed_instruction_display_config = ins_display_config,
+		.instruction_display_config = ins_display_config,
 		.bip32_path = bip32_path,
 	};
 

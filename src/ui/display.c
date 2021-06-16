@@ -468,7 +468,7 @@ static void ui_display_tokens(tokens_t *tokens) {
 
     // Prepare tokens RRI
     transaction_metadata_t *tx_metadata =
-        &G_context.sign_tx_info.transaction_parser.config.transaction_metadata;
+        &G_context.sign_tx_info.transaction_parser.transaction_metadata;
     if (tokens->rri.address_type == RE_ADDRESS_HASHED_KEY_NONCE) {
         // Would be nice to avoid this global state access...
         if (tx_metadata->hrp_non_native_token_len == 0) {

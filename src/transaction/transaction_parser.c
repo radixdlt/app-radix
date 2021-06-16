@@ -98,9 +98,10 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
         return false;
     }
 
-    tx_parser->config.transaction_metadata.tx_bytes_received_count += buffer->size;
-    if (tx_parser->config.transaction_metadata.tx_bytes_received_count >
-        tx_parser->config.transaction_metadata.tx_byte_count) {
+    transaction_metadata_t *tx_metadata = &tx_parser->transaction_metadata;
+
+    tx_metadata->tx_bytes_received_count += buffer->size;
+    if (tx_metadata->tx_bytes_received_count > tx_metadata->tx_byte_count) {
         outcome->outcome_type = PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH;
         return false;
     }
@@ -111,7 +112,7 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
         return false;
     }
 
-    tx_parser->config.transaction_metadata.number_of_instructions_received += 1;
+    tx_metadata->number_of_instructions_received += 1;
 
     if (instruction_parser->instruction.ins_type == INS_HEADER) {
         bool mint_and_burn_is_forbidden = instruction_parser->instruction.ins_header.flag ==
@@ -160,8 +161,8 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
         }
     }
 
-    bool was_last_apdu = tx_parser->config.transaction_metadata.number_of_instructions_received ==
-                         tx_parser->config.transaction_metadata.total_number_of_instructions;
+    bool was_last_apdu =
+        tx_metadata->number_of_instructions_received == tx_metadata->total_number_of_instructions;
 
     // Update the hash
     update_hash(&tx_parser->hasher,
@@ -172,65 +173,110 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
                 HASH_LEN);
 
     if (was_last_apdu) {
-        if (tx_parser->config.transaction_metadata.tx_bytes_received_count !=
-            tx_parser->config.transaction_metadata.tx_byte_count) {
+        if (tx_metadata->tx_bytes_received_count != tx_metadata->tx_byte_count) {
             outcome->outcome_type = PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH;
             return false;
         }
 
-        // G_parse_tx_state_finished_parsing_all();
         if (instruction_parser->instruction.ins_type != INS_END) {
-            // return io_send_sw(ERR_CMD_SIGN_TX_LAST_INSTRUCTION_WAS_NOT_INS_END);
             outcome->outcome_type = PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END;
             return false;
         }
 
-        // if (!tx_parser->config.parsed_instruction_display_config.display_tx_summary) {
-        //     PRINTF(
-        //         "You have specified to skip displaying TX summary UI => sign tx hash "
-        //         "immediately.\n");
-        //     if (!crypto_sign_message(&tx_parser->signing)) {
-        //         // G_context.state = STATE_NONE;
-        //         // return io_send_sw(ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL);
-
-        //         return false;
-        //     } else {
-        //         // return helper_send_response_signature(
-        //         //     true,
-        //         //     &tx_parser->signing);  // also respond with `hash`: true
-        //           outcome->outcome_type =
-        //           PARSE_PROCESS_INS_OK_FINISHED_WITH_WHOLE_TX_SKIP_DISPLAY_BECAUSE_IN_TEST;
-        //         return true;
-        //     }
-        // }
-
-        // return ui_display_tx_summary(&tx_parser->transaction,
-        //                              &tx_parser->signing.my_derived_public_key.bip32_path,
-        //                              tx_parser->signing.digest);
-        outcome->outcome_type =
-            PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION;  //_DISPLAY_TX_SUMMARY;
+        outcome->outcome_type = PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION;
         return true;
 
     } else {
-        // // G_parse_tx_state_did_parse_new();
-
-        // // Not done yet => tell host machine to continue sending next RE instruction.
-        // if (does_instruction_need_to_be_displayed(
-        //         &instruction_parser->instruction,
-        //         &tx_parser->signing.my_derived_public_key.address.public_key) &&
-        //     tx_parser->config.parsed_instruction_display_config.display_substate_contents) {
-        //     // G_parse_tx_state_ins_needs_approval();
-
-        //     // return ui_display_instruction(&instruction_parser->instruction);
-
-        //     outcome->outcome_type = PARSE_PROCESS_INS_OK_DISPLAY_INS_BEFORE_PROCEEDING_WITH_NEXT;
-        //     return true;
-        // }
-
-        // G_parse_tx_state_ready_to_parse();
-
-        outcome->outcome_type =
-            PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS;  //_PROCEED_WITH_NEXT_INS;
+        outcome->outcome_type = PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS;
         return true;
     }
+}
+
+static bool derive_my_public_key(derived_public_key_t *my_derived_pubkey) {
+    // Derive public key according to BIP32 path
+    cx_ecfp_private_key_t private_key = {0};
+    cx_ecfp_public_key_t public_key = {0};
+
+    // SHOULD _NOT_ return early if `crypto_derive_private_key` or `crypto_init_public_key` fails,
+    // because we SHOULD zero out `private_key`.
+    bool success = crypto_derive_private_key(&private_key, &my_derived_pubkey->bip32_path) &&
+                   crypto_init_public_key(&private_key, &public_key);
+
+    explicit_bzero(&private_key, sizeof(private_key));
+
+    if (!success) {
+        return false;
+    }
+
+    return crypto_compress_public_key(&public_key, &my_derived_pubkey->address.public_key);
+}
+
+static bool validate_tx_parser_config_tx_metadata(transaction_metadata_t *metadata) {
+    if (metadata->tx_byte_count < 1) {
+        // Must have at at least one byte to sign.
+        PRINTF("Invalid Tx Parser Config MetaData: TX byte count.\n");
+        return false;
+    }
+    if (metadata->tx_bytes_received_count != 0) {
+        // Must start at 0
+        PRINTF("Invalid Tx Parser Config MetaData: TX recieved byte count.\n");
+        return false;
+    }
+
+    if (metadata->total_number_of_instructions < 1) {
+        // Must have at least one instruction to sign.
+        PRINTF("Invalid Tx Parser Config MetaData: instruction count.\n");
+        return false;
+    }
+    if (metadata->number_of_instructions_received != 0) {
+        // Must start at 0
+        PRINTF("Invalid Tx Parser Config MetaData: received instruction count.\n");
+        return false;
+    }
+
+    return true;
+}
+
+static void setup_instruction_parser(instruction_parser_t *ins_parser) {
+    // Setup state
+    ins_parser->state = STATE_PARSE_INS_READY_TO_PARSE;
+}
+
+bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
+                                init_transaction_parser_config_t *config,
+                                init_tx_parser_outcome_t *outcome) {
+    if (!validate_tx_parser_config_tx_metadata(&config->transaction_metadata)) {
+        outcome->outcome_type = INIT_TX_PARSER_INVALID_TX_METADATA_IN_CONFIG;
+        return false;
+    }
+
+    // Copy over `transaction_metadata` from `config`
+    memmove(&tx_parser->transaction_metadata,
+            &config->transaction_metadata,
+            sizeof(config->transaction_metadata));
+
+    // Copy over `instruction_display_config` from `config`
+    memmove(&tx_parser->instruction_display_config,
+            &config->instruction_display_config,
+            sizeof(config->instruction_display_config));
+
+    // Copy over `bip32_path` from `config`
+    memmove(&tx_parser->signing.my_derived_public_key.bip32_path,
+            &config->bip32_path,
+            sizeof(config->bip32_path));
+
+    // Need our public key to compare against recipient addresses in transfer/stake to identify
+    // spent amount and amounts being change back to ourselves
+    if (!derive_my_public_key(&tx_parser->signing.my_derived_public_key)) {
+        outcome->outcome_type = INIT_TX_PARSER_FAILED_TO_DERIVE_MY_PUBLIC_KEY;
+        return false;
+    }
+
+    // Setup hasher
+    cx_sha256_init(&tx_parser->hasher);
+
+    // Setup instruction parser
+    setup_instruction_parser(&tx_parser->instruction_parser);
+
+    return true;
 }
