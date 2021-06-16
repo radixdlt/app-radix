@@ -142,6 +142,41 @@ python3 -m ledgerblue.hostOnboard --apdu --id 0 --prefix "" --passphrase "" --pi
 ```
 
 Do this so that you will get the same HD wallet as the rest of the developers, so that integration tests will work (e.g. in TypeScript library)
+
+**EXPECTED KEYS & ADDRESSES**
+
+Now you should get these public keys:
+**First**
+Derivation path: `m/44'/1022'/0'/0/0` (non hardened)
+Public Key compressed: `03bc2ec8f3668c869577bf66b7b48f8dee57b833916aa70966fa4a5029b63bb18f`
+Betanet account address: `brx1qspmctkg7dngep54w7lkdda537x7u4acxwgk4fcfvmay55pfkcamrrc0z4uz0`
+Mainnet account address: `rdx1qspmctkg7dngep54w7lkdda537x7u4acxwgk4fcfvmay55pfkcamrrc0lcarp`
+Betanet validator address: `vb1qw7zaj8nv6xgd9thhant0dy03hh90wpnj942wztxlf99q2dk8wcc7d4erkm`
+Mainnet validator address: `vr1qw7zaj8nv6xgd9thhant0dy03hh90wpnj942wztxlf99q2dk8wcc7as4y70`
+
+Derivation path: `m/44'/1022'/0'/0/0'` (hardened)
+Public Key compressed: `03f43fba6541031ef2195f5ba96677354d28147e45b40cde4662bec9162c361f55`
+Betanet account address: `brx1qsplg0a6v4qsx8hjr904h2txwu6562q50ezmgrx7ge3tajgk9smp74gh62u3y`
+Mainnet account address: `rdx1qsplg0a6v4qsx8hjr904h2txwu6562q50ezmgrx7ge3tajgk9smp74gh88as2`
+Betanet validator address: `vb1q06rlwn9gyp3ausetad6jenhx4xjs9r7gk6qehjxv2lvj93vxc0420fstg6`
+Mainnet validator address: `vr1q06rlwn9gyp3ausetad6jenhx4xjs9r7gk6qehjxv2lvj93vxc042lvuvqw`
+
+**Non all zero paths**
+Derivation path: `m/44'/1022'/2'/1/3` (non hardened)
+Public Key compressed: `03d79039c428a6b835e136fbb582e9259df23f8660f928367c3f0d6912728a8444`
+Betanet account address: `brx1qspa0ypecs52dwp4uym0hdvzayjemu3lses0j2pk0sls66gjw29gg3q09vgzx`
+Mainnet account address: `rdx1qspa0ypecs52dwp4uym0hdvzayjemu3lses0j2pk0sls66gjw29gg3q0cpfrg`
+Betanet validator address: `vb1q0teqwwy9zntsd0pxmamtqhfykwly0uxvrujsdnu8uxkjynj32zyg9yt3ug`
+Mainnet validator address: `vr1q0teqwwy9zntsd0pxmamtqhfykwly0uxvrujsdnu8uxkjynj32zyg4p8k5u`
+
+Derivation path: `m/44'/1022'/2'/1/3'` (hardened)
+Public Key compressed: `034d2fd914bb6045f58b239d6949dd35e73bc67a67fe9668ed0d9c05affe1c122b`
+Betanet account address: `brx1qsp56t7ezjakq3043v3e662fm567ww7x0fnla9nga5xecpd0lcwpy2cvmfn6t`
+Mainnet account address: `rdx1qsp56t7ezjakq3043v3e662fm567ww7x0fnla9nga5xecpd0lcwpy2cvxyjm9`
+Betanet validator address: `vb1qdxjlkg5hdsytavtywwkjjwaxhnnh3n6vllfv68dpkwqttl7rsfzk89dm26`
+Mainnet validator address: `vr1qdxjlkg5hdsytavtywwkjjwaxhnnh3n6vllfv68dpkwqttl7rsfzkhqpuzw`
+
+
 </details>
 
 
@@ -184,7 +219,7 @@ Run:
 
 ```sh
 python -m ledgerblue.loadApp \
---path "44'/536'" \
+--path "44'/1022'" \
 --curve secp256k1 \
 --tlv \
 --targetId 0x31100004 \
