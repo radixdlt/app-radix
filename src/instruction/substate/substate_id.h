@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>        // uint8_t, uint32_t
-#include "../constants.h"  // HASH_LEN
-#include "../types/buffer.h"
+#include <stdint.h>           // uint8_t, uint32_t
+#include "../../constants.h"  // HASH_LEN
+#include "../../types/buffer.h"
 
 #define SUBSTATE_ID_HASH_LEN HASH_LEN
 
@@ -25,5 +25,3 @@ bool parse_substate_id(buffer_t *buffer,
                        substate_id_t *substate_id);
 
 uint16_t status_word_for_failed_to_parse_substate_id(parse_substate_id_outcome_e outcome);
-
-void print_parse_substate_id_outcome(parse_substate_id_outcome_e outcome);

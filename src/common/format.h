@@ -78,5 +78,3 @@ int format_hex(const uint8_t *in, size_t in_len, char *out, size_t out_len);
  * @return false If failed.
  */
 bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len);
-
-void print_uint256(uint256_t *uint256);

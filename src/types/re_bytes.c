@@ -1,6 +1,10 @@
 #include "re_bytes.h"
 #include "../../sw.h"
 
+#ifdef PRINTF
+#include "os.h"  // PRINTF
+#endif
+
 bool parse_re_bytes(buffer_t *buffer, parse_bytes_outcome_e *outcome, re_bytes_t *bytes) {
     if (!buffer_read_u8(buffer, &bytes->length)) {
         PRINTF("Failed to parse length of RE bytes.\n");
@@ -28,20 +32,4 @@ uint16_t status_word_for_failed_to_parse_bytes(parse_bytes_outcome_e outcome) {
         case PARSE_BYTES_FAIL_WRONG_LENGTH:
             return ERR_CMD_SIGN_TX_PARSE_BYTES_WRONG_LENGTH;
     }
-}
-
-void print_parse_bytes_outcome(parse_bytes_outcome_e outcome) {
-    PRINTF("parse_bytes_outcome\n");
-    switch (outcome) {
-        case PARSE_BYTES_OK:
-            PRINTF("'OK'");
-            break;
-        case PARSE_BYTES_FAILED_TO_PARSE_LENGTH:
-            PRINTF("'FAILED_TO_PARSE_LENGTH'");
-            break;
-        case PARSE_BYTES_FAIL_WRONG_LENGTH:
-            PRINTF("'FAIL_WRONG_LENGTH'");
-            break;
-    }
-    PRINTF("\n");
 }

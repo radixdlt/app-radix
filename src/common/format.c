@@ -14,11 +14,10 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include <stddef.h>     // size_t
-#include <stdint.h>     // int*_t, uint*_t
-#include <string.h>     // strncpy, memmove
-#include <stdbool.h>    // bool
-#include "../macros.h"  // ASSERT
+#include <stddef.h>   // size_t
+#include <stdint.h>   // int*_t, uint*_t
+#include <string.h>   // strncpy, memmove
+#include <stdbool.h>  // bool
 #include "../types/uint256.h"
 
 #include "format.h"
@@ -170,15 +169,4 @@ int format_hex(const uint8_t *in, size_t in_len, char *out, size_t out_len) {
 bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len) {
     uint32_t base10 = 10;
     return tostring256(uint256, base10, out, (uint32_t) out_len);
-}
-
-void print_uint256(uint256_t *uint256) {
-    char amount[UINT256_DEC_STRING_MAX_LENGTH + 1] = {0};
-
-    if (!to_string_uint256(uint256, amount, sizeof(amount))) {
-        PRINTF("Failed to print uint256");
-        return;
-    }
-
-    PRINTF("%s\n", amount);
 }

@@ -1,14 +1,19 @@
 #include "transaction_parser.h"
 
-#include <string.h>     // explicit_bzero
-#include "../crypto.h"  // update_hash
+#include <string.h>  // explicit_bzero
+// #include "../crypto.h"  // update_hash
+
+#ifdef PRINTF
+#include "os.h"  // PRINTF
+#endif
 
 status_word_t status_word_for_parse_and_process_ins_failure(
     parse_and_process_instruction_outcome_t *failure) {
     switch (failure->outcome_type) {
         case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS:
         case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION:
-            THROW(ERR_BAD_STATE);  // Did not expect success.
+            // THROW(ERR_BAD_STATE);  // Did not expect success.
+            return ERR_BAD_STATE;
         case PARSE_PROCESS_INS_BAD_STATE:
             return ERR_BAD_STATE;
         case PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH:
@@ -23,59 +28,13 @@ status_word_t status_word_for_parse_and_process_ins_failure(
             return status_word_for_failed_to_parse_ins(&failure->parse_failure);
     }
 }
-void print_parse_process_instruction_outcome(parse_and_process_instruction_outcome_t *outcome) {
-    PRINTF("Parse and process instruction outcome: ");
-    switch (outcome->outcome_type) {
-        case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS:
-            PRINTF("'SUCCESS_FINISHED_PARSING_INS'");
-            break;
-        case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION:
-            PRINTF("'SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION'");
-            break;
-        case PARSE_PROCESS_INS_BAD_STATE:
-            PRINTF("'BAD_STATE'");
-            break;
-        case PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH:
-            PRINTF("'BYTE_COUNT_MISMATCH'");
-            break;
-        case PARSE_PROCESS_INS_DISABLE_MINT_AND_BURN_FLAG_NOT_SET:
-            PRINTF("'DISABLE_MINT_AND_BURN_FLAG_NOT_SET'");
-            break;
-        case PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL:
-            PRINTF("'PARSE_TX_FEE_FROM_SYSCALL_FAIL'");
-            break;
-        case PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END:
-            PRINTF("'LAST_INS_WAS_NOT_INS_END'");
-            break;
-        case PARSE_PROCESS_INS_FAILED_TO_PARSE:
-            PRINTF("'FAILED_TO_PARSE' - printing reason:\n");
-            print_parse_instruction_outcome(&outcome->parse_failure);
-            break;
-        default:
-            PRINTF("UNKNOWN Parse and process instruction outcome type: %d", outcome->outcome_type);
-            break;
-    }
-    PRINTF("\n");
-}
 
 bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
-    PRINTF("Length of SYSCALL data: %d.\n", syscall->call_data.length);
-    PRINTF("SYSCALL data: %.*H.\n", syscall->call_data.length, syscall->call_data.data);
-
     if (syscall->call_data.length != 33) {
-        PRINTF(
-            "Failed to parse tx fee from syscall, wrong length, requiring length of 33, but got: "
-            "%d.\n",
-            syscall->call_data.length);
         return false;
     }
     uint8_t required_tx_fee_version_byte = 0x00;
     if (syscall->call_data.data[0] != required_tx_fee_version_byte) {
-        PRINTF(
-            "Failed to parse tx fee from syscall, incorrect version byte, required: %d, but got: "
-            "%d.\n",
-            required_tx_fee_version_byte,
-            syscall->call_data.data[0]);
         return false;
     }
 
@@ -85,6 +44,7 @@ bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
 }
 
 bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
+                                               update_hash_fn update_hash,
                                                transaction_parser_t *tx_parser,
                                                parse_and_process_instruction_outcome_t *outcome) {
     instruction_parser_t *instruction_parser = &tx_parser->instruction_parser;
@@ -165,12 +125,7 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
         tx_metadata->number_of_instructions_received == tx_metadata->total_number_of_instructions;
 
     // Update the hash
-    update_hash(&tx_parser->hasher,
-                buffer->ptr,
-                buffer->size,
-                was_last_apdu,
-                tx_parser->signing.digest,
-                HASH_LEN);
+    update_hash(buffer);
 
     if (was_last_apdu) {
         if (tx_metadata->tx_bytes_received_count != tx_metadata->tx_byte_count) {
@@ -190,25 +145,6 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
         outcome->outcome_type = PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS;
         return true;
     }
-}
-
-static bool derive_my_public_key(derived_public_key_t *my_derived_pubkey) {
-    // Derive public key according to BIP32 path
-    cx_ecfp_private_key_t private_key = {0};
-    cx_ecfp_public_key_t public_key = {0};
-
-    // SHOULD _NOT_ return early if `crypto_derive_private_key` or `crypto_init_public_key` fails,
-    // because we SHOULD zero out `private_key`.
-    bool success = crypto_derive_private_key(&private_key, &my_derived_pubkey->bip32_path) &&
-                   crypto_init_public_key(&private_key, &public_key);
-
-    explicit_bzero(&private_key, sizeof(private_key));
-
-    if (!success) {
-        return false;
-    }
-
-    return crypto_compress_public_key(&public_key, &my_derived_pubkey->address.public_key);
 }
 
 static bool validate_tx_parser_config_tx_metadata(transaction_metadata_t *metadata) {
@@ -243,6 +179,7 @@ static void setup_instruction_parser(instruction_parser_t *ins_parser) {
 }
 
 bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
+                                derive_my_pubkey_key_fn derive_my_pubkey,
                                 init_transaction_parser_config_t *config,
                                 init_tx_parser_outcome_t *outcome) {
     if (!validate_tx_parser_config_tx_metadata(&config->transaction_metadata)) {
@@ -267,13 +204,10 @@ bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
 
     // Need our public key to compare against recipient addresses in transfer/stake to identify
     // spent amount and amounts being change back to ourselves
-    if (!derive_my_public_key(&tx_parser->signing.my_derived_public_key)) {
+    if (!derive_my_pubkey(&tx_parser->signing.my_derived_public_key)) {
         outcome->outcome_type = INIT_TX_PARSER_FAILED_TO_DERIVE_MY_PUBLIC_KEY;
         return false;
     }
-
-    // Setup hasher
-    cx_sha256_init(&tx_parser->hasher);
 
     // Setup instruction parser
     setup_instruction_parser(&tx_parser->instruction_parser);

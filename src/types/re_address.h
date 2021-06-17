@@ -73,13 +73,6 @@ bool parse_re_address(buffer_t *buffer,
                       re_address_t *address);
 
 /**
- * @brief Prints a parse address failure reason.
- *
- * @param[in] failure_reason The parse address failure reason to print.
- */
-void print_parse_address_failure_reason(parse_address_failure_reason_e failure_reason);
-
-/**
  * @brief Formats an abstract `re_address` as an account address.
  *
  * Bech32 encodes an `re_address` of type `RE_ADDRESS_PUBLIC_KEY` as an account address.

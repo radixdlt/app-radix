@@ -23,5 +23,3 @@ typedef enum {
 bool is_re_substate_type_known(int raw);
 
 bool is_re_substate_type_supported(int raw);
-
-void print_re_substate_type(re_substate_type_e substate_type);

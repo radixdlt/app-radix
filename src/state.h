@@ -5,6 +5,8 @@
 
 #include "transaction/transaction_parser.h"
 
+#include "cx.h"  // cx_sha256_t
+
 typedef bool user_accepted_t;
 
 /**
@@ -90,6 +92,7 @@ typedef struct {
  * Structure for transaction information context.
  */
 typedef struct {
+    cx_sha256_t hasher;
     transaction_parser_t transaction_parser;
 } sign_transaction_ctx_t;
 

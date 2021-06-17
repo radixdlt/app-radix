@@ -5,7 +5,7 @@
 #include <stdbool.h>  // bool
 
 #include "bip32_path.h"
-#include "read.h"
+#include "../common/read.h"
 
 bool bip32_path_read(const uint8_t *in, size_t in_len, bip32_path_t *out) {
     const uint8_t out_len = out->path_len;

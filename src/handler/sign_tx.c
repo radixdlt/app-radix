@@ -69,6 +69,25 @@ status_word_t status_word_for_setup_sign_tx_failure(setup_sign_tx_outcome_t *fai
     }
 }
 
+static bool derive_my_public_key(derived_public_key_t *my_derived_pubkey) {
+    // Derive public key according to BIP32 path
+    cx_ecfp_private_key_t private_key = {0};
+    cx_ecfp_public_key_t public_key = {0};
+
+    // SHOULD _NOT_ return early if `crypto_derive_private_key` or `crypto_init_public_key` fails,
+    // because we SHOULD zero out `private_key`.
+    bool success = crypto_derive_private_key(&private_key, &my_derived_pubkey->bip32_path) &&
+                   crypto_init_public_key(&private_key, &public_key);
+
+    explicit_bzero(&private_key, sizeof(private_key));
+
+    if (!success) {
+        return false;
+    }
+
+    return crypto_compress_public_key(&public_key, &my_derived_pubkey->address.public_key);
+}
+
 /**
  * @brief Initiate the sign transaction flow. If successful return \code true, else \code false and
  * \p outcome will contain the failure reason.
@@ -88,7 +107,12 @@ static bool init_sign_transaction_flow(buffer_t *buffer,
         return false;
     }
 
-    if (!init_tx_parser_with_config(tx_parser, &parsed_config, &outcome->init_tx_parser_failure)) {
+    derive_my_pubkey_key_fn derive_my_pubkey = &derive_my_public_key;
+
+    if (!init_tx_parser_with_config(tx_parser,
+                                    derive_my_pubkey,
+                                    &parsed_config,
+                                    &outcome->init_tx_parser_failure)) {
         PRINTF("Failed to initialize transaction parser.\n");
         outcome->outcome_type = SETUP_SIGN_TX_FAILED_TO_PARSE_INIT_PARSER_WITH_CONFIG;
         return false;
@@ -111,6 +135,9 @@ static int handle_initial_setup_apdu(buffer_t *buffer, transaction_parser_t *tx_
     // Setup state
     G_context.req_type = CONFIRM_TRANSACTION;
     G_context.state = STATE_NONE;
+
+    // Setup hasher
+    cx_sha256_init(&G_context.sign_tx_info.hasher);
 
     return io_send_sw(SW_OK);
 }
@@ -150,9 +177,28 @@ static int ux_display_new_instruction_if_needed(transaction_parser_t *tx_parser)
     }
 }
 
+// static void _do_update_hash(uint8_t *input_bytes, uint8_t input_bytes_len) {
+static void _do_update_hash(buffer_t *buffer) {
+    cx_sha256_t *hasher = &G_context.sign_tx_info.hasher;
+    transaction_parser_t *tx_parser = &G_context.sign_tx_info.transaction_parser;
+    transaction_metadata_t *tx_metadata = &tx_parser->transaction_metadata;
+    bool was_last_apdu =
+        tx_metadata->number_of_instructions_received == tx_metadata->total_number_of_instructions;
+
+    update_hash(hasher,
+                buffer->ptr,
+                buffer->size,
+                was_last_apdu,
+                tx_parser->signing.digest,
+                HASH_LEN);
+}
+
 static int handle_single_re_ins_apdu(buffer_t *buffer, transaction_parser_t *tx_parser) {
     parse_and_process_instruction_outcome_t outcome;
-    if (!parse_and_process_instruction_from_buffer(buffer, tx_parser, &outcome)) {
+
+    update_hash_fn update_hash = &_do_update_hash;
+
+    if (!parse_and_process_instruction_from_buffer(buffer, update_hash, tx_parser, &outcome)) {
         // Failed to parse and process
         status_word_t sw_error = status_word_for_parse_and_process_ins_failure(&outcome);
         return io_send_sw(sw_error);
@@ -163,8 +209,8 @@ static int handle_single_re_ins_apdu(buffer_t *buffer, transaction_parser_t *tx_
         case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS:
             return ux_display_new_instruction_if_needed(tx_parser);
         default:
-            PRINTF("\n\nFail???\n\n");
-            print_parse_process_instruction_outcome(&outcome);
+            PRINTF("\n\nFailed to parse and process instruction from buffer.\n\n");
+            // print_parse_process_instruction_outcome(&outcome);
             break;
     }
 

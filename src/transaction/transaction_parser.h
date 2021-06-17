@@ -1,14 +1,16 @@
 #pragma once
 
-#include "os.h"  // cx_sha256_t
-
-#include "signing.h"
 #include "init_transaction_parser_config.h"
 #include "instruction_parser.h"
 #include "transaction.h"
 #include "../types/status_word.h"
+#include "../types/signing.h"
 #include "../types/uint256.h"
+#include "../types/buffer.h"
 #include "../instruction/instruction.h"  // re_ins_syscall_t
+
+typedef void (*update_hash_fn)(buffer_t *);
+typedef bool (*derive_my_pubkey_key_fn)(derived_public_key_t *);
 
 typedef enum {
     // Successful
@@ -37,7 +39,6 @@ typedef struct {
  *
  */
 typedef struct {
-    cx_sha256_t hasher;
     signing_t signing;
     transaction_metadata_t transaction_metadata;
     instruction_display_config_t instruction_display_config;
@@ -48,13 +49,12 @@ typedef struct {
 } transaction_parser_t;
 
 bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
+                                               update_hash_fn update_hash,
                                                transaction_parser_t *tx_parser,
                                                parse_and_process_instruction_outcome_t *outcome);
 
 status_word_t status_word_for_parse_and_process_ins_failure(
     parse_and_process_instruction_outcome_t *failure);
-
-void print_parse_process_instruction_outcome(parse_and_process_instruction_outcome_t *outcome);
 
 /**
  * @brief Parse transaction fee from SYSCALL instruction.
@@ -80,5 +80,6 @@ typedef struct {
 } init_tx_parser_outcome_t;
 
 bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
+                                derive_my_pubkey_key_fn derive_my_pubkey,
                                 init_transaction_parser_config_t *config,
                                 init_tx_parser_outcome_t *outcome);

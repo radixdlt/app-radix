@@ -1,13 +1,12 @@
 #pragma once
 
 #include "substate_type.h"
-#include "../types/buffer.h"
 #include "tokens.h"
 #include "prepared_stake.h"
 #include "prepared_unstake.h"
 #include "stake_share.h"
-#include "cx.h"
 
+#include "../../types/buffer.h"
 #include "../../types/public_key.h"
 
 typedef struct {
@@ -47,7 +46,5 @@ typedef struct {
 bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substate_t *substate);
 
 uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failure_reason);
-
-void print_parse_substate_outcome(parse_substate_outcome_t *failure_reason);
 
 bool does_substate_need_to_be_displayed(substate_t *substate, public_key_t *my_public_key);

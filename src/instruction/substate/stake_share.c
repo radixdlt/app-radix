@@ -1,6 +1,10 @@
 #include "stake_share.h"
 #include "../../sw.h"
 
+#ifdef PRINTF
+#include "os.h"  // PRINTF
+#endif
+
 bool parse_stake_share(buffer_t *buffer,
                        parse_stake_share_outcome_t *outcome,
                        stake_share_t *stake_share) {
@@ -45,24 +49,4 @@ uint16_t status_word_for_failed_to_parse_stake_share(parse_stake_share_outcome_e
         case PARSE_STAKE_SHARE_FAILURE_PARSE_AMOUNT:
             return ERR_CMD_SIGN_TX_STAKE_SHARE_PARSE_AMOUNT_FAILURE;
     }
-}
-
-void print_parse_stake_share_outcome(parse_stake_share_outcome_t *outcome) {
-    PRINTF("parse stake share outcome: ");
-    switch (outcome->outcome_type) {
-        case PARSE_STAKE_SHARE_OK:
-            PRINTF("'OK'");
-            break;
-        case PARSE_STAKE_SHARE_FAILURE_PARSE_PUBLICKEY:
-            PRINTF("'FAILURE_PARSE_PUBLICKEY'");
-            break;
-        case PARSE_STAKE_SHARE_FAILURE_PARSE_OWNER:
-            PRINTF("'FAILURE_PARSE_OWNER' - printing reason:\n");
-            print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
-            break;
-        case PARSE_STAKE_SHARE_FAILURE_PARSE_AMOUNT:
-            PRINTF("'FAILURE_PARSE_AMOUNT'");
-            break;
-    }
-    PRINTF("\n");
 }

@@ -46,27 +46,6 @@ uint16_t status_word_for_failed_to_parse_tokens(parse_tokens_outcome_e failure_r
     }
 }
 
-void print_parse_tokens_outcome(parse_tokens_outcome_t *outcome) {
-    PRINTF("parse tokens outcome: ");
-    switch (outcome->outcome_type) {
-        case PARSE_TOKENS_OK:
-            PRINTF("'OK'");
-            break;
-        case PARSE_TOKENS_FAILURE_PARSE_RRI:
-            PRINTF("'FAILURE_PARSE_RRI' - printing reason:\n");
-            print_parse_address_failure_reason(outcome->rri_parse_failure_reason);
-            break;
-        case PARSE_TOKENS_FAILURE_PARSE_OWNER:
-            PRINTF("'FAILURE_PARSE_OWNER' - printing reason:\n");
-            print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
-            break;
-        case PARSE_TOKENS_FAILURE_PARSE_AMOUNT:
-            PRINTF("'FAILURE_PARSE_AMOUNT'");
-            break;
-    }
-    PRINTF("\n");
-}
-
 bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key) {
     ASSERT(tokens->owner.address_type == RE_ADDRESS_PUBLIC_KEY,
            "Owner of tokens should be of Radix Address type 'PUBLICKEY'");

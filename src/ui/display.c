@@ -623,7 +623,7 @@ int ui_display_instruction(re_instruction_t *instruction) {
             break;
         default:
             PRINTF("Trying to display a substate type that should not be displayed\n");
-            print_re_substate_type(instruction->ins_up.substate.type);
+            // print_re_substate_type(instruction->ins_up.substate.type);
             return io_send_sw(ERR_BAD_STATE);
     }
 

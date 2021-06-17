@@ -1,5 +1,7 @@
 #include "init_transaction_parser_config.h"
 
+#include <string.h>  // explicit_bzero
+
 static bool parse_tx_parser_config_tx_metadata(buffer_t *buffer,
                                                parse_tx_config_outcome_e *outcome,
                                                transaction_metadata_t *metadata,

@@ -12,5 +12,3 @@ typedef enum {
 bool is_re_address_type_known(int raw);
 
 bool is_re_address_type_supported(int raw);
-
-void print_re_address_type(re_address_type_e address_type);

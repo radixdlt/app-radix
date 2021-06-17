@@ -28,6 +28,10 @@
 #include "../state.h"
 #include "types/buffer.h"
 
+#ifdef PRINTF
+#include "os.h"  // PRINTF
+#endif
+
 int handler_get_version() {
     PRINTF("\n.-~=: GET_VERSION called :=~-.\n\n");
     _Static_assert(APPVERSION_LEN == 3, "Length of (MAJOR || MINOR || PATCH) must be 3!");

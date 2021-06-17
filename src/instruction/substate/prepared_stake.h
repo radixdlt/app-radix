@@ -36,5 +36,3 @@ bool parse_prepared_stake(buffer_t *buffer,
 
 uint16_t status_word_for_failed_to_parse_prepared_stake(
     parse_prepared_stake_outcome_e failure_reason);
-
-void print_parse_prepared_stake_outcome(parse_prepared_stake_outcome_t *outcome);

@@ -1,6 +1,10 @@
 #include "substate.h"
 #include "sw.h"
 
+#ifdef PRINTF
+#include "os.h"  // PRINTF
+#endif
+
 bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substate_t *substate) {
     uint8_t substate_type_value;
     if (!buffer_read_u8(buffer, &substate_type_value) ||
@@ -20,7 +24,7 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
 
     substate->type = (re_substate_type_e) substate_type_value;
 
-    print_re_substate_type(substate->type);
+    // print_re_substate_type(substate->type);
 
     switch (substate->type) {
         case SUBSTATE_TYPE_TOKENS:
@@ -65,38 +69,6 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
     }
     outcome->outcome_type = PARSE_SUBSTATE_OK;
     return true;
-}
-
-void print_parse_substate_outcome(parse_substate_outcome_t *failure_reason) {
-    PRINTF("parse substate outcome: \n");
-    switch (failure_reason->outcome_type) {
-        case PARSE_SUBSTATE_OK:
-            PRINTF("'OK'");
-            break;
-        case PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE:
-            PRINTF("'FAIL_UNRECOGNIZED_SUBSTATE_TYPE'");
-            break;
-        case PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE:
-            PRINTF("'FAIL_UNSUPPORTED_SUBSTATE_TYPE'");
-            break;
-        case PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS:
-            PRINTF("'FAILED_TO_PARSE_TOKENS' - printing reason:\n");
-            print_parse_tokens_outcome(&failure_reason->tokens_failure);
-            break;
-        case PARSE_SUBSTATE_FAILED_TO_PARSE_PREPARED_STAKE:
-            PRINTF("'FAILED_TO_PARSE_PREPARED_STAKE' - printing reason:\n");
-            print_parse_prepared_stake_outcome(&failure_reason->prepared_stake_failure);
-            break;
-        case PARSE_SUBSTATE_FAILED_TO_PARSE_PREPARED_UNSTAKE:
-            PRINTF("'FAILED_TO_PARSE_PREPARED_UNSTAKE' - printing reason:\n");
-            print_parse_prepared_unstake_outcome(&failure_reason->prepared_unstake_failure);
-            break;
-        case PARSE_SUBSTATE_FAILED_TO_PARSE_SHARE_STAKE:
-            PRINTF("'FAILED_TO_PARSE_SHARE_STAKE' - printing reason:\n");
-            print_parse_stake_share_outcome(&failure_reason->stake_share_failure);
-            break;
-    }
-    PRINTF("\n");
 }
 
 uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failure_reason) {

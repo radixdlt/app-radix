@@ -11,19 +11,17 @@ bool parse_re_address(buffer_t *buffer,
     uint8_t address_type_value;
     if (!buffer_read_u8(buffer, &address_type_value) ||
         !is_re_address_type_known((int) address_type_value)) {
-        PRINTF("ERROR unrecognized RE address type: %d\n", address_type_value);
         *failure_reason = PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE;
         return false;
     }
 
     if (!is_re_address_type_supported((int) address_type_value)) {
-        PRINTF("ERROR unsupported RE address type: %d\n", address_type_value);
         *failure_reason = PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE;
         return false;
     }
     re_address_type_e address_type = (re_address_type_e) address_type_value;
 
-    print_re_address_type(address_type);
+    // print_re_address_type(address_type);
 
     address->address_type = address_type;
 
@@ -47,25 +45,6 @@ bool parse_re_address(buffer_t *buffer,
     }
 
     return true;
-}
-
-void print_parse_address_failure_reason(parse_address_failure_reason_e failure_reason) {
-    PRINTF("Parse address failure reason: ");
-    switch (failure_reason) {
-        case PARSE_ADDRESS_FAIL_HASHEDKEY_WRONG_LEN:
-            PRINTF("'FAIL_HASHEDKEY_WRONG_LEN'");
-            break;
-        case PARSE_ADDRESS_FAIL_PUBKEY_WRONG_LEN:
-            PRINTF("'FAIL_PUBKEY_WRONG_LEN'");
-            break;
-        case PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE:
-            PRINTF("'FAIL_UNRECOGNIZED_ADDRESS_TYPE'");
-            break;
-        case PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE:
-            PRINTF("'UNSUPPORTED_ADDRESS_TYPE'");
-            break;
-    }
-    PRINTF("\n");
 }
 
 /**
@@ -93,7 +72,6 @@ static bool abstract_addr_from_bytes(char *hrp,
     explicit_bzero(dst, *dst_len);
 
     if (in_len > MAX_BECH32_DATA_PART_BYTE_COUNT) {
-        PRINTF("bech32 encoding failed, out of bounds.\n");
         return false;
     }
 
@@ -104,12 +82,10 @@ static bool abstract_addr_from_bytes(char *hrp,
     int pad = 1;  // use padding
     convert_bits(tmp_data, &tmp_size, 5, in, in_len, 8, pad);
     if (tmp_size >= *dst_len) {
-        PRINTF("bech32 encoding failed, out of bounds.\n");
         return false;
     }
 
     if (!bech32_encode(dst, hrp, tmp_data, &tmp_size)) {
-        PRINTF("bech32 encoding failed, encoding failed.\n");
         return false;
     }
     // Set actual size
@@ -146,16 +122,10 @@ static bool __to_string_re_address(re_address_t *re_address,
     bool is_mainnet = false;  // TODO MAINNET change this
 
     if (rri_hrp && rri_hrp_len == 0) {
-        PRINTF(
-            "`rri_hrp` was set, but `rri_hrp_len` has value 0, this is invalid. Set `rri_hrp` to "
-            "`NULL` if it isn't used.\n");
         return false;
     }
 
     if (!rri_hrp && rri_hrp_len > 0) {
-        PRINTF(
-            "`rri_hrp` was not set, but `rri_hrp_len` has value greater than 0, this is invalid. "
-            "Set `rri_hrp_len` to `0` if `rri_hrp` is `NULL`.\n");
         return false;
     }
 
@@ -189,9 +159,6 @@ static bool __to_string_re_address(re_address_t *re_address,
         case RE_ADDRESS_PUBLIC_KEY:  // Account address or Validator address
             switch (type_if_pubkey) {
                 case DISPLAY_TYPE_IRRELEVANT_NOT_USED:
-                    PRINTF(
-                        "Expected display type to be Account/Validator address since "
-                        "`re_address->address_type == RE_ADDRESS_PUBLIC_KEY`, but it was not.\n");
                     return false;
                 case DISPLAY_TYPE_ACCOUNT_ADDRESS:
                     // Set HRP
@@ -235,11 +202,8 @@ static bool __to_string_re_address(re_address_t *re_address,
     size_t actual_len = out_len;
     if (!abstract_addr_from_bytes(hrp, hrp_len, data, data_len, out, &actual_len) ||
         actual_len > out_len) {
-        PRINTF("Bech32 encoding of re address failed.\n");
         return false;
     }
-
-    PRINTF("Successfully formatted re_adress: %.*s\n", actual_len - 1, out);
 
     return true;
 }

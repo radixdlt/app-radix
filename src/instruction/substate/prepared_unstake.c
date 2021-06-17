@@ -2,6 +2,10 @@
 
 #include "sw.h"
 
+#ifdef PRINTF
+#include "os.h"  // PRINTF
+#endif
+
 bool parse_prepared_unstake(buffer_t *buffer,
                             parse_prepared_unstake_outcome_t *outcome,
                             prepared_unstake_t *prepared_unstake) {
@@ -48,24 +52,4 @@ uint16_t status_word_for_failed_to_parse_prepared_unstake(
         case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_AMOUNT:
             return ERR_CMD_SIGN_TX_PREPARED_UNSTAKE_PARSE_AMOUNT_FAILURE;
     }
-}
-
-void print_parse_prepared_unstake_outcome(parse_prepared_unstake_outcome_t *outcome) {
-    PRINTF("parse prepared unstake outcome: ");
-    switch (outcome->outcome_type) {
-        case PARSE_PREPARED_UNSTAKE_OK:
-            PRINTF("'OK'");
-            break;
-        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_DELEGATE:
-            PRINTF("'FAILURE_PARSE_DELEGATE'");
-            break;
-        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_OWNER:
-            PRINTF("'FAILURE_PARSE_OWNER' - printing reason:\n");
-            print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
-            break;
-        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_AMOUNT:
-            PRINTF("'FAILURE_PARSE_AMOUNT'");
-            break;
-    }
-    PRINTF("\n");
 }

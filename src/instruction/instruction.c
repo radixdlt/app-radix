@@ -2,6 +2,10 @@
 
 #include "sw.h"
 
+#ifdef PRINTF
+#include "os.h"  // PRINTF
+#endif
+
 static bool parse_substate_index(buffer_t *buffer, uint32_t *i32) {
     if (!buffer_read_u32(buffer, i32, BE)) {
         PRINTF("Failed to parse 'substate index'.\n");
@@ -31,7 +35,7 @@ bool parse_instruction(buffer_t *buffer,
 
     instruction->ins_type = (re_instruction_type_e) re_instruction_type_value;
 
-    print_re_ins_type(instruction->ins_type);
+    // print_re_ins_type(instruction->ins_type);
 
     switch (instruction->ins_type) {
         case INS_DOWN:
@@ -118,47 +122,6 @@ bool parse_instruction(buffer_t *buffer,
     }
     outcome->outcome_type = PARSE_INS_OK;
     return true;
-}
-
-void print_parse_instruction_outcome(parse_instruction_outcome_t *outcome) {
-    PRINTF("Parse instruction type: ");
-    switch (outcome->outcome_type) {
-        case PARSE_INS_OK:
-            PRINTF("'OK'");
-            break;
-        case PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE:
-            PRINTF("'FAIL_UNREGOZNIED_INSTRUCTION_TYPE'");
-            break;
-        case PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE:
-            PRINTF("'FAIL_UNSUPPORTED_INSTRUCTION_TYPE'");
-            break;
-        case PARSE_INS_FAILED_TO_PARSE_SUBSTATE:
-            PRINTF("'FAILED_TO_PARSE_SUBSTATE' - printing reason:\n");
-            print_parse_substate_outcome(&outcome->substate_failure);
-            break;
-        case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID:
-            PRINTF("'FAILED_TO_PARSE_SUBSTATE_ID' - printing reason:\n");
-            print_parse_substate_id_outcome(outcome->substate_id_failure);
-            break;
-        case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_INDEX:
-            PRINTF("'FAILED_TO_PARSE_SUBSTATE_INDEX'");
-            break;
-        case PARSE_INS_FAILED_TO_PARSE_MSG:
-            PRINTF("'FAILED_TO_PARSE_MSG' - printing reason:\n");
-            print_parse_bytes_outcome(outcome->message_failure);
-            break;
-        case PARSE_INS_FAILED_TO_PARSE_HEADER:
-            PRINTF("'FAILED_TO_PARSE_HEADER'");
-            break;
-        case PARSE_INS_INVALID_HEADER:
-            PRINTF("'INVALID_HEADER'");
-            break;
-        case PARSE_INS_FAILED_TO_PARSE_SYSCALL:
-            PRINTF("'FAILED_TO_PARSE_SYSCALL' - printing reason:\n");
-            print_parse_bytes_outcome(outcome->syscall_failure);
-            break;
-    }
-    PRINTF("\n");
 }
 
 uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failure) {
