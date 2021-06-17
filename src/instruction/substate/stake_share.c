@@ -1,9 +1,7 @@
 #include "stake_share.h"
 #include "../../sw.h"
 
-#ifdef PRINTF
-#include "os.h"  // PRINTF
-#endif
+#include "../../bridge.h"
 
 bool parse_stake_share(buffer_t *buffer,
                        parse_stake_share_outcome_t *outcome,
@@ -49,4 +47,6 @@ uint16_t status_word_for_failed_to_parse_stake_share(parse_stake_share_outcome_e
         case PARSE_STAKE_SHARE_FAILURE_PARSE_AMOUNT:
             return ERR_CMD_SIGN_TX_STAKE_SHARE_PARSE_AMOUNT_FAILURE;
     }
+
+    return ERR_BAD_STATE;  // should never happen
 }

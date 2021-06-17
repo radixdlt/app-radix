@@ -1,9 +1,7 @@
 #include "prepared_stake.h"
 #include "../../sw.h"
 
-#ifdef PRINTF
-#include "os.h"  // PRINTF
-#endif
+#include "../../bridge.h"
 
 bool parse_prepared_stake(buffer_t *buffer,
                           parse_prepared_stake_outcome_t *outcome,
@@ -51,4 +49,6 @@ uint16_t status_word_for_failed_to_parse_prepared_stake(
         case PARSE_PREPARED_STAKE_FAILURE_PARSE_AMOUNT:
             return ERR_CMD_SIGN_TX_PREPARED_STAKE_PARSE_AMOUNT_FAILURE;
     }
+
+    return ERR_BAD_STATE;  // should never happen
 }

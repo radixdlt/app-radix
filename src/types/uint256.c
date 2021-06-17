@@ -22,9 +22,10 @@
 #include <string.h>
 
 #include "uint256.h"
+#include "buffer.h"
+#include "common/format.h"
 
-#include "os.h"
-#include "cx.h"
+#include "../bridge.h"
 
 static const char HEXDIGITS[] = "0123456789abcdef";
 
@@ -337,45 +338,6 @@ void mul128(uint128_t *number1, uint128_t *number2, uint128_t *target) {
     add128(&tmp, &tmp2, target);
 }
 
-static void __write_u64_be_no_offset(uint8_t *buffer, uint64_t value) {
-    buffer[0] = ((value >> 56) & 0xff);
-    buffer[1] = ((value >> 48) & 0xff);
-    buffer[2] = ((value >> 40) & 0xff);
-    buffer[3] = ((value >> 32) & 0xff);
-    buffer[4] = ((value >> 24) & 0xff);
-    buffer[5] = ((value >> 16) & 0xff);
-    buffer[6] = ((value >> 8) & 0xff);
-    buffer[7] = (value & 0xff);
-}
-
-static void __read_u64_be_put_int(uint8_t *in, uint64_t *out) {
-    uint8_t *out_ptr = (uint8_t *) out;
-    *out_ptr++ = in[7];
-    *out_ptr++ = in[6];
-    *out_ptr++ = in[5];
-    *out_ptr++ = in[4];
-    *out_ptr++ = in[3];
-    *out_ptr++ = in[2];
-    *out_ptr++ = in[1];
-    *out_ptr = in[0];
-}
-
-void mul256(uint256_t *number1, uint256_t *number2, uint256_t *target) {
-    uint8_t num1[UINT256_BYTE_COUNT], num2[UINT256_BYTE_COUNT], result[UINT256_BYTE_COUNT * 2];
-    memset(&result, 0, sizeof(result));
-    for (uint8_t i = 0; i < 4; i++) {
-        __write_u64_be_no_offset(num1 + i * sizeof(uint64_t),
-                                 number1->elements[i / 2].elements[i % 2]);
-        __write_u64_be_no_offset(num2 + i * sizeof(uint64_t),
-                                 number2->elements[i / 2].elements[i % 2]);
-    }
-    cx_math_mult(result, num1, num2, sizeof(num1));
-    for (uint8_t i = 0; i < 4; i++) {
-        __read_u64_be_put_int(result + 32 + i * sizeof(uint64_t),
-                              &target->elements[i / 2].elements[i % 2]);
-    }
-}
-
 void divmod128(uint128_t *l, uint128_t *r, uint128_t *retDiv, uint128_t *retMod) {
     uint128_t copyd, adder, resDiv, resMod;
     uint128_t one;
@@ -496,4 +458,9 @@ bool tostring256(uint256_t *number, uint32_t baseParam, char *out, uint32_t outL
     out[offset] = '\0';
     reverseString(out, offset);
     return true;
+}
+
+bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len) {
+    uint32_t base10 = 10;
+    return tostring256(uint256, base10, out, (uint32_t) out_len);
 }

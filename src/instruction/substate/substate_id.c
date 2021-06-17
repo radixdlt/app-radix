@@ -1,9 +1,7 @@
 #include "substate_id.h"
-#include "../../sw.h"
 
-#ifdef PRINTF
-#include "os.h"  // PRINTF
-#endif
+#include "../../sw.h"
+#include "../../bridge.h"
 
 bool parse_substate_id(buffer_t *buffer,
                        parse_substate_id_outcome_e *outcome,
@@ -40,4 +38,6 @@ uint16_t status_word_for_failed_to_parse_substate_id(parse_substate_id_outcome_e
         case PARSE_SUBSTATE_ID_FAILED_INDEX:
             return ERR_CMD_SIGN_TX_SUBSTATE_ID_INDEX_PARSE_FAILURE;
     }
+
+    return ERR_BAD_STATE;  // should never happen
 }

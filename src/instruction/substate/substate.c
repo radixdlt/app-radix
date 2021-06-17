@@ -1,9 +1,7 @@
 #include "substate.h"
 #include "sw.h"
 
-#ifdef PRINTF
-#include "os.h"  // PRINTF
-#endif
+#include "../../bridge.h"
 
 bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substate_t *substate) {
     uint8_t substate_type_value;
@@ -92,6 +90,8 @@ uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failu
             return status_word_for_failed_to_parse_stake_share(
                 failure_reason.stake_share_failure.outcome_type);
     }
+
+    return ERR_BAD_STATE;  // should never happen
 }
 
 bool does_substate_need_to_be_displayed(substate_t *substate, public_key_t *my_public_key) {
@@ -105,4 +105,6 @@ bool does_substate_need_to_be_displayed(substate_t *substate, public_key_t *my_p
         case SUBSTATE_TYPE_STAKE_SHARE:
             return false;
     }
+
+    return false;  // should never happen
 }

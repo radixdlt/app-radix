@@ -30,13 +30,18 @@
 #include "../globals.h"
 #include "../crypto.h"
 #include "../ui/display.h"
+
 #include "../types/buffer.h"
 #include "../types/status_word.h"
+#include "../types/public_key.h"
 #include "../instruction/instruction.h"
+
 #include "../common/bech32_encode.h"
-#include "../helper/send_response.h"
 #include "../common/read.h"    // read_u16_be, read_u32_be
 #include "../common/format.h"  // print_uint256
+#include "../transaction/transaction_parser.h"
+
+#include "../helper/send_response.h"
 
 typedef enum {
     SETUP_SIGN_TX_FAILED_TO_PARSE_TX_CONFIG_FROM_BUFFER,

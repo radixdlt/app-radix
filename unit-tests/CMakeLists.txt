@@ -39,7 +39,14 @@ include_directories(../src)
 
 add_executable(test_tx_parser test_tx_parser.c)
 
-add_library(bip32 SHARED ../src/types/bip32_path.c)
+add_library(buffer SHARED ../src/types/buffer.c)
+add_library(bip32_path SHARED ../src/types/bip32_path.c)
+add_library(public_key SHARED ../src/types/public_key.c)
+add_library(uint256 SHARED ../src/types/uint256.c)
+add_library(re_bytes SHARED ../src/types/re_bytes.c)
+add_library(re_address SHARED ../src/types/re_address.c)
+
+add_library(read SHARED ../src/common/read.c)
 add_library(format SHARED ../src/common/format.c)
 
 add_library(transaction ../src/transaction/transaction.c)
@@ -48,23 +55,44 @@ add_library(transaction_metadata ../src/transaction/transaction_metadata.c)
 add_library(instruction_display_config ../src/transaction/instruction_display_config.c)
 add_library(init_transaction_parser_config ../src/transaction/init_transaction_parser_config.c)
 
-
+add_library(instruction ../src/instruction/instruction.c)
 add_library(instruction_type ../src/instruction/instruction_type.c)
+
 add_library(substate_type ../src/instruction/substate/substate_type.c)
+add_library(substate ../src/instruction/substate/substate.c)
+add_library(substate_id ../src/instruction/substate/substate_id.c)
+
+add_library(tokens ../src/instruction/substate/tokens.c)
+add_library(prepared_stake ../src/instruction/substate/prepared_stake.c)
+add_library(prepared_unstake ../src/instruction/substate/prepared_unstake.c)
+add_library(stake_share ../src/instruction/substate/stake_share.c)
 
 
 target_link_libraries(test_tx_parser PUBLIC
                       cmocka
                       gcov
+                      buffer
+                      re_bytes
+                      re_address
+                      bip32_path
+                      read
+                      uint256
+                      format
+                      public_key
+                      substate_type
+                      substate
+                      substate_id
+                      tokens
+                      prepared_stake
+                      prepared_unstake
+                      stake_share
                       transaction
                       transaction_parser
                       transaction_metadata
+                      instruction
                       instruction_type
                       instruction_display_config
                       init_transaction_parser_config
-                      substate_type
-                      bip32
-                      format
                       )
 
 add_test(test_tx_parser test_tx_parser)

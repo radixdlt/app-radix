@@ -28,9 +28,7 @@
 #include "../state.h"
 #include "types/buffer.h"
 
-#ifdef PRINTF
-#include "os.h"  // PRINTF
-#endif
+#include "../bridge.h"
 
 int handler_get_version() {
     PRINTF("\n.-~=: GET_VERSION called :=~-.\n\n");

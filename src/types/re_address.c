@@ -1,9 +1,10 @@
 
 
-#include <string.h>  // memset, explicit_bzero, strncpy
+#include <string.h>  // memset, explicit_bzero
 #include "re_address.h"
-#include "bech32_encode.h"
-#include "../macros.h"  // ASSERT
+#include "../common/bech32_encode.h"
+// #include "../macros.h"  // ASSERT
+#include "../bridge.h"  // PRINTF
 
 bool parse_re_address(buffer_t *buffer,
                       parse_address_failure_reason_e *failure_reason,
@@ -164,9 +165,9 @@ static bool __to_string_re_address(re_address_t *re_address,
                     // Set HRP
                     hrp_len = ACCOUNT_ADDRESS_HRP_LENGTH;
                     if (is_mainnet) {
-                        strncpy(hrp, ACCOUNT_ADDRESS_HRP_MAINNET, hrp_len);
+                        memmove(hrp, ACCOUNT_ADDRESS_HRP_MAINNET, hrp_len);
                     } else {
-                        strncpy(hrp, ACCOUNT_ADDRESS_HRP_BETANET, hrp_len);
+                        memmove(hrp, ACCOUNT_ADDRESS_HRP_BETANET, hrp_len);
                     }
                     memmove(data + 1, re_address->public_key.compressed, PUBLIC_KEY_COMPRESSED_LEN);
                     data_len += PUBLIC_KEY_COMPRESSED_LEN;
@@ -174,9 +175,9 @@ static bool __to_string_re_address(re_address_t *re_address,
                 case DISPLAY_TYPE_VALIDATOR_ADDRESS:
                     hrp_len = VALIDATOR_ADDRESS_HRP_LENGTH;
                     if (is_mainnet) {
-                        strncpy(hrp, VALIDATOR_ADDRESS_HRP_MAINNET, hrp_len);
+                        memmove(hrp, VALIDATOR_ADDRESS_HRP_MAINNET, hrp_len);
                     } else {
-                        strncpy(hrp, VALIDATOR_ADDRESS_HRP_BETANET, hrp_len);
+                        memmove(hrp, VALIDATOR_ADDRESS_HRP_BETANET, hrp_len);
                     }
                     memmove(data, re_address->public_key.compressed, PUBLIC_KEY_COMPRESSED_LEN);
                     data_len = PUBLIC_KEY_COMPRESSED_LEN;
@@ -189,15 +190,18 @@ static bool __to_string_re_address(re_address_t *re_address,
                   re_address->address_type == RE_ADDRESS_HASHED_KEY_NONCE;
     if (is_rri) {
         if (is_mainnet) {
-            strncpy(hrp + hrp_len, RRI_HRP_SUFFIX_MAINNET, RRI_HRP_SUFFIX_LEN);
+            memmove(hrp + hrp_len, RRI_HRP_SUFFIX_MAINNET, RRI_HRP_SUFFIX_LEN);
         } else {
-            strncpy(hrp + hrp_len, RRI_HRP_SUFFIX_BETANET, RRI_HRP_SUFFIX_LEN);
+            memmove(hrp + hrp_len, RRI_HRP_SUFFIX_BETANET, RRI_HRP_SUFFIX_LEN);
         }
 
         hrp_len += RRI_HRP_SUFFIX_LEN;
     }
 
-    ASSERT(hrp_len <= MAX_BECH32_HRP_PART_LEN, "RRI HRP too long");
+    if (hrp_len > MAX_BECH32_HRP_PART_LEN) {
+        PRINTF("RRI HRP too long\n");
+        return false;
+    }
 
     size_t actual_len = out_len;
     if (!abstract_addr_from_bytes(hrp, hrp_len, data, data_len, out, &actual_len) ||
@@ -225,11 +229,24 @@ static bool __format_account_or_validator_address_from_re_address(
     re_display_type_address_e display_type,
     char *out,
     const size_t out_len) {
-    ASSERT(re_address->address_type == RE_ADDRESS_PUBLIC_KEY,
-           "re_address is not RE_ADDRESS_PUBLIC_KEY");
-    ASSERT(display_type != DISPLAY_TYPE_IRRELEVANT_NOT_USED,
-           "Display style must be `DISPLAY_TYPE_VALIDATOR_ADDRESS` or "
-           "`DISPLAY_TYPE_ACCOUNT_ADDRESS`'");
+    // ASSERT(re_address->address_type == RE_ADDRESS_PUBLIC_KEY,
+    //    "re_address is not RE_ADDRESS_PUBLIC_KEY");
+
+    if (re_address->address_type != RE_ADDRESS_PUBLIC_KEY) {
+        PRINTF("re_address is not RE_ADDRESS_PUBLIC_KEY\n");
+        return false;
+    }
+
+    // ASSERT(display_type != DISPLAY_TYPE_IRRELEVANT_NOT_USED,
+    //    "Display style must be `DISPLAY_TYPE_VALIDATOR_ADDRESS` or "
+    //    "`DISPLAY_TYPE_ACCOUNT_ADDRESS`'");
+
+    if (display_type == DISPLAY_TYPE_IRRELEVANT_NOT_USED) {
+        PRINTF(
+            "Display style must be `DISPLAY_TYPE_VALIDATOR_ADDRESS` or "
+            "`DISPLAY_TYPE_ACCOUNT_ADDRESS`'\n");
+        return false;
+    }
 
     if (!__to_string_re_address(re_address, display_type, NULL, 0, out, out_len)) {
         return false;
@@ -241,7 +258,12 @@ static bool __format_account_or_validator_address_from_re_address(
 bool format_account_address_from_re_address(re_address_t *re_address,
                                             char *out,
                                             const size_t out_len) {
-    ASSERT(out_len >= ACCOUNT_ADDRESS_LEN, "Output string is too short.");
+    // ASSERT(out_len >= ACCOUNT_ADDRESS_LEN, "Output string is too short.");
+    if (out_len < ACCOUNT_ADDRESS_LEN) {
+        PRINTF("Output string is too short.\n");
+        return false;
+    }
+
     return __format_account_or_validator_address_from_re_address(re_address,
                                                                  DISPLAY_TYPE_ACCOUNT_ADDRESS,
                                                                  out,
@@ -251,7 +273,12 @@ bool format_account_address_from_re_address(re_address_t *re_address,
 bool format_validator_address_from_re_address(re_address_t *re_address,
                                               char *out,
                                               const size_t out_len) {
-    ASSERT(out_len >= VALIDATOR_ADDRESS_LEN, "Output string is too short.");
+    // ASSERT(out_len >= VALIDATOR_ADDRESS_LEN, "Output string is too short.");
+    if (out_len < VALIDATOR_ADDRESS_LEN) {
+        PRINTF("Output string is too short.\n");
+        return false;
+    }
+
     return __format_account_or_validator_address_from_re_address(re_address,
                                                                  DISPLAY_TYPE_VALIDATOR_ADDRESS,
                                                                  out,
@@ -261,8 +288,17 @@ bool format_validator_address_from_re_address(re_address_t *re_address,
 bool format_native_token_from_re_address(re_address_t *re_address,
                                          char *out,
                                          const size_t out_len) {
-    ASSERT(re_address->address_type == RE_ADDRESS_NATIVE_TOKEN, "re_address is not NATIVE_TOKEN");
-    ASSERT(out_len >= NATIVE_TOKEN_LEN, "Output string is too short.");
+    // ASSERT(re_address->address_type == RE_ADDRESS_NATIVE_TOKEN, "re_address is not
+    // NATIVE_TOKEN");
+    if (re_address->address_type != RE_ADDRESS_NATIVE_TOKEN) {
+        PRINTF("re_address is not NATIVE_TOKEN\n");
+        return false;
+    }
+    // ASSERT(out_len >= NATIVE_TOKEN_LEN, "Output string is too short.");
+    if (out_len < NATIVE_TOKEN_LEN) {
+        PRINTF("Output string is too short.\n");
+        return false;
+    }
     return __to_string_re_address(re_address,
                                   DISPLAY_TYPE_IRRELEVANT_NOT_USED,
                                   NULL,
@@ -276,8 +312,14 @@ bool format_other_token_from_re_address(re_address_t *re_address,
                                         const size_t rri_hrp_len,
                                         char *out,
                                         const size_t out_len) {
-    ASSERT(re_address->address_type == RE_ADDRESS_HASHED_KEY_NONCE,
-           "re_address is not HASHED_KEY_NONCE");
+    // ASSERT(re_address->address_type == RE_ADDRESS_HASHED_KEY_NONCE,
+    //    "re_address is not HASHED_KEY_NONCE");
+
+    if (re_address->address_type != RE_ADDRESS_HASHED_KEY_NONCE) {
+        PRINTF("re_address is not HASHED_KEY_NONCE\n");
+        return false;
+    }
+
     return __to_string_re_address(re_address,
                                   DISPLAY_TYPE_IRRELEVANT_NOT_USED,
                                   rri_hrp,

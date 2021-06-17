@@ -1,10 +1,9 @@
 #include "instruction.h"
 
 #include "sw.h"
+#include "../types/buffer.h"
 
-#ifdef PRINTF
-#include "os.h"  // PRINTF
-#endif
+#include "../bridge.h"
 
 static bool parse_substate_index(buffer_t *buffer, uint32_t *i32) {
     if (!buffer_read_u32(buffer, i32, BE)) {
@@ -147,6 +146,7 @@ uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failur
         case PARSE_INS_FAILED_TO_PARSE_SYSCALL:
             return ERR_CMD_SIGN_TX_PARSE_INS_SYSCALL;
     }
+    return ERR_BAD_STATE;  // should not happen.
 }
 
 bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
@@ -168,4 +168,6 @@ bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
             // tx fee summary.
             return false;
     }
+
+    return false;  // should not happen.
 }

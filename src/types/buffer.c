@@ -20,8 +20,9 @@
 #include <string.h>   // memmove
 
 #include "buffer.h"
-#include "read.h"
-#include "os.h"
+#include "../common/read.h"
+
+#include "../bridge.h"
 
 size_t number_of_remaining_bytes_in_buffer(const buffer_t *buffer) {
     return buffer->size - buffer->offset;

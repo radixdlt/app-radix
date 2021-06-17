@@ -1,11 +1,11 @@
 #include "transaction_parser.h"
 
 #include <string.h>  // explicit_bzero
-// #include "../crypto.h"  // update_hash
 
-#ifdef PRINTF
-#include "os.h"  // PRINTF
-#endif
+#include "../types/uint256.h"
+#include "../types/public_key.h"
+
+#include "../bridge.h"
 
 status_word_t status_word_for_parse_and_process_ins_failure(
     parse_and_process_instruction_outcome_t *failure) {
@@ -27,6 +27,8 @@ status_word_t status_word_for_parse_and_process_ins_failure(
         case PARSE_PROCESS_INS_FAILED_TO_PARSE:
             return status_word_for_failed_to_parse_ins(&failure->parse_failure);
     }
+
+    return ERR_BAD_STATE;  // should never happen
 }
 
 bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {

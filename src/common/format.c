@@ -18,7 +18,6 @@
 #include <stdint.h>   // int*_t, uint*_t
 #include <string.h>   // strncpy, memmove
 #include <stdbool.h>  // bool
-#include "../types/uint256.h"
 
 #include "format.h"
 
@@ -155,18 +154,4 @@ int format_hex(const uint8_t *in, size_t in_len, char *out, size_t out_len) {
     *out = '\0';
 
     return written + 1;
-}
-
-/**
- * @brief Formats a UInt256 as a decimal string
- *
- * @param[int] uint256
- * @param[out] out will contain a decimal string
- * @param[in] out_len length of \p out.
- * @return true If was successful.
- * @return false If failed.
- */
-bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len) {
-    uint32_t base10 = 10;
-    return tostring256(uint256, base10, out, (uint32_t) out_len);
 }

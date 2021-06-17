@@ -30,4 +30,6 @@ bool have_payload_to_parse(re_instruction_type_e ins_type) {
         case INS_END:
             return false;
     }
+
+    return false;  // should never happen
 }

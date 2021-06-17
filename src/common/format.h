@@ -4,6 +4,8 @@
 #include <stdint.h>   // int*_t, uint*_t
 #include <stdbool.h>  // bool
 
+#include "../types/uint256.h"
+
 /**
  * Format 64-bit signed integer as string.
  *
@@ -67,14 +69,3 @@ bool format_fpu64(char *dst, size_t dst_len, const uint64_t value, uint8_t decim
  *
  */
 int format_hex(const uint8_t *in, size_t in_len, char *out, size_t out_len);
-
-/**
- * @brief Formats a UInt256 as a decimal string
- *
- * @param[int] uint256
- * @param[out] out will contain a decimal string
- * @param[in] out_len length of \p out.
- * @return true If was successful.
- * @return false If failed.
- */
-bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len);
