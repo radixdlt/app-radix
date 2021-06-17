@@ -158,8 +158,8 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
 
     } else {
         outcome->outcome_type = PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS;
-    return true;
-}
+        return true;
+    }
 }
 
 static bool validate_tx_parser_config_tx_metadata(transaction_metadata_t *metadata) {
