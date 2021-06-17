@@ -435,7 +435,11 @@ bool tostring128(uint128_t *number, uint32_t baseParam, char *out, uint32_t outL
     return true;
 }
 
-bool tostring256(uint256_t *number, uint32_t baseParam, char *out, uint32_t outLength) {
+static bool tostring256(uint256_t *number,
+                        uint32_t baseParam,
+                        char *out,
+                        uint32_t outLength,
+                        size_t *actual_len) {
     uint256_t rDiv;
     uint256_t rMod;
     uint256_t base;
@@ -457,10 +461,19 @@ bool tostring256(uint256_t *number, uint32_t baseParam, char *out, uint32_t outL
     } while (!zero256(&rDiv));
     out[offset] = '\0';
     reverseString(out, offset);
+    *actual_len = offset;
     return true;
 }
 
-bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len) {
+bool to_string_uint256_get_len(uint256_t *uint256,
+                               char *out,
+                               const size_t out_len,
+                               size_t *actual_len) {
     uint32_t base10 = 10;
-    return tostring256(uint256, base10, out, (uint32_t) out_len);
+    return tostring256(uint256, base10, out, (uint32_t) out_len, actual_len);
+}
+
+bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len) {
+    size_t discarded = out_len;
+    return to_string_uint256_get_len(uint256, out, out_len, &discarded);
 }

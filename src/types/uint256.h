@@ -67,7 +67,7 @@ void mul128(uint128_t *number1, uint128_t *number2, uint128_t *target);
 void divmod128(uint128_t *l, uint128_t *r, uint128_t *div, uint128_t *mod);
 void divmod256(uint256_t *l, uint256_t *r, uint256_t *div, uint256_t *mod);
 bool tostring128(uint128_t *number, uint32_t base, char *out, uint32_t outLength);
-bool tostring256(uint256_t *number, uint32_t base, char *out, uint32_t outLength);
+// bool tostring256(uint256_t *number, uint32_t base, char *out, uint32_t outLength);
 
 // Extension by Alexander Cyon @ Radix DLT
 #define UINT256_DEC_STRING_MAX_LENGTH 78
@@ -83,6 +83,21 @@ bool tostring256(uint256_t *number, uint32_t base, char *out, uint32_t outLength
  * @return false iff failure.
  */
 bool uint256_from_buffer(buffer_t *buffer, uint256_t *target);
+
+/**
+ * @brief Formats a UInt256 as a decimal string and sets the actual len to \p actual_len
+ *
+ * @param[int] uint256
+ * @param[out] out will contain a decimal string
+ * @param[in] out_len length of \p out.
+ * @param[out] actual_len  the actual length of \p out.
+ * @return true If was successful.
+ * @return false If failed.
+ */
+bool to_string_uint256_get_len(uint256_t *uint256,
+                               char *out,
+                               const size_t out_len,
+                               size_t *actual_len);
 
 /**
  * @brief Formats a UInt256 as a decimal string
