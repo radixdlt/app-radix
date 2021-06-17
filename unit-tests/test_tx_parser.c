@@ -298,42 +298,41 @@ static void test_parse_tx(void **state) {
 		&init_tx_parser_outcome
 	);
 
-	// assert_true(init_tx_parser_successful);
+	assert_true(init_tx_parser_successful);
 
-	// update_hash_fn skip_hashing = &skip_hash;
+	update_hash_fn skip_hashing = &skip_hash;
 
-	// for (int instruction_index = 0; instruction_index < total_number_of_instructions; instruction_index++) {
-	// 	const uint8_t *instruction_bytes = tx_instructions[instruction_index];
-	// 	expected_instruction_t *expected_instruction = expected_instructions + (instruction_index*sizeof(expected_instruction_t));
+	for (int instruction_index = 0; instruction_index < total_number_of_instructions; instruction_index++) {
+		const uint8_t *instruction_bytes = tx_instructions[instruction_index];
+		expected_instruction_t *expected_instruction = expected_instructions + (instruction_index*sizeof(expected_instruction_t));
 
-	// 	size_t size = sizeof(instruction_bytes);
-	// 	assert_int_equal(size, expected_instruction->byte_count);
+		size_t size = expected_instruction->byte_count;
 		
-	// 	buffer_t instructionBuffer = {.ptr = instruction_bytes, .size = size, .offset = 0};
+		buffer_t instructionBuffer = {.ptr = instruction_bytes, .size = size, .offset = 0};
 
-	// 	parse_and_process_instruction_outcome_t outcome;
-	//     const bool parse_in_successful = parse_and_process_instruction_from_buffer(&instructionBuffer, skip_hashing, &tx_parser, &outcome);
+		parse_and_process_instruction_outcome_t outcome;
+	    const bool parse_in_successful = parse_and_process_instruction_from_buffer(&instructionBuffer, skip_hashing, &tx_parser, &outcome);
 
-	// 	assert_true(parse_in_successful);
+		assert_true(parse_in_successful);
 
-	// 	if (instruction_index - 1 == total_number_of_instructions) {
-	// 		// Last
-	// 		assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION);
-	// 	} else {
-	// 		assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS);
+		if (instruction_index - 1 == total_number_of_instructions) {
+			// Last
+			assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION);
+		} else {
+			assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS);
 
-	// 		assert_int_equal(tx_parser.instruction_parser.state, STATE_PARSE_INS_PARSED_INSTRUCTION);
+			assert_int_equal(tx_parser.instruction_parser.state, STATE_PARSE_INS_PARSED_INSTRUCTION);
 
-	// 		re_instruction_type_e parsed_ins_type = tx_parser.instruction_parser.instruction.ins_type;
+			re_instruction_type_e parsed_ins_type = tx_parser.instruction_parser.instruction.ins_type;
 
-	// 		assert_int_equal(parsed_ins_type, expected_instruction->instruction_type);
-	// 		if (parsed_ins_type == INS_UP) {
-	// 			re_substate_type_e parsed_substate_type = tx_parser.instruction_parser.instruction.ins_up.substate.type;
-	// 			assert_int_equal(parsed_substate_type, expected_instruction->substate_type);
-	// 		}
-	// 	}
+			assert_int_equal(parsed_ins_type, expected_instruction->instruction_type);
+			if (parsed_ins_type == INS_UP) {
+				re_substate_type_e parsed_substate_type = tx_parser.instruction_parser.instruction.ins_up.substate.type;
+				assert_int_equal(parsed_substate_type, expected_instruction->substate_type);
+			}
+		}
 
-	// }
+	}
 
 	// transaction_t *transaction = &tx_parser.transaction;
 
