@@ -7,6 +7,8 @@
 
 #include "../bridge.h"
 
+#include "../instruction/instruction.h"  // re_ins_syscall_t
+
 status_word_t status_word_for_parse_and_process_ins_failure(
     parse_and_process_instruction_outcome_t *failure) {
     switch (failure->outcome_type) {
@@ -31,6 +33,17 @@ status_word_t status_word_for_parse_and_process_ins_failure(
     return ERR_BAD_STATE;  // should never happen
 }
 
+/**
+ * @brief Parse transaction fee from SYSCALL instruction.
+ *
+ * When SYSCALL is used for tx fee, it MUST have length 33, and the first byte (a version byte),
+ * MUST be 0x00, and the remaining 32 bytes should be parsed as a UInt256.
+ *
+ * @param syscall A syscall instruction to parse from.
+ * @param tx_fee target uint256 to put result of parsing in
+ * @return true if successful
+ * @return false if fail
+ */
 bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
     if (syscall->call_data.length != 33) {
         return false;
@@ -145,8 +158,8 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
 
     } else {
         outcome->outcome_type = PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS;
-        return true;
-    }
+    return true;
+}
 }
 
 static bool validate_tx_parser_config_tx_metadata(transaction_metadata_t *metadata) {

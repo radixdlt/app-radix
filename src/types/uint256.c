@@ -23,7 +23,7 @@
 
 #include "uint256.h"
 #include "buffer.h"
-#include "common/format.h"
+#include "../common/format.h"
 
 #include "../bridge.h"
 

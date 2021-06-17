@@ -5,6 +5,7 @@
 #include "instruction_type.h"
 
 #include "../types/re_bytes.h"
+#include "../types/buffer.h"
 #include "../types/public_key.h"
 #include "substate/substate_id.h"
 #include "substate/substate.h"

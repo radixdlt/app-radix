@@ -5,9 +5,7 @@
 #include "transaction.h"
 #include "../types/status_word.h"
 #include "../types/signing.h"
-#include "../types/uint256.h"
 #include "../types/buffer.h"
-#include "../instruction/instruction.h"  // re_ins_syscall_t
 
 typedef void (*update_hash_fn)(buffer_t *);
 typedef bool (*derive_my_pubkey_key_fn)(derived_public_key_t *);
@@ -55,19 +53,6 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
 
 status_word_t status_word_for_parse_and_process_ins_failure(
     parse_and_process_instruction_outcome_t *failure);
-
-/**
- * @brief Parse transaction fee from SYSCALL instruction.
- *
- * When SYSCALL is used for tx fee, it MUST have length 33, and the first byte (a version byte),
- * MUST be 0x00, and the remaining 32 bytes should be parsed as a UInt256.
- *
- * @param syscall A syscall instruction to parse from.
- * @param tx_fee target uint256 to put result of parsing in
- * @return true if successful
- * @return false if fail
- */
-bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee);
 
 typedef enum {
     INIT_TX_PARSER_OK,

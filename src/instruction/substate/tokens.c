@@ -48,13 +48,3 @@ uint16_t status_word_for_failed_to_parse_tokens(parse_tokens_outcome_e failure_r
 
     return ERR_BAD_STATE;  // should never happen
 }
-
-bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key) {
-    if (tokens->owner.address_type != RE_ADDRESS_PUBLIC_KEY) {
-        PRINTF("Owner of tokens should be of Radix Address type 'PUBLICKEY'\n");
-        return false;
-    }
-
-    // We do not need to display tokens that are sent back to user (change).
-    return !public_key_equals(&tokens->owner.public_key, my_public_key);
-}

@@ -1,9 +1,10 @@
 #include "instruction.h"
 
-#include "sw.h"
-#include "../types/buffer.h"
+#include "../sw_custom.h"
 
 #include "../bridge.h"
+#include "substate/substate.h"
+#include "../types/public_key.h"
 
 static bool parse_substate_index(buffer_t *buffer, uint32_t *i32) {
     if (!buffer_read_u32(buffer, i32, BE)) {
@@ -147,6 +148,31 @@ uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failur
             return ERR_CMD_SIGN_TX_PARSE_INS_SYSCALL;
     }
     return ERR_BAD_STATE;  // should not happen.
+}
+
+static bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key) {
+    if (tokens->owner.address_type != RE_ADDRESS_PUBLIC_KEY) {
+        PRINTF("Owner of tokens should be of Radix Address type 'PUBLICKEY'\n");
+        return false;
+    }
+
+    // We do not need to display tokens that are sent back to user (change).
+    return !public_key_equals(&tokens->owner.public_key, my_public_key);
+}
+
+static bool does_substate_need_to_be_displayed(substate_t *substate, public_key_t *my_public_key) {
+    switch (substate->type) {
+        case SUBSTATE_TYPE_TOKENS:
+            return does_tokens_need_to_be_displayed(&substate->tokens, my_public_key);
+        case SUBSTATE_TYPE_PREPARED_STAKE:
+            return true;
+        case SUBSTATE_TYPE_PREPARED_UNSTAKE:
+            return true;
+        case SUBSTATE_TYPE_STAKE_SHARE:
+            return false;
+    }
+
+    return false;  // should never happen
 }
 
 bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,

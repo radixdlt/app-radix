@@ -46,5 +46,3 @@ typedef struct {
 bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *tokens);
 
 uint16_t status_word_for_failed_to_parse_tokens(parse_tokens_outcome_e failure_reason);
-
-bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key);
