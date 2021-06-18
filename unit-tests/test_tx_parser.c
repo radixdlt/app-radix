@@ -9,6 +9,7 @@
 
 #include "util/sha256.h"
 #include "util/debug_print.h"
+#include "util/hex_to_bin.h"
 
 #include "types/public_key.h"
 #include "types/bip32_path.h"
@@ -55,6 +56,10 @@ static re_substate_type_e IRRELEVANT = (re_substate_type_e) RE_SUBSTATE_TYPE_LAS
 
 static SHA256_CTX sha256_ctx;
 
+static char output[UINT256_DEC_STRING_MAX_LENGTH] = {0};
+static char output2[UINT256_DEC_STRING_MAX_LENGTH] = {0};
+static uint8_t bytes32[HASH_LEN];
+
 static void init_sha256_hasher() {
     sha256_init(&sha256_ctx);
 }
@@ -63,14 +68,6 @@ static bool update_sha256_hasher_hash(buffer_t *buf, bool final, uint8_t *out) {
     sha256_update(&sha256_ctx, buf->ptr, buf->size);
     if (final) {
         sha256_final(&sha256_ctx, out);
-        print_error("\n\nHASH:\n");
-        size_t i;
-        for (i = 0; i < 32; i++) {
-            print_error("%02x", out[i]);
-        }
-        print_error("\n\n");
-        // print_message("\n\n\HASH: %64x\n", out);
-        // print_array(out, HASH_LEN);
     }
     return true;  // never fails
 }
@@ -78,6 +75,127 @@ static bool update_sha256_hasher_hash(buffer_t *buf, bool final, uint8_t *out) {
 static bool skip_deriving_key(derived_public_key_t *key) {
     // NOOP with key
     return true;
+}
+
+static void do_test_parse_tx(uint32_t tx_byte_count,
+                             uint16_t total_number_of_instructions,
+                             expected_instruction_t *expected_instructions,
+                             char *expected_tx_fee,
+                             char *expected_total_xrd_amount,
+                             char expected_hash_hex[static HASH_LEN]) {
+    memset(output, 0, sizeof(output));
+    memset(output2, 0, sizeof(output2));
+    memset(bytes32, 0, sizeof(bytes32));
+
+    transaction_parser_t tx_parser;
+
+    transaction_metadata_t transaction_metadata = (transaction_metadata_t){
+        .tx_byte_count = tx_byte_count,
+        .tx_bytes_received_count = (uint32_t) 0,
+        .total_number_of_instructions = total_number_of_instructions,
+        .number_of_instructions_received = (uint16_t) 0,
+        .hrp_non_native_token = {0x00},
+        .hrp_non_native_token_len = (uint8_t) 0,
+    };
+
+    const bip32_path_t bip32_path = (bip32_path_t){
+        .path = {0x8000002C, 0x80000218, 0x80000002, 1, 3},
+        .path_len = 5,
+    };
+
+    const bool format_bip32_successful = bip32_path_format(&bip32_path, output, sizeof(output));
+    assert_true(format_bip32_successful);
+    assert_string_equal(output, "44'/536'/2'/1/3");
+
+    instruction_display_config_t ins_display_config = (instruction_display_config_t){
+        .display_substate_contents = true,
+        .display_tx_summary = true,
+    };
+
+    init_transaction_parser_config_t tx_parser_config = (init_transaction_parser_config_t){
+        .transaction_metadata = transaction_metadata,
+        .instruction_display_config = ins_display_config,
+        .bip32_path = bip32_path,
+    };
+
+    init_tx_parser_outcome_t init_tx_parser_outcome;
+
+    const bool init_tx_parser_successful = init_tx_parser_with_config(&tx_parser,
+                                                                      &skip_deriving_key,
+                                                                      &update_sha256_hasher_hash,
+                                                                      &init_sha256_hasher,
+                                                                      &tx_parser_config,
+                                                                      &init_tx_parser_outcome);
+
+    assert_true(init_tx_parser_successful);
+
+    size_t i;
+    for (i = 0; i < total_number_of_instructions; i++) {
+        expected_instruction_t *expected_instruction = &expected_instructions[i];
+        assert_int_equal(expected_instruction->index, i);
+        buffer_t *buf = &expected_instruction->buffer;
+        assert_int_equal(buf->offset, 0);
+
+        parse_and_process_instruction_outcome_t outcome;
+        const bool parse_in_successful =
+            parse_and_process_instruction_from_buffer(buf, &tx_parser, &outcome);
+
+        dbg_print_parse_process_instruction_outcome(&outcome);
+
+        assert_true(parse_in_successful);
+
+        if (i == total_number_of_instructions - 1) {
+            // Last
+            assert_int_equal(outcome.outcome_type,
+                             PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION);
+        } else {
+            assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS);
+
+            re_instruction_type_e parsed_ins_type =
+                tx_parser.instruction_parser.instruction.ins_type;
+
+            assert_int_equal(parsed_ins_type, expected_instruction->instruction_type);
+            if (parsed_ins_type == INS_UP) {
+                re_substate_type_e parsed_substate_type =
+                    tx_parser.instruction_parser.instruction.ins_up.substate.type;
+                assert_int_equal(parsed_substate_type, expected_instruction->substate_type);
+            }
+        }
+    }
+
+    transaction_t *transaction = &tx_parser.transaction;
+
+    // Must not allow burning/minting
+    assert_true(transaction->have_asserted_no_mint_or_burn);
+
+    // Assert Tx fee
+    memset(output, 0, sizeof(output));
+    const bool format_fee_successfull =
+        to_string_uint256(&transaction->tx_fee, output, sizeof(output));
+    assert_true(format_fee_successfull);
+    assert_string_equal(output, expected_tx_fee);
+
+    // Assert total XRD cost
+    memset(output, 0, sizeof(output));
+    size_t total_amount_len;
+    const bool format_total_cost_successfull =
+        to_string_uint256_get_len(&transaction->total_xrd_amount_incl_fee,
+                                  output,
+                                  sizeof(output),
+                                  &total_amount_len);
+
+    assert_true(format_total_cost_successfull);
+
+    // Ugh... `assert_string_equal` was unstable, 1/3 it fails, and the resulting string was way to
+    // long, this ugly manual fix copies over just the relevant bits.
+    memset(output2, 0, sizeof(output2));
+    memmove(output2, output, total_amount_len);
+    assert_string_equal(output2, expected_total_xrd_amount);
+
+    // Assert hash
+    memset(bytes32, 0, sizeof(bytes32));
+    hex_to_bin(expected_hash_hex, bytes32, HASH_LEN);
+    assert_memory_equal(tx_parser.signing.hasher.hash, bytes32, HASH_LEN);
 }
 
 /**
@@ -140,7 +258,7 @@ static bool skip_deriving_key(derived_public_key_t *key) {
  *
  * @param state
  */
-static void test_parse_tx(void **state) {
+static void test_tx_2_transfer_1_stake(void **state) {
     (void) state;
 
     const uint16_t total_number_of_instructions = 9;
@@ -221,9 +339,9 @@ static void test_parse_tx(void **state) {
 	
 	// Instruction 'END' (#1 bytes)
 	static uint8_t ins8[] = {0x00};
-    // clang-format on
 
-    expected_instruction_t expected_instructions[9] = {
+    // clang-format on
+    expected_instruction_t expected_instructions[] = {
         (expected_instruction_t){
             .index = 0,
             .buffer =
@@ -325,125 +443,26 @@ static void test_parse_tx(void **state) {
         },
     };
 
-    const uint32_t tx_byte_count = 321;
-
-    transaction_parser_t tx_parser;
-
-    transaction_metadata_t transaction_metadata = (transaction_metadata_t){
-        .tx_byte_count = tx_byte_count,
-        .tx_bytes_received_count = (uint32_t) 0,
-        .total_number_of_instructions = total_number_of_instructions,
-        .number_of_instructions_received = (uint16_t) 0,
-        .hrp_non_native_token = {0x00},
-        .hrp_non_native_token_len = (uint8_t) 0,
-    };
-
-    const bip32_path_t bip32_path = (bip32_path_t){
-        .path = {0x8000002C, 0x80000218, 0x80000002, 1, 3},
-        .path_len = 5,
-    };
-
-    char output[UINT256_DEC_STRING_MAX_LENGTH] = {0};
-    const bool format_bip32_successful = bip32_path_format(&bip32_path, output, sizeof(output));
-    assert_true(format_bip32_successful);
-    assert_string_equal(output, "44'/536'/2'/1/3");
-
-    instruction_display_config_t ins_display_config = (instruction_display_config_t){
-        .display_substate_contents = true,
-        .display_tx_summary = true,
-    };
-
-    init_transaction_parser_config_t tx_parser_config = (init_transaction_parser_config_t){
-        .transaction_metadata = transaction_metadata,
-        .instruction_display_config = ins_display_config,
-        .bip32_path = bip32_path,
-    };
-
-    init_tx_parser_outcome_t init_tx_parser_outcome;
-
-    const bool init_tx_parser_successful = init_tx_parser_with_config(&tx_parser,
-                                                                      &skip_deriving_key,
-                                                                      &update_sha256_hasher_hash,
-                                                                      &init_sha256_hasher,
-                                                                      &tx_parser_config,
-                                                                      &init_tx_parser_outcome);
-
-    assert_true(init_tx_parser_successful);
-
-    for (int instruction_index = 0; instruction_index < total_number_of_instructions;
-         instruction_index++) {
-        expected_instruction_t *expected_instruction = &expected_instructions[instruction_index];
-        buffer_t *buf = &expected_instruction->buffer;
-        assert_int_equal(buf->offset, 0);
-
-        parse_and_process_instruction_outcome_t outcome;
-        const bool parse_in_successful =
-            parse_and_process_instruction_from_buffer(buf, &tx_parser, &outcome);
-
-        dbg_print_parse_process_instruction_outcome(&outcome);
-
-        assert_true(parse_in_successful);
-
-        if (instruction_index == total_number_of_instructions - 1) {
-            // Last
-            assert_int_equal(outcome.outcome_type,
-                             PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION);
-        } else {
-            assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS);
-
-            re_instruction_type_e parsed_ins_type =
-                tx_parser.instruction_parser.instruction.ins_type;
-
-            assert_int_equal(parsed_ins_type, expected_instruction->instruction_type);
-            if (parsed_ins_type == INS_UP) {
-                re_substate_type_e parsed_substate_type =
-                    tx_parser.instruction_parser.instruction.ins_up.substate.type;
-                assert_int_equal(parsed_substate_type, expected_instruction->substate_type);
-            }
-        }
-    }
-
-    transaction_t *transaction = &tx_parser.transaction;
-    assert_true(transaction->have_asserted_no_mint_or_burn);
-
-    // clang-format off
-    // Expected hash sha256 TWICE: 83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
-    uint8_t expected_hash_twice[32] = {
-    	0x83, 0xf4, 0x54, 0x4f, 0xf1, 0xfb, 0xab, 0xc7,
-    	0xbe, 0x39, 0xc6, 0xf5, 0x31, 0xc3, 0xf3, 0x7f,
-    	0xc5, 0x0e, 0x0a, 0x0b, 0x65, 0x3a, 0xfd, 0xb2,
-    	0x2c, 0xc9, 0xf8, 0xe8, 0xaa, 0x46, 0x1f, 0xc9
-    };
-    // clang-format on
-
-    assert_memory_equal(tx_parser.signing.hasher.hash, expected_hash_twice, HASH_LEN);
-
-    memset(output, 0, sizeof(output));
-    const bool format_fee_successfull =
-        to_string_uint256(&transaction->tx_fee, output, sizeof(output));
-    assert_true(format_fee_successfull);
-    assert_string_equal(output, "2");  // tx fee
-
-    memset(output, 0, sizeof(output));
-    size_t total_amount_len;
-    const bool format_total_cost_successfull =
-        to_string_uint256_get_len(&transaction->total_xrd_amount_incl_fee,
-                                  output,
-                                  sizeof(output),
-                                  &total_amount_len);
-
-    assert_true(format_total_cost_successfull);
-
-    // Ugh... `assert_string_equal` was unstable, 1/3 it fails, and the resulting string was way to
-    // long, this ugly manual fix copies over just the relevant bits.
-    char output2[UINT256_DEC_STRING_MAX_LENGTH] = {0};
-    memset(output2, 0, sizeof(output2));
-    memmove(output2, output, total_amount_len);
-    assert_string_equal(output2, "29999999999999999998");  // total_xrd_amount_incl_fee
+    do_test_parse_tx(
+        321,  // tx byte count
+        total_number_of_instructions,
+        expected_instructions,
+        "2",                                                                // tx fee
+        "29999999999999999998",                                             // expected total cost
+        "83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9"  // hash
+        // {
+        //     // clang-format off
+        //         	0x83, 0xf4, 0x54, 0x4f, 0xf1, 0xfb, 0xab, 0xc7,
+        //         	0xbe, 0x39, 0xc6, 0xf5, 0x31, 0xc3, 0xf3, 0x7f,
+        //         	0xc5, 0x0e, 0x0a, 0x0b, 0x65, 0x3a, 0xfd, 0xb2,
+        //         	0x2c, 0xc9, 0xf8, 0xe8, 0xaa, 0x46, 0x1f, 0xc9
+        //     // clang-format on
+        // }  // Expected hash 83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
+    );
 }
 
 int main() {
-    const struct CMUnitTest tests[] = {cmocka_unit_test(test_parse_tx)};
+    const struct CMUnitTest tests[] = {cmocka_unit_test(test_tx_2_transfer_1_stake)};
 
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
