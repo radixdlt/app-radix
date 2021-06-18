@@ -54,15 +54,15 @@ int handler_sign_hash(buffer_t *cdata) {
         return io_send_sw(ERR_CMD_SIGN_HASH_PARSE_HASH_FAILURE_BAD_LENGTH);
     }
 
-    if (!buffer_move_fill_target(cdata, G_context.sign_hash_info.signing.digest, hash_len)) {
+    if (!buffer_move_fill_target(cdata, G_context.sign_hash_info.signing.hasher.hash, hash_len)) {
         return io_send_sw(ERR_CMD_SIGN_HASH_PARSE_HASH_FAILURE_TOO_SHORT);
     }
 
     PRINTF("Hash: %.*H\n",
-           sizeof(G_context.sign_hash_info.signing.digest),
-           G_context.sign_hash_info.signing.digest);
+           sizeof(G_context.sign_hash_info.signing.hasher.hash),
+           G_context.sign_hash_info.signing.hasher.hash);
 
     return ui_display_sign_hash(&G_context.sign_hash_info.signing.my_derived_public_key.bip32_path,
-                                G_context.sign_hash_info.signing.digest,
-                                sizeof(G_context.sign_hash_info.signing.digest));
+                                G_context.sign_hash_info.signing.hasher.hash,
+                                sizeof(G_context.sign_hash_info.signing.hasher.hash));
 }

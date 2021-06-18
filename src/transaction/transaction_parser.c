@@ -59,7 +59,6 @@ bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
 }
 
 bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
-                                               update_hash_fn update_hash,
                                                transaction_parser_t *tx_parser,
                                                parse_and_process_instruction_outcome_t *outcome) {
     instruction_parser_t *instruction_parser = &tx_parser->instruction_parser;
@@ -139,8 +138,10 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
     bool was_last_apdu =
         tx_metadata->number_of_instructions_received == tx_metadata->total_number_of_instructions;
 
-    // Update the hash
-    update_hash(buffer);
+    bool finalize_hash = was_last_apdu;
+
+    // Update the hash, finalize if needed
+    update_hash_twice(&tx_parser->signing.hasher, buffer, finalize_hash);
 
     if (was_last_apdu) {
         if (tx_metadata->tx_bytes_received_count != tx_metadata->tx_byte_count) {
@@ -155,7 +156,6 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
 
         outcome->outcome_type = PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION;
         return true;
-
     } else {
         outcome->outcome_type = PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS;
         return true;
@@ -195,6 +195,8 @@ static void setup_instruction_parser(instruction_parser_t *ins_parser) {
 
 bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
                                 derive_my_pubkey_key_fn derive_my_pubkey,
+                                sha_256_once_fn sha_256_once,
+                                init_implementing_hasher_fn reinit_implementing_hasher,
                                 init_transaction_parser_config_t *config,
                                 init_tx_parser_outcome_t *outcome) {
     if (!validate_tx_parser_config_tx_metadata(&config->transaction_metadata)) {
@@ -223,6 +225,9 @@ bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
         outcome->outcome_type = INIT_TX_PARSER_FAILED_TO_DERIVE_MY_PUBLIC_KEY;
         return false;
     }
+
+    // Setup hasher
+    init_hasher(&tx_parser->signing.hasher, sha_256_once, reinit_implementing_hasher);
 
     // Setup instruction parser
     setup_instruction_parser(&tx_parser->instruction_parser);

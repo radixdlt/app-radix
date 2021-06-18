@@ -130,24 +130,7 @@ bool crypto_ecdh(bip32_path_t *bip32_path,
                  cx_ecfp_public_key_t *other_party_public_key,
                  uint8_t shared_pubkey_point[static PUBLIC_KEY_POINT_LEN]);
 
-/**
- * @brief Updates hasher.
- *
- * Updates hasher and "finalizes" it if `should_finalize` is true.
- * Finalizing it performs sha256 again, meaining that we do SHA256(SHA256(buffer)).
- *
- * @param in
- * @param in_len
- * @param should_finalize
- * @param hasher
- * @param out
- * @param out_len
- * @return true iff successful.
- * @return false iff failure
- */
-bool update_hash(cx_sha256_t *hasher,
-                 const uint8_t *in,
-                 const size_t in_len,
-                 bool should_finalize,
-                 uint8_t *out,
-                 const size_t out_len);
+bool sha256_hash_ledger_sdk(cx_sha256_t *hash_context,
+                            buffer_t *buffer,
+                            bool finalize,  // if `false` then `out` is not used
+                            uint8_t *out);

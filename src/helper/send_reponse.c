@@ -72,7 +72,7 @@ int helper_send_response_signature(bool include_hash_in_response, signing_t *sig
     resp[offset++] = (uint8_t) signing->signature.v;
 
     if (include_hash_in_response) {
-        memmove(resp + offset, signing->digest, HASH_LEN);
+        memmove(resp + offset, signing->hasher.hash, HASH_LEN);
         offset += HASH_LEN;
     }
 

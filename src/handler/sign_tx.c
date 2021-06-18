@@ -93,6 +93,17 @@ static bool derive_my_public_key(derived_public_key_t *my_derived_pubkey) {
     return crypto_compress_public_key(&public_key, &my_derived_pubkey->address.public_key);
 }
 
+static cx_sha256_t hasher_ledger;
+
+static void init_impl_hasher() {
+    // Setup Ledger SDK hasher
+    cx_sha256_init(&hasher_ledger);
+}
+
+static bool update_hash_ledger_sdk(buffer_t *buffer, bool finalize, uint8_t *out) {
+    return sha256_hash_ledger_sdk(&hasher_ledger, buffer, finalize, out);
+}
+
 /**
  * @brief Initiate the sign transaction flow. If successful return \code true, else \code false and
  * \p outcome will contain the failure reason.
@@ -116,6 +127,8 @@ static bool init_sign_transaction_flow(buffer_t *buffer,
 
     if (!init_tx_parser_with_config(tx_parser,
                                     derive_my_pubkey,
+                                    &update_hash_ledger_sdk,
+                                    &init_impl_hasher,
                                     &parsed_config,
                                     &outcome->init_tx_parser_failure)) {
         PRINTF("Failed to initialize transaction parser.\n");
@@ -141,9 +154,6 @@ static int handle_initial_setup_apdu(buffer_t *buffer, transaction_parser_t *tx_
     G_context.req_type = CONFIRM_TRANSACTION;
     G_context.state = STATE_NONE;
 
-    // Setup hasher
-    cx_sha256_init(&G_context.sign_tx_info.hasher);
-
     return io_send_sw(SW_OK);
 }
 
@@ -161,7 +171,7 @@ static int ux_finished_parsing_tx(transaction_parser_t *tx_parser) {
 
     return ui_display_tx_summary(&tx_parser->transaction,
                                  &tx_parser->signing.my_derived_public_key.bip32_path,
-                                 tx_parser->signing.digest
+                                 tx_parser->signing.hasher.hash
 
     );
 }
@@ -182,28 +192,10 @@ static int ux_display_new_instruction_if_needed(transaction_parser_t *tx_parser)
     }
 }
 
-// static void _do_update_hash(uint8_t *input_bytes, uint8_t input_bytes_len) {
-static void _do_update_hash(buffer_t *buffer) {
-    cx_sha256_t *hasher = &G_context.sign_tx_info.hasher;
-    transaction_parser_t *tx_parser = &G_context.sign_tx_info.transaction_parser;
-    transaction_metadata_t *tx_metadata = &tx_parser->transaction_metadata;
-    bool was_last_apdu =
-        tx_metadata->number_of_instructions_received == tx_metadata->total_number_of_instructions;
-
-    update_hash(hasher,
-                buffer->ptr,
-                buffer->size,
-                was_last_apdu,
-                tx_parser->signing.digest,
-                HASH_LEN);
-}
-
 static int handle_single_re_ins_apdu(buffer_t *buffer, transaction_parser_t *tx_parser) {
     parse_and_process_instruction_outcome_t outcome;
 
-    update_hash_fn update_hash = &_do_update_hash;
-
-    if (!parse_and_process_instruction_from_buffer(buffer, update_hash, tx_parser, &outcome)) {
+    if (!parse_and_process_instruction_from_buffer(buffer, tx_parser, &outcome)) {
         // Failed to parse and process
         status_word_t sw_error = status_word_for_parse_and_process_ins_failure(&outcome);
         return io_send_sw(sw_error);

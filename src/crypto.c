@@ -214,9 +214,9 @@ static int __crypto_sign_message(const uint8_t *hash,
     return 0;
 }
 bool crypto_sign_message(signing_t *signing) {
-        signing->signature.der_len = MAX_DER_SIG_LEN;
-    return __crypto_sign_message(signing->digest,
-                                 sizeof(signing->digest),
+    signing->signature.der_len = MAX_DER_SIG_LEN;
+    return __crypto_sign_message(signing->hasher.hash,
+                                 sizeof(signing->hasher.hash),
                                  &signing->my_derived_public_key.bip32_path,
                                  signing->signature.der,
                                  &signing->signature.der_len,
@@ -305,39 +305,9 @@ static int __sha256_hash(cx_sha256_t *hash_context,
     return 0;
 }
 
-static bool sha256_hash(cx_sha256_t *hash_context,
-                        const uint8_t *in,
-                        const size_t in_len,
-
-                        bool should_finalize,  // if `false` then `out` is not used
-                        uint8_t *out,
-                        const size_t out_len) {
-    return __sha256_hash(hash_context, in, in_len, should_finalize, out, out_len) == 0;
-}
-
-bool update_hash(cx_sha256_t *hasher,
-                 const uint8_t *in,
-                 const size_t in_len,
-                 bool should_finalize,
-                 uint8_t *out,
-                 const size_t out_len) {
-    if (!sha256_hash(hasher, in, in_len, should_finalize, out, out_len)) {
-        return false;
-    }
-
-    if (should_finalize) {
-        cx_sha256_init(hasher);
-
-        // tmp copy of firstHash
-        uint8_t hashed_once[HASH_LEN];
-        memmove(hashed_once, out, HASH_LEN);
-
-        if (!sha256_hash(hasher, hashed_once, HASH_LEN, true, out, out_len)) {
-            return false;
-        }
-
-        PRINTF("Finalized hash to: '%.*h'\n", HASH_LEN, out);
-    }
-
-    return true;
+bool sha256_hash_ledger_sdk(cx_sha256_t *hash_context,
+                 buffer_t *buffer,
+                 bool finalize,  // if `false` then `out` is not used
+                 uint8_t *out) {
+    return __sha256_hash(hash_context, buffer->ptr, buffer->size, finalize, out, HASH_LEN) == 0;
 }

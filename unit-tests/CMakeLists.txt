@@ -39,7 +39,7 @@ include_directories(../src)
 
 add_executable(test_tx_parser test_tx_parser.c)
 
-
+add_library(sha256 SHARED util/sha256.c)
 
 add_library(read SHARED ../src/common/read.c)
 add_library(format SHARED ../src/common/format.c)
@@ -48,10 +48,13 @@ add_library(bech32_encode SHARED ../src/common/bech32_encode.c)
 add_library(public_key SHARED ../src/types/public_key.c)
 add_library(buffer SHARED ../src/types/buffer.c)
 add_library(bip32_path SHARED ../src/types/bip32_path.c)
+add_library(hasher SHARED ../src/types/hasher.c)
+
+# target_link_libraries(hasher PUBLIC buffer)
 
 add_library(uint256 SHARED ../src/types/uint256.c)
 #
-# We MUST explicitly state that `uint256.c` depends on `buffer.c (method: `buffer_move_fill_target`)`
+# We MUST explicitly state that `uint256.c` depends on `buffer.c` (method: `buffer_move_fill_target`)
 target_link_libraries(uint256 PUBLIC buffer)
 
 add_library(re_bytes SHARED ../src/types/re_bytes.c)
@@ -114,17 +117,19 @@ add_library(transaction_parser SHARED ../src/transaction/transaction_parser.c)
 # We MUST explicitly state that `transaction_parser.c` depends on `uint256.c` (method: `readu256BE`)
 target_link_libraries(transaction_parser PUBLIC uint256)
 
+# We MUST explicitly state that `transaction_parser.c` depends on `hasher.c` (method: `init_hasher`, `update_hash_twice`)
+target_link_libraries(transaction_parser PUBLIC hasher)
+
 add_library(transaction_metadata SHARED ../src/transaction/transaction_metadata.c)
 add_library(instruction_display_config SHARED ../src/transaction/instruction_display_config.c)
 add_library(init_transaction_parser_config SHARED ../src/transaction/init_transaction_parser_config.c)
 add_library(instruction_parser SHARED ../src/transaction/instruction_parser.c)
 
-
-
-
 target_link_libraries(test_tx_parser PUBLIC
                       cmocka
                       gcov
+                      sha256
+                      hasher
                       public_key
                       buffer
                       re_bytes

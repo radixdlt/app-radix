@@ -6,8 +6,8 @@
 #include "../types/status_word.h"
 #include "../types/signing.h"
 #include "../types/buffer.h"
+#include "../types/hasher.h"
 
-typedef void (*update_hash_fn)(buffer_t *);
 typedef bool (*derive_my_pubkey_key_fn)(derived_public_key_t *);
 
 typedef enum {
@@ -47,7 +47,6 @@ typedef struct {
 } transaction_parser_t;
 
 bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
-                                               update_hash_fn update_hash,
                                                transaction_parser_t *tx_parser,
                                                parse_and_process_instruction_outcome_t *outcome);
 
@@ -66,5 +65,7 @@ typedef struct {
 
 bool init_tx_parser_with_config(transaction_parser_t *tx_parser,
                                 derive_my_pubkey_key_fn derive_my_pubkey,
+                                sha_256_once_fn sha_256_once,
+                                init_implementing_hasher_fn reinit_implementing_hasher,
                                 init_transaction_parser_config_t *config,
                                 init_tx_parser_outcome_t *outcome);
