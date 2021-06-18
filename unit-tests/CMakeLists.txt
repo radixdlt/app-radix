@@ -40,7 +40,6 @@ include_directories(../src)
 add_executable(test_tx_parser test_tx_parser.c)
 
 add_library(sha256 SHARED util/sha256.c)
-add_library(debug_print SHARED util/debug_print.c)
 add_library(hex_to_bin SHARED util/hex_to_bin.c)
 
 add_library(read SHARED ../src/common/read.c)
@@ -131,7 +130,6 @@ target_link_libraries(test_tx_parser PUBLIC
                       cmocka
                       gcov
                       sha256
-                      debug_print
                       hex_to_bin
                       hasher
                       public_key

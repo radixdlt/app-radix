@@ -8,7 +8,6 @@
 #include <cmocka.h>
 
 #include "util/sha256.h"
-#include "util/debug_print.h"
 #include "util/hex_to_bin.h"
 
 #include "types/public_key.h"
@@ -32,7 +31,6 @@
 #include "instruction/substate/substate.h"
 #include "instruction/substate/substate_id.h"
 
-// #include "instruction/instruction.h"
 #include "instruction/instruction_type.h"
 
 #include "transaction/transaction.h"
@@ -42,9 +40,358 @@
 #include "transaction/init_transaction_parser_config.h"
 #include "transaction/instruction_parser.h"
 
+void dbg_print_re_ins_type(re_instruction_type_e ins_type) {
+    print_message("Instruction type: ");
+    switch (ins_type) {
+        case INS_DOWN:
+            print_message("'DOWN'");
+            break;
+        case INS_LDOWN:
+            print_message("'LDOWN'");
+            break;
+        case INS_UP:
+            print_message("'UP'");
+            break;
+        case INS_END:
+            print_message("'END'");
+            break;
+        case INS_MSG:
+            print_message("'MSG'");
+            break;
+        case INS_SYSCALL:
+            print_message("'SYSCALL'");
+            break;
+        case INS_HEADER:
+            print_message("'HEADER'");
+            break;
+        default:
+            print_message("UNKNOWN instruction type: %d", ins_type);
+            break;
+    }
+    print_message("\n");
+}
+
+// static void dbg_print_uint256(uint256_t *uint256) {
+//     char amount[UINT256_DEC_STRING_MAX_LENGTH + 1] = {0};
+
+//     if (!to_string_uint256(uint256, amount, sizeof(amount))) {
+//         print_message("Failed to print uint256");
+//         return;
+//     }
+
+//     print_message("%s\n", amount);
+// }
+
+// static void dbg_print_parse_tx_ins_state(parse_tx_ins_state_e state) {
+//     print_message("Parse tx ins state: ");
+//     switch (state) {
+//         case STATE_PARSE_INS_READY_TO_PARSE:
+//             print_message("'READY_TO_PARSE'");
+//             break;
+//         case STATE_PARSE_INS_PARSED_INSTRUCTION:
+//             print_message("'PARSED_INSTRUCTION'");
+//             break;
+//         case STATE_PARSE_INS_NEEDS_APPROVAL:
+//             print_message("'NEEDS_APPROVAL'");
+//             break;
+//         case STATE_PARSE_INS_APPROVED:
+//             print_message("'APPROVED'");
+//             break;
+//         case STATE_PARSE_INS_FINISHED_PARSING_ALL_INS:
+//             print_message("'FINISHED_PARSING_ALL_INS'");
+//             break;
+//         default:
+//             print_message("UNKNOWN parse tx ins state: %d", state);
+//             break;
+//     }
+//     print_message("\n");
+// }
+
+static void dbg_print_parse_address_failure_reason(parse_address_failure_reason_e failure_reason) {
+    print_message("Parse address failure reason: ");
+    switch (failure_reason) {
+        case PARSE_ADDRESS_FAIL_HASHEDKEY_WRONG_LEN:
+            print_message("'FAIL_HASHEDKEY_WRONG_LEN'");
+            break;
+        case PARSE_ADDRESS_FAIL_PUBKEY_WRONG_LEN:
+            print_message("'FAIL_PUBKEY_WRONG_LEN'");
+            break;
+        case PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE:
+            print_message("'FAIL_UNRECOGNIZED_ADDRESS_TYPE'");
+            break;
+        case PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE:
+            print_message("'UNSUPPORTED_ADDRESS_TYPE'");
+            break;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_parse_prepared_stake_outcome(parse_prepared_stake_outcome_t *outcome) {
+    print_message("parse prepared stake outcome: ");
+    switch (outcome->outcome_type) {
+        case PARSE_PREPARED_STAKE_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_PREPARED_STAKE_FAILURE_PARSE_DELEGATE:
+            print_message("'FAILURE_PARSE_DELEGATE'");
+            break;
+        case PARSE_PREPARED_STAKE_FAILURE_PARSE_OWNER:
+            print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");
+            dbg_print_parse_address_failure_reason(outcome->parse_owner_failure);
+            break;
+        case PARSE_PREPARED_STAKE_FAILURE_PARSE_AMOUNT:
+            print_message("'FAILURE_PARSE_AMOUNT'");
+            break;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_parse_prepared_unstake_outcome(parse_prepared_unstake_outcome_t *outcome) {
+    print_message("parse prepared unstake outcome: ");
+    switch (outcome->outcome_type) {
+        case PARSE_PREPARED_UNSTAKE_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_DELEGATE:
+            print_message("'FAILURE_PARSE_DELEGATE'");
+            break;
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_OWNER:
+            print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");
+            dbg_print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
+            break;
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_AMOUNT:
+            print_message("'FAILURE_PARSE_AMOUNT'");
+            break;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_parse_stake_share_outcome(parse_stake_share_outcome_t *outcome) {
+    print_message("parse stake share outcome: ");
+    switch (outcome->outcome_type) {
+        case PARSE_STAKE_SHARE_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_STAKE_SHARE_FAILURE_PARSE_PUBLICKEY:
+            print_message("'FAILURE_PARSE_PUBLICKEY'");
+            break;
+        case PARSE_STAKE_SHARE_FAILURE_PARSE_OWNER:
+            print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");
+            dbg_print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
+            break;
+        case PARSE_STAKE_SHARE_FAILURE_PARSE_AMOUNT:
+            print_message("'FAILURE_PARSE_AMOUNT'");
+            break;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_parse_substate_id_outcome(parse_substate_id_outcome_e outcome) {
+    print_message("Parse substate id outcome tpye:");
+    switch (outcome) {
+        case PARSE_SUBSTATE_ID_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_SUBSTATE_ID_FAILED_HASH:
+            print_message("'FAILED_HASH'");
+            break;
+        case PARSE_SUBSTATE_ID_FAILED_INDEX:
+            print_message("'FAILED_INDEX'");
+            break;
+    }
+    print_message("\n");
+}
+
+// static void dbg_print_re_substate_type(re_substate_type_e substate_type) {
+//     print_message("Substate type: ");
+//     switch (substate_type) {
+//         case SUBSTATE_TYPE_TOKENS:
+//             print_message("'TOKENS'");
+//             break;
+//         case SUBSTATE_TYPE_PREPARED_STAKE:
+//             print_message("'PREPARED_STAKE'");
+//             break;
+//         case SUBSTATE_TYPE_STAKE_SHARE:
+//             print_message("'STAKE_SHARE'");
+//             break;
+//         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
+//             print_message("'PREPARED_UNSTAKE'");
+//             break;
+//         default:
+//             print_message("UNKNOWN substate type: %d", substate_type);
+//             break;
+//     }
+//     print_message("\n");
+// }
+
+static void dbg_print_parse_tokens_outcome(parse_tokens_outcome_t *outcome) {
+    print_message("parse tokens outcome: ");
+    switch (outcome->outcome_type) {
+        case PARSE_TOKENS_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_TOKENS_FAILURE_PARSE_RRI:
+            print_message("'FAILURE_PARSE_RRI' - printing reason:\n");
+            dbg_print_parse_address_failure_reason(outcome->rri_parse_failure_reason);
+            break;
+        case PARSE_TOKENS_FAILURE_PARSE_OWNER:
+            print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");
+            dbg_print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
+            break;
+        case PARSE_TOKENS_FAILURE_PARSE_AMOUNT:
+            print_message("'FAILURE_PARSE_AMOUNT'");
+            break;
+    }
+    print_message("\n");
+}
+
+// static void dbg_print_re_address_type(re_address_type_e address_type) {
+//     print_message("RE address type: ");
+//     switch (address_type) {
+//         case RE_ADDRESS_NATIVE_TOKEN:
+//             print_message("'NATIVE_TOKEN'");
+//             break;
+//         case RE_ADDRESS_HASHED_KEY_NONCE:
+//             print_message("'HASHED_KEY_NONCE'");
+//             break;
+//         case RE_ADDRESS_PUBLIC_KEY:
+//             print_message("'PUBLIC_KEY'");
+//             break;
+//     }
+//     print_message("\n");
+// }
+
+static void dbg_print_parse_bytes_outcome(parse_bytes_outcome_e outcome) {
+    print_message("parse_bytes_outcome\n");
+    switch (outcome) {
+        case PARSE_BYTES_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_BYTES_FAILED_TO_PARSE_LENGTH:
+            print_message("'FAILED_TO_PARSE_LENGTH'");
+            break;
+        case PARSE_BYTES_FAIL_WRONG_LENGTH:
+            print_message("'FAIL_WRONG_LENGTH'");
+            break;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_parse_substate_outcome(parse_substate_outcome_t *failure_reason) {
+    print_message("parse substate outcome: \n");
+    switch (failure_reason->outcome_type) {
+        case PARSE_SUBSTATE_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE:
+            print_message("'FAIL_UNRECOGNIZED_SUBSTATE_TYPE'");
+            break;
+        case PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE:
+            print_message("'FAIL_UNSUPPORTED_SUBSTATE_TYPE'");
+            break;
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS:
+            print_message("'FAILED_TO_PARSE_TOKENS' - printing reason:\n");
+            dbg_print_parse_tokens_outcome(&failure_reason->tokens_failure);
+            break;
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_PREPARED_STAKE:
+            print_message("'FAILED_TO_PARSE_PREPARED_STAKE' - printing reason:\n");
+            dbg_print_parse_prepared_stake_outcome(&failure_reason->prepared_stake_failure);
+            break;
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_PREPARED_UNSTAKE:
+            print_message("'FAILED_TO_PARSE_PREPARED_UNSTAKE' - printing reason:\n");
+            dbg_print_parse_prepared_unstake_outcome(&failure_reason->prepared_unstake_failure);
+            break;
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_SHARE_STAKE:
+            print_message("'FAILED_TO_PARSE_SHARE_STAKE' - printing reason:\n");
+            dbg_print_parse_stake_share_outcome(&failure_reason->stake_share_failure);
+            break;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_parse_instruction_outcome(parse_instruction_outcome_t *outcome) {
+    print_message("Parse instruction type: ");
+    switch (outcome->outcome_type) {
+        case PARSE_INS_OK:
+            print_message("'OK'");
+            break;
+        case PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE:
+            print_message("'FAIL_UNREGOZNIED_INSTRUCTION_TYPE'");
+            break;
+        case PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE:
+            print_message("'FAIL_UNSUPPORTED_INSTRUCTION_TYPE'");
+            break;
+        case PARSE_INS_FAILED_TO_PARSE_SUBSTATE:
+            print_message("'FAILED_TO_PARSE_SUBSTATE' - printing reason:\n");
+            dbg_print_parse_substate_outcome(&outcome->substate_failure);
+            break;
+        case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID:
+            print_message("'FAILED_TO_PARSE_SUBSTATE_ID' - printing reason:\n");
+            dbg_print_parse_substate_id_outcome(outcome->substate_id_failure);
+            break;
+        case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_INDEX:
+            print_message("'FAILED_TO_PARSE_SUBSTATE_INDEX'");
+            break;
+        case PARSE_INS_FAILED_TO_PARSE_MSG:
+            print_message("'FAILED_TO_PARSE_MSG' - printing reason:\n");
+            dbg_print_parse_bytes_outcome(outcome->message_failure);
+            break;
+        case PARSE_INS_FAILED_TO_PARSE_HEADER:
+            print_message("'FAILED_TO_PARSE_HEADER'");
+            break;
+        case PARSE_INS_INVALID_HEADER:
+            print_message("'INVALID_HEADER'");
+            break;
+        case PARSE_INS_FAILED_TO_PARSE_SYSCALL:
+            print_message("'FAILED_TO_PARSE_SYSCALL' - printing reason:\n");
+            dbg_print_parse_bytes_outcome(outcome->syscall_failure);
+            break;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_parse_process_instruction_outcome(
+    parse_and_process_instruction_outcome_t *outcome) {
+    print_message("Parse and process instruction outcome: ");
+    switch (outcome->outcome_type) {
+        case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS:
+            print_message("'SUCCESS_FINISHED_PARSING_INS'");
+            break;
+        case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION:
+            print_message("'SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION'");
+            break;
+        case PARSE_PROCESS_INS_BAD_STATE:
+            print_message("'BAD_STATE'");
+            break;
+        case PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH:
+            print_message("'BYTE_COUNT_MISMATCH'");
+            break;
+        case PARSE_PROCESS_INS_DISABLE_MINT_AND_BURN_FLAG_NOT_SET:
+            print_message("'DISABLE_MINT_AND_BURN_FLAG_NOT_SET'");
+            break;
+        case PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL:
+            print_message("'PARSE_TX_FEE_FROM_SYSCALL_FAIL'");
+            break;
+        case PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END:
+            print_message("'LAST_INS_WAS_NOT_INS_END'");
+            break;
+        case PARSE_PROCESS_INS_FAILED_TO_PARSE:
+            print_message("'FAILED_TO_PARSE' - printing reason:\n");
+            dbg_print_parse_instruction_outcome(&outcome->parse_failure);
+            break;
+        default:
+            print_message("UNKNOWN Parse and process instruction outcome type: %d",
+                          outcome->outcome_type);
+            break;
+    }
+    print_message("\n");
+}
+
 typedef struct {
     int index;
-    buffer_t buffer;
+    // buffer_t buffer;
+    char *ins_hex;
+    size_t ins_len;
 
     re_instruction_type_e instruction_type;
 
@@ -55,10 +402,6 @@ typedef struct {
 static re_substate_type_e IRRELEVANT = (re_substate_type_e) RE_SUBSTATE_TYPE_LAST_KNOWN;
 
 static SHA256_CTX sha256_ctx;
-
-static char output[UINT256_DEC_STRING_MAX_LENGTH] = {0};
-static char output2[UINT256_DEC_STRING_MAX_LENGTH] = {0};
-static uint8_t bytes32[HASH_LEN];
 
 static void init_sha256_hasher() {
     sha256_init(&sha256_ctx);
@@ -83,9 +426,11 @@ static void do_test_parse_tx(uint32_t tx_byte_count,
                              char *expected_tx_fee,
                              char *expected_total_xrd_amount,
                              char expected_hash_hex[static HASH_LEN]) {
-    memset(output, 0, sizeof(output));
-    memset(output2, 0, sizeof(output2));
-    memset(bytes32, 0, sizeof(bytes32));
+    char output[UINT256_DEC_STRING_MAX_LENGTH] = {0};
+    char output2[UINT256_DEC_STRING_MAX_LENGTH] = {0};
+    uint8_t bytes255[255];
+    uint8_t bytes32[HASH_LEN];
+    buffer_t buf;
 
     transaction_parser_t tx_parser;
 
@@ -130,15 +475,18 @@ static void do_test_parse_tx(uint32_t tx_byte_count,
     assert_true(init_tx_parser_successful);
 
     size_t i;
+    parse_and_process_instruction_outcome_t outcome;
     for (i = 0; i < total_number_of_instructions; i++) {
         expected_instruction_t *expected_instruction = &expected_instructions[i];
         assert_int_equal(expected_instruction->index, i);
-        buffer_t *buf = &expected_instruction->buffer;
-        assert_int_equal(buf->offset, 0);
+        size_t instruction_size = expected_instruction->ins_len;
+        buf.offset = 0;
+        buf.size = instruction_size;
+        hex_to_bin(expected_instruction->ins_hex, bytes255, instruction_size);
+        buf.ptr = bytes255;
 
-        parse_and_process_instruction_outcome_t outcome;
         const bool parse_in_successful =
-            parse_and_process_instruction_from_buffer(buf, &tx_parser, &outcome);
+            parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
         dbg_print_parse_process_instruction_outcome(&outcome);
 
@@ -263,201 +611,83 @@ static void test_tx_2_transfer_1_stake(void **state) {
 
     const uint16_t total_number_of_instructions = 9;
 
-    // clang-format off
-	// Instruction 'HEADER' (#3 bytes)
-	static uint8_t ins0[] = {0x0a, 0x00, 0x01};
-			
-	// Instruction 'DOWN' (#37 bytes)
-	static uint8_t ins1[] = { 
-		0x04, 0x37, 0x4c, 0x00, 0xef, 0xbe, 0x61, 0xf6,
-		0x45, 0xa8, 0xb3, 0x5d, 0x77, 0x46, 0xe1, 0x06,
-		0xaf, 0xa7, 0x42, 0x28, 0x77, 0xe5, 0xd6, 0x07,
-		0x97, 0x5b, 0x60, 0x18, 0xe0, 0xa1, 0xaa, 0x6b,
-		0xf0, 0x00, 0x00, 0x00, 0x04
-	};
-	
-	// Instruction 'SYSCALL' (#35 bytes)
-	static uint8_t ins2[] = {
-		0x09, 0x21, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x02
-	};
-	
-	// Instruction 'UP' (#69 bytes)
-	// Substate type: 'TOKENS'
-	static uint8_t ins3[] = {
-		0x01, 0x03, 0x01, 0x04, 0x03, 0x77, 0xba, 0xc8,
-		0x06, 0x6e, 0x51, 0xcd, 0x0d, 0x6b, 0x32, 0x0c,
-		0x33, 0x8d, 0x5a, 0xbb, 0xcd, 0xbc, 0xca, 0x25,
-		0x57, 0x2b, 0x6b, 0x3e, 0xee, 0x94, 0x43, 0xea,
-		0xfc, 0x92, 0x10, 0x6b, 0xba, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x01, 0x15, 0x8e, 0x46,
-		0x09, 0x13, 0xcf, 0xff, 0xfe
-	};
-	
-	// Instruction 'END' (#1 bytes)
-	static uint8_t ins4[] = {0x00};
-	
-	// Instruction 'LDOWN' (#5 bytes)
-	static uint8_t ins5[] = {0x05, 0x00, 0x00, 0x00, 0x03};
-	
-	// Instruction 'UP' (#69 bytes)
-	// Substate type: 'TOKENS'
-	static uint8_t ins6[] = {
-		0x01, 0x03, 0x01, 0x04, 0x03, 0x77, 0xba, 0xc8,
-		0x06, 0x6e, 0x51, 0xcd, 0x0d, 0x6b, 0x32, 0x0c,
-		0x33, 0x8d, 0x5a, 0xbb, 0xcd, 0xbc, 0xca, 0x25,
-		0x57, 0x2b, 0x6b, 0x3e, 0xee, 0x94, 0x43, 0xea,
-		0xfc, 0x92, 0x10, 0x6b, 0xba, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x8a, 0xc7, 0x23,
-		0x04, 0x89, 0xe7, 0xff, 0xfe
-	};
-	
-	// Instruction 'UP' (#101 bytes)
-	// Substate type: 'PREPARED STAKE'
-	static uint8_t ins7[] = {
-		0x01, 0x04, 0x04, 0x03, 0x77, 0xba, 0xc8, 0x06,
-		0x6e, 0x51, 0xcd, 0x0d, 0x6b, 0x32, 0x0c, 0x33,
-		0x8d, 0x5a, 0xbb, 0xcd, 0xbc, 0xca, 0x25, 0x57,
-		0x2b, 0x6b, 0x3e, 0xee, 0x94, 0x43, 0xea, 0xfc,
-		0x92, 0x10, 0x6b, 0xba, 0x02, 0xf1, 0x9b, 0x2d,
-		0x09, 0x5a, 0x55, 0x3f, 0x3a, 0x41, 0xda, 0x4a,
-		0x8d, 0xc1, 0xf8, 0x45, 0x3d, 0xfb, 0xdc, 0x73,
-		0x3c, 0x5a, 0xec, 0xe8, 0xb1, 0x28, 0xb7, 0xd7,
-		0x99, 0x9a, 0xe2, 0x47, 0xa5, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x8a, 0xc7, 0x23,
-		0x04, 0x89, 0xe8, 0x00, 0x00
-	};
-	
-	// Instruction 'END' (#1 bytes)
-	static uint8_t ins8[] = {0x00};
-
     // clang-format on
     expected_instruction_t expected_instructions[] = {
-        (expected_instruction_t){
+        {
             .index = 0,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 3,
-                    .ptr = ins0,
-                },
+            .ins_len = 3,
+            .ins_hex = "0a0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
-        (expected_instruction_t){
+        {
             .index = 1,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 37,
-                    .ptr = ins1,
-                },
+            .ins_len = 37,
+            .ins_hex = "04374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf000000004",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-        (expected_instruction_t){
+        {
             .index = 2,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 35,
-                    .ptr = ins2,
-                },
+            .ins_len = 35,
+            .ins_hex = "0921000000000000000000000000000000000000000000000000000000000000000002",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-        (expected_instruction_t){
+        {
             .index = 3,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 69,
-                    .ptr = ins3,
-                },
+            .ins_len = 69,
+            .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
+                       "00000000000000000000000000000000000000000000001158e460913cffffe",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-        (expected_instruction_t){
+        {
             .index = 4,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 1,
-                    .ptr = ins4,
-                },
+            .ins_len = 1,
+            .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-        (expected_instruction_t){
+        {
             .index = 5,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 5,
-                    .ptr = ins5,
-                },
+            .ins_len = 5,
+            .ins_hex = "0500000003",
             .instruction_type = INS_LDOWN,
             .substate_type = IRRELEVANT,
         },
-        (expected_instruction_t){
+        {
             .index = 6,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 69,
-                    .ptr = ins6,
-                },
+            .ins_len = 69,
+            .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
+                       "000000000000000000000000000000000000000000000008ac7230489e7fffe",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-        (expected_instruction_t){
+        {
             .index = 7,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 101,
-                    .ptr = ins7,
-                },
+            .ins_len = 101,
+            .ins_hex = "0104040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bb"
+                       "a02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a50000"
+                       "000000000000000000000000000000000000000000008ac7230489e80000",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
         },
-        (expected_instruction_t){
+        {
             .index = 8,
-            .buffer =
-                (buffer_t){
-                    .offset = 0,
-                    .size = 1,
-                    .ptr = ins8,
-                },
+            .ins_len = 1,
+            .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    do_test_parse_tx(
-        321,  // tx byte count
-        total_number_of_instructions,
-        expected_instructions,
-        "2",                                                                // tx fee
-        "29999999999999999998",                                             // expected total cost
-        "83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9"  // hash
-        // {
-        //     // clang-format off
-        //         	0x83, 0xf4, 0x54, 0x4f, 0xf1, 0xfb, 0xab, 0xc7,
-        //         	0xbe, 0x39, 0xc6, 0xf5, 0x31, 0xc3, 0xf3, 0x7f,
-        //         	0xc5, 0x0e, 0x0a, 0x0b, 0x65, 0x3a, 0xfd, 0xb2,
-        //         	0x2c, 0xc9, 0xf8, 0xe8, 0xaa, 0x46, 0x1f, 0xc9
-        //     // clang-format on
-        // }  // Expected hash 83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
+    do_test_parse_tx(321,  // tx byte count
+                     total_number_of_instructions,
+                     expected_instructions,
+                     "2",                     // tx fee
+                     "29999999999999999998",  // expected total cost
+                     "83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9"  // hash
     );
 }
 
