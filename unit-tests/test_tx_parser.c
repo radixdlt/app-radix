@@ -388,13 +388,9 @@ static void dbg_print_parse_process_instruction_outcome(
 }
 
 typedef struct {
-    int index;
-    // buffer_t buffer;
     char *ins_hex;
     size_t ins_len;
-
     re_instruction_type_e instruction_type;
-
     /// Iff instruction type is 'INS_UP'
     re_substate_type_e substate_type;
 } expected_instruction_t;
@@ -415,24 +411,51 @@ static bool update_sha256_hasher_hash(buffer_t *buf, bool final, uint8_t *out) {
     return true;  // never fails
 }
 
-static bool skip_deriving_key(derived_public_key_t *key) {
-    // NOOP with key
+// TODO SLIP44 when we have changed from 536' => 1022' update this
+static bool always_derive_44_536_2_1_3(derived_public_key_t *key) {
+    key->address.address_type = RE_ADDRESS_PUBLIC_KEY;
+    // Public key corresponding to m/44'/536'/2'/1/3, when using the mnemonic:
+    // "equip will roof matter pink blind book anxiety banner elbow sun young"
+
+    hex_to_bin("026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
+               key->address.public_key.compressed,
+               33);
     return true;
 }
 
-static void do_test_parse_tx(uint32_t tx_byte_count,
-                             uint16_t total_number_of_instructions,
-                             expected_instruction_t *expected_instructions,
-                             char *expected_tx_fee,
-                             char *expected_total_xrd_amount,
-                             char expected_hash_hex[static HASH_LEN]) {
+typedef struct {
+    uint16_t total_number_of_instructions;
+    expected_instruction_t *expected_instructions;
+    // uint8_t expected_tx_fee[UINT256_BYTE_COUNT];
+    char *expected_tx_fee;
+    // uint8_t expected_total_xrd_amount[UINT256_BYTE_COUNT];
+    char *expected_total_xrd_amount;
+    uint8_t expected_hash[HASH_LEN];
+} test_vector_t;
+
+static void do_test_parse_tx(test_vector_t test_vector) {
+    uint16_t total_number_of_instructions = test_vector.total_number_of_instructions;
+    expected_instruction_t *expected_instructions = test_vector.expected_instructions;
+    // uint8_t *expected_tx_fee = test_vector->expected_tx_fee;
+    char *expected_tx_fee = test_vector.expected_tx_fee;
+    // uint8_t *expected_total_xrd_amount = test_vector->expected_total_xrd_amount;
+    char *expected_total_xrd_amount = test_vector.expected_total_xrd_amount;
+    uint8_t *expected_hash = test_vector.expected_hash;
+
+    size_t i;
+    uint32_t tx_byte_count = 0;
+    for (i = 0; i < total_number_of_instructions; i++) {
+        expected_instruction_t *expected_instruction = &expected_instructions[i];
+        size_t instruction_size = expected_instruction->ins_len;
+        tx_byte_count += instruction_size;
+    }
+
     char output[UINT256_DEC_STRING_MAX_LENGTH] = {0};
-    char output2[UINT256_DEC_STRING_MAX_LENGTH] = {0};
     uint8_t bytes255[255];
-    uint8_t bytes32[HASH_LEN];
     buffer_t buf;
 
     transaction_parser_t tx_parser;
+    memset(&tx_parser, 0, sizeof(tx_parser));
 
     transaction_metadata_t transaction_metadata = (transaction_metadata_t){
         .tx_byte_count = tx_byte_count,
@@ -466,7 +489,7 @@ static void do_test_parse_tx(uint32_t tx_byte_count,
     init_tx_parser_outcome_t init_tx_parser_outcome;
 
     const bool init_tx_parser_successful = init_tx_parser_with_config(&tx_parser,
-                                                                      &skip_deriving_key,
+                                                                      &always_derive_44_536_2_1_3,
                                                                       &update_sha256_hasher_hash,
                                                                       &init_sha256_hasher,
                                                                       &tx_parser_config,
@@ -474,19 +497,20 @@ static void do_test_parse_tx(uint32_t tx_byte_count,
 
     assert_true(init_tx_parser_successful);
 
-    size_t i;
+    expected_instruction_t expected_instruction;
     parse_and_process_instruction_outcome_t outcome;
+    bool parse_in_successful = false;
+    re_instruction_type_e parsed_ins_type;
+
     for (i = 0; i < total_number_of_instructions; i++) {
-        expected_instruction_t *expected_instruction = &expected_instructions[i];
-        assert_int_equal(expected_instruction->index, i);
-        size_t instruction_size = expected_instruction->ins_len;
+        expected_instruction = expected_instructions[i];
+        size_t instruction_size = expected_instruction.ins_len;
         buf.offset = 0;
         buf.size = instruction_size;
-        hex_to_bin(expected_instruction->ins_hex, bytes255, instruction_size);
+        hex_to_bin(expected_instruction.ins_hex, bytes255, instruction_size);
         buf.ptr = bytes255;
 
-        const bool parse_in_successful =
-            parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
+        parse_in_successful = parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
         dbg_print_parse_process_instruction_outcome(&outcome);
 
@@ -499,51 +523,38 @@ static void do_test_parse_tx(uint32_t tx_byte_count,
         } else {
             assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS);
 
-            re_instruction_type_e parsed_ins_type =
-                tx_parser.instruction_parser.instruction.ins_type;
+            parsed_ins_type = tx_parser.instruction_parser.instruction.ins_type;
 
-            assert_int_equal(parsed_ins_type, expected_instruction->instruction_type);
+            assert_int_equal(parsed_ins_type, expected_instruction.instruction_type);
             if (parsed_ins_type == INS_UP) {
                 re_substate_type_e parsed_substate_type =
                     tx_parser.instruction_parser.instruction.ins_up.substate.type;
-                assert_int_equal(parsed_substate_type, expected_instruction->substate_type);
+                assert_int_equal(parsed_substate_type, expected_instruction.substate_type);
             }
         }
     }
 
-    transaction_t *transaction = &tx_parser.transaction;
+    transaction_t transaction = tx_parser.transaction;
 
     // Must not allow burning/minting
-    assert_true(transaction->have_asserted_no_mint_or_burn);
+    assert_true(transaction.have_asserted_no_mint_or_burn);
+
+    // Assert hash
+    assert_memory_equal(tx_parser.signing.hasher.hash, expected_hash, HASH_LEN);
 
     // Assert Tx fee
     memset(output, 0, sizeof(output));
-    const bool format_fee_successfull =
-        to_string_uint256(&transaction->tx_fee, output, sizeof(output));
-    assert_true(format_fee_successfull);
+    bool uint256_format_success = false;
+    uint256_format_success = to_string_uint256(&transaction.tx_fee, output, sizeof(output));
+    assert_true(uint256_format_success);
     assert_string_equal(output, expected_tx_fee);
 
-    // Assert total XRD cost
+    // Assert total_xrd_amount_incl_fee
     memset(output, 0, sizeof(output));
-    size_t total_amount_len;
-    const bool format_total_cost_successfull =
-        to_string_uint256_get_len(&transaction->total_xrd_amount_incl_fee,
-                                  output,
-                                  sizeof(output),
-                                  &total_amount_len);
-
-    assert_true(format_total_cost_successfull);
-
-    // Ugh... `assert_string_equal` was unstable, 1/3 it fails, and the resulting string was way to
-    // long, this ugly manual fix copies over just the relevant bits.
-    memset(output2, 0, sizeof(output2));
-    memmove(output2, output, total_amount_len);
-    assert_string_equal(output2, expected_total_xrd_amount);
-
-    // Assert hash
-    memset(bytes32, 0, sizeof(bytes32));
-    hex_to_bin(expected_hash_hex, bytes32, HASH_LEN);
-    assert_memory_equal(tx_parser.signing.hasher.hash, bytes32, HASH_LEN);
+    uint256_format_success =
+        to_string_uint256(&transaction.total_xrd_amount_incl_fee, output, sizeof(output));
+    assert_true(uint256_format_success);
+    assert_string_equal(output, expected_total_xrd_amount);
 }
 
 /**
@@ -614,28 +625,24 @@ static void test_tx_2_transfer_1_stake(void **state) {
     // clang-format on
     expected_instruction_t expected_instructions[] = {
         {
-            .index = 0,
             .ins_len = 3,
             .ins_hex = "0a0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .index = 1,
             .ins_len = 37,
             .ins_hex = "04374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf000000004",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .index = 2,
             .ins_len = 35,
             .ins_hex = "0921000000000000000000000000000000000000000000000000000000000000000002",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .index = 3,
             .ins_len = 69,
             .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
                        "00000000000000000000000000000000000000000000001158e460913cffffe",
@@ -643,21 +650,18 @@ static void test_tx_2_transfer_1_stake(void **state) {
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
         {
-            .index = 4,
             .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
         {
-            .index = 5,
             .ins_len = 5,
             .ins_hex = "0500000003",
             .instruction_type = INS_LDOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .index = 6,
             .ins_len = 69,
             .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
                        "000000000000000000000000000000000000000000000008ac7230489e7fffe",
@@ -665,7 +669,6 @@ static void test_tx_2_transfer_1_stake(void **state) {
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
         {
-            .index = 7,
             .ins_len = 101,
             .ins_hex = "0104040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bb"
                        "a02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a50000"
@@ -674,7 +677,6 @@ static void test_tx_2_transfer_1_stake(void **state) {
             .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
         },
         {
-            .index = 8,
             .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
@@ -682,13 +684,43 @@ static void test_tx_2_transfer_1_stake(void **state) {
         },
     };
 
-    do_test_parse_tx(321,  // tx byte count
-                     total_number_of_instructions,
-                     expected_instructions,
-                     "2",                     // tx fee
-                     "29999999999999999998",  // expected total cost
-                     "83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9"  // hash
-    );
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = total_number_of_instructions,
+        .expected_instructions = expected_instructions,
+        .expected_tx_fee = "2",
+        // .expected_tx_fee =
+        //     {
+        //         // clang-format off
+        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02
+        //         // clang-format on
+        //     },  // tx fee, in hex (dec: 2)
+        .expected_total_xrd_amount = "29999999999999999998",
+        // .expected_total_xrd_amount =
+        //     {
+        //         // clang-format off
+        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        //         0xa0, 0x55, 0x69, 0x0d, 0x9d, 0xb7, 0xff, 0xfe
+        //         // clang-format on
+        //     },  // expected total cost = 0x01a055690d9db7fffe, in hex (dec: 29999999999999999998)
+        .expected_hash =
+            {
+                // clang-format off
+    	        0x83, 0xf4, 0x54, 0x4f, 0xf1, 0xfb, 0xab, 0xc7,
+            	0xbe, 0x39, 0xc6, 0xf5, 0x31, 0xc3, 0xf3, 0x7f,
+            	0xc5, 0x0e, 0x0a, 0x0b, 0x65, 0x3a, 0xfd, 0xb2,
+            	0x2c, 0xc9, 0xf8, 0xe8, 0xaa, 0x46, 0x1f, 0xc9
+                // clang-format on
+            },  //         expected hash:
+                //         83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
+
+    };
+
+    do_test_parse_tx(test_vector);
 }
 
 int main() {
