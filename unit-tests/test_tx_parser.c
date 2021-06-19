@@ -65,15 +65,10 @@ static bool update_sha256_hasher_hash(buffer_t *buf, bool final, uint8_t *out) {
     return true;  // never fails
 }
 
-// TODO SLIP44 when we have changed from 536' => 1022' update this
+uint8_t pub_key_bytes[PUBLIC_KEY_COMPRESSED_LEN];
 static bool always_derive_44_536_2_1_3(derived_public_key_t *key) {
     key->address.address_type = RE_ADDRESS_PUBLIC_KEY;
-    // Public key corresponding to m/44'/536'/2'/1/3, when using the mnemonic:
-    // "equip will roof matter pink blind book anxiety banner elbow sun young"
-
-    hex_to_bin("026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
-               key->address.public_key.compressed,
-               33);
+    memmove(key->address.public_key.compressed, pub_key_bytes, PUBLIC_KEY_COMPRESSED_LEN);
     return true;
 }
 
@@ -83,6 +78,7 @@ typedef struct {
     char *expected_tx_fee;
     char *expected_total_xrd_amount;
     uint8_t expected_hash[HASH_LEN];
+    char *my_public_key_hex;  // used to check token transfer change
 } test_vector_t;
 
 static void do_test_parse_tx(test_vector_t test_vector) {
@@ -91,6 +87,8 @@ static void do_test_parse_tx(test_vector_t test_vector) {
     char *expected_tx_fee = test_vector.expected_tx_fee;
     char *expected_total_xrd_amount = test_vector.expected_total_xrd_amount;
     uint8_t *expected_hash = test_vector.expected_hash;
+
+    hex_to_bin(test_vector.my_public_key_hex, pub_key_bytes, PUBLIC_KEY_COMPRESSED_LEN);
 
     size_t i;
     uint32_t tx_byte_count = 0;
@@ -264,15 +262,10 @@ static void do_test_parse_tx(test_vector_t test_vector) {
  * |- })
  * |
  * |- END
- *
- * @param state
  */
 static void test_tx_2_transfer_1_stake(void **state) {
     (void) state;
 
-    const uint16_t total_number_of_instructions = 9;
-
-    // clang-format on
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
@@ -335,7 +328,7 @@ static void test_tx_2_transfer_1_stake(void **state) {
     };
 
     test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = total_number_of_instructions,
+        .total_number_of_instructions = 9,
         .expected_instructions = expected_instructions,
         .expected_tx_fee = "2",
         .expected_total_xrd_amount = "29999999999999999998",
@@ -349,14 +342,186 @@ static void test_tx_2_transfer_1_stake(void **state) {
                 // clang-format on
             },  //         expected hash:
                 //         83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
+        .my_public_key_hex = "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
 
     };
 
     do_test_parse_tx(test_vector);
 }
 
+/**
+ * @brief
+ * BLOB
+ * 0a0001045d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f0000000309210000000000000000000000000000000000000000000000000000000000deadbeef0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155000000000000000000000000000000000000000000000001158e460913cffffe0005000000020103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550000000000000000000000000000000000000000000000008ac7230489e7fffe01040402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e15502fd72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de8870000000000000000000000000000000000000000000000008ac7230489e800000005000000050103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550000000000000000000000000000000000000000000000008ac7230489e7fffd01030104036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7000000000000000000000000000000000000000000000000000000000000000100
+
+      Instructions:
+      |- HEADER(0, 1)
+      |- DOWN(SubstateId { hash: 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f,
+ index: 3 })
+      |- SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
+ 19999999999999999998 } })
+      |- END
+      |- LDOWN(2)
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
+ 9999999999999999998 } })
+      |- UP(PreparedStake { owner:
+ 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, delegate:
+ 0x02fd72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de887, amount: U256 { raw:
+ 10000000000000000000 } })
+      |- END
+      |- LDOWN(5)
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
+ 9999999999999999997 } })
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x04036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7, amount: U256 { raw: 1 } })
+      |- END
+
+
+    More human readable
+
+      HEADER(0, 1)
+      DOWN(SubstateId { hash: 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f,
+ index: 3 })
+      SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 19.0000 })
+      END
+      LDOWN(2)
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
+      UP(PreparedStake { owner: brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd,
+ delegate: vb1qt7h9c2t4efstkm975why0s2dzj55jwushggwk6y6083aqzp8h5gwr7x4gz, amount: 10.0000 })
+      END
+      LDOWN(5)
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qspkkp3tqpz0gyhnp2tnj3l9axrx99nf6p2m0r70hd52vvs3gchdpacsadyal, amount: 0.0000 })
+      END
+ *
+ * @param state
+ */
+static void test_Fee_Stake_Transfer(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "045d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f00000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "09210000000000000000000000000000000000000000000000000000000000deadbeef",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
+                       "00000000000000000000000000000000000000000000001158e460913cffffe",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 5,
+            .ins_hex = "0500000002",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
+                       "000000000000000000000000000000000000000000000008ac7230489e7fffe",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 101,
+            .ins_hex = "01040402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e15502f"
+                       "d72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de887000000000000"
+                       "0000000000000000000000000000000000008ac7230489e80000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 5,
+            .ins_hex = "0500000005",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
+                       "000000000000000000000000000000000000000000000008ac7230489e7fffd",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "01030104036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f70"
+                       "000000000000000000000000000000000000000000000000000000000000001",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 13,
+        .expected_instructions = expected_instructions,
+        .expected_tx_fee = "3735928559",
+        .expected_total_xrd_amount = "40000000003735928552",
+        .expected_hash =
+            {
+                // clang-format off
+      0x42, 0x32, 0x5f, 0x68, 0xc1, 0x60, 0x71, 0xd0,
+      0xf2, 0x44, 0xbe, 0x9a, 0x73, 0x82, 0xb3, 0x4e,
+      0x52, 0x03, 0x7c, 0x4c, 0x6b, 0xa6, 0x35, 0x43,
+      0xfc, 0x68, 0x56, 0x22, 0x0f, 0x42, 0x27, 0x0d
+                // clang-format on
+            },  //         expected hash:
+                //         42325f68c16071d0f244be9a7382b34e52037c4c6ba63543fc6856220f42270d
+        .my_public_key_hex = "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
+    };
+
+    do_test_parse_tx(test_vector);
+}
+
 int main() {
-    const struct CMUnitTest tests[] = {cmocka_unit_test(test_tx_2_transfer_1_stake)};
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_tx_2_transfer_1_stake),
+        cmocka_unit_test(test_Fee_Stake_Transfer),
+
+    };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
