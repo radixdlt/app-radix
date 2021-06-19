@@ -160,7 +160,7 @@ static void do_test_parse_tx(test_vector_t test_vector) {
 
         parse_in_successful = parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
-        dbg_print_parse_process_instruction_outcome(&outcome);
+        // dbg_print_parse_process_instruction_outcome(&outcome);
 
         assert_true(parse_in_successful);
 
@@ -516,10 +516,179 @@ static void test_Fee_Stake_Transfer(void **state) {
     do_test_parse_tx(test_vector);
 }
 
+/**
+ * @brief
+ *
+ * Blob
+ 0a000104c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028000000030921000000000000000000000000000000000000000000000038821089088b6063da1801030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b000000000000000000000000000000000000000000000001158e460913cffffe00050000000201030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b000000000000000000000000000000000000000000000001158e460913cffffd01030104022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411000000000000000000000000000000000000000000000000000000000000000100050000000501030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0000000000000000000000000000000000000000000000008ac7230489e7fffd010404035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b037bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac0000000000000000000000000000000000000000000000008ac7230489e8000000
+
+      Instructions:
+      |- HEADER(0, 1)
+      |- DOWN(SubstateId { hash: 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028,
+ index: 3 })
+      |- SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
+ 19999999999999999998 } })
+      |- END
+      |- LDOWN(2)
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
+ 19999999999999999997 } })
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x04022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411, amount: U256 { raw: 1 } })
+      |- END
+      |- LDOWN(5)
+      |- UP(Tokens { rri: 0x01, owner:
+ 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
+ 9999999999999999997 } })
+      |- UP(PreparedStake { owner:
+ 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, delegate:
+ 0x037bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac, amount: U256 { raw:
+ 10000000000000000000 } })
+      |- END
+
+
+      More human readable:
+
+      HEADER(0, 1)
+      DOWN(SubstateId { hash: 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028,
+ index: 3 })
+      SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 19.0000 })
+      END
+      LDOWN(2)
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 19.0000 })
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qspzcncgxtpya0rywuq9cwtl550gmcr3qzvts9k582znxfjcc73pgygp9c86v, amount: 0.0000 })
+      END
+      LDOWN(5)
+      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 9.0000 })
+      UP(PreparedStake { owner: brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7,
+ delegate: vb1qdal2tlawdhd5e25kwmmq04w870zhkd5k8q3uue42xg5q0led9s6cxpe65y, amount: 10.0000 })
+      END
+
+ *
+ */
+static void test_Transfer_PartialTransfer_Transfer_Stake(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "04c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "0921000000000000000000000000000000000000000000000038821089088b6063da18",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
+                       "00000000000000000000000000000000000000000000001158e460913cffffe",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 5,
+            .ins_hex = "0500000002",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
+                       "00000000000000000000000000000000000000000000001158e460913cffffd",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "01030104022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a214110"
+                       "000000000000000000000000000000000000000000000000000000000000001",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 5,
+            .ins_hex = "0500000005",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
+                       "000000000000000000000000000000000000000000000008ac7230489e7fffd",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 101,
+            .ins_hex = "010404035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b037"
+                       "bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac000000000000"
+                       "0000000000000000000000000000000000008ac7230489e80000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 13,
+        .expected_instructions = expected_instructions,
+        .expected_tx_fee = "266851791263253500516888",
+        .expected_total_xrd_amount = "266901791263253500516880",
+        .expected_hash =
+            {
+                // clang-format off
+      0xda, 0xbb, 0xe3, 0xc3, 0x60, 0x1b, 0x3b, 0xbc,
+      0x58, 0x63, 0x36, 0x8e, 0x8e, 0x8f, 0x06, 0x1c,
+      0x24, 0x42, 0x0a, 0x9b, 0x2e, 0x06, 0x58, 0xad,
+      0x50, 0xa7, 0x40, 0xee, 0xb6, 0x16, 0x02, 0xde
+                // clang-format on
+            },  //         expected hash:
+                //         dabbe3c3601b3bbc5863368e8e8f061c24420a9b2e0658ad50a740eeb61602de
+        .my_public_key_hex = "022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411",
+    };
+
+    do_test_parse_tx(test_vector);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_tx_2_transfer_1_stake),
         cmocka_unit_test(test_Fee_Stake_Transfer),
+        cmocka_unit_test(test_Transfer_PartialTransfer_Transfer_Stake),
 
     };
 
