@@ -80,9 +80,7 @@ static bool always_derive_44_536_2_1_3(derived_public_key_t *key) {
 typedef struct {
     uint16_t total_number_of_instructions;
     expected_instruction_t *expected_instructions;
-    // uint8_t expected_tx_fee[UINT256_BYTE_COUNT];
     char *expected_tx_fee;
-    // uint8_t expected_total_xrd_amount[UINT256_BYTE_COUNT];
     char *expected_total_xrd_amount;
     uint8_t expected_hash[HASH_LEN];
 } test_vector_t;
@@ -90,9 +88,7 @@ typedef struct {
 static void do_test_parse_tx(test_vector_t test_vector) {
     uint16_t total_number_of_instructions = test_vector.total_number_of_instructions;
     expected_instruction_t *expected_instructions = test_vector.expected_instructions;
-    // uint8_t *expected_tx_fee = test_vector->expected_tx_fee;
     char *expected_tx_fee = test_vector.expected_tx_fee;
-    // uint8_t *expected_total_xrd_amount = test_vector->expected_total_xrd_amount;
     char *expected_total_xrd_amount = test_vector.expected_total_xrd_amount;
     uint8_t *expected_hash = test_vector.expected_hash;
 
@@ -342,25 +338,7 @@ static void test_tx_2_transfer_1_stake(void **state) {
         .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
         .expected_tx_fee = "2",
-        // .expected_tx_fee =
-        //     {
-        //         // clang-format off
-        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02
-        //         // clang-format on
-        //     },  // tx fee, in hex (dec: 2)
         .expected_total_xrd_amount = "29999999999999999998",
-        // .expected_total_xrd_amount =
-        //     {
-        //         // clang-format off
-        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-        //         0xa0, 0x55, 0x69, 0x0d, 0x9d, 0xb7, 0xff, 0xfe
-        //         // clang-format on
-        //     },  // expected total cost = 0x01a055690d9db7fffe, in hex (dec: 29999999999999999998)
         .expected_hash =
             {
                 // clang-format off
