@@ -73,20 +73,33 @@ static bool always_derive_44_536_2_1_3(derived_public_key_t *key) {
 }
 
 typedef struct {
-    uint16_t total_number_of_instructions;
-    expected_instruction_t *expected_instructions;
     char *expected_tx_fee;
     char *expected_total_xrd_amount;
     uint8_t expected_hash[HASH_LEN];
+
+} expected_success_t;
+
+typedef struct {
+    uint16_t index_of_failing_instruction;
+    parse_and_process_instruction_outcome_t expected_failure_outcome;
+} expected_failing_instruction_t;
+
+typedef struct {
+    uint16_t total_number_of_instructions;
+    expected_instruction_t *expected_instructions;
     char *my_public_key_hex;  // used to check token transfer change
+
+    bool should_fail;
+
+    union {
+        expected_failing_instruction_t expected_failing_instruction;
+        expected_success_t expected_success;
+    };
 } test_vector_t;
 
 static void do_test_parse_tx(test_vector_t test_vector) {
     uint16_t total_number_of_instructions = test_vector.total_number_of_instructions;
     expected_instruction_t *expected_instructions = test_vector.expected_instructions;
-    char *expected_tx_fee = test_vector.expected_tx_fee;
-    char *expected_total_xrd_amount = test_vector.expected_total_xrd_amount;
-    uint8_t *expected_hash = test_vector.expected_hash;
 
     hex_to_bin(test_vector.my_public_key_hex, pub_key_bytes, PUBLIC_KEY_COMPRESSED_LEN);
 
@@ -158,26 +171,47 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         hex_to_bin(expected_instruction.ins_hex, bytes255, instruction_size);
         buf.ptr = bytes255;
 
+        memset(&outcome, 0, sizeof(outcome));  // so that we can use `assert_memory_equal`.
         parse_in_successful = parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
         // dbg_print_parse_process_instruction_outcome(&outcome);
 
-        assert_true(parse_in_successful);
+        if (test_vector.should_fail &&
+            i == test_vector.expected_failing_instruction.index_of_failing_instruction) {
+            assert_false(parse_in_successful);
 
-        if (i == total_number_of_instructions - 1) {
-            // Last
-            assert_int_equal(outcome.outcome_type,
-                             PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION);
+            assert_int_equal(
+                outcome.outcome_type,
+                test_vector.expected_failing_instruction.expected_failure_outcome.outcome_type);
+
+            // print_message("\nExpected failure outcome:\n");
+            // dbg_print_parse_process_instruction_outcome(
+            //     &test_vector.expected_failing_instruction.expected_failure_outcome);
+
+            assert_memory_equal(&outcome,
+                                &test_vector.expected_failing_instruction.expected_failure_outcome,
+                                sizeof(outcome));
+            // Done parsing failure.
+            return;
         } else {
-            assert_int_equal(outcome.outcome_type, PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS);
+            assert_true(parse_in_successful);
 
-            parsed_ins_type = tx_parser.instruction_parser.instruction.ins_type;
+            if (i == total_number_of_instructions - 1) {
+                // Last
+                assert_int_equal(outcome.outcome_type,
+                                 PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION);
+            } else {
+                assert_int_equal(outcome.outcome_type,
+                                 PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS);
 
-            assert_int_equal(parsed_ins_type, expected_instruction.instruction_type);
-            if (parsed_ins_type == INS_UP) {
-                re_substate_type_e parsed_substate_type =
-                    tx_parser.instruction_parser.instruction.ins_up.substate.type;
-                assert_int_equal(parsed_substate_type, expected_instruction.substate_type);
+                parsed_ins_type = tx_parser.instruction_parser.instruction.ins_type;
+
+                assert_int_equal(parsed_ins_type, expected_instruction.instruction_type);
+                if (parsed_ins_type == INS_UP) {
+                    re_substate_type_e parsed_substate_type =
+                        tx_parser.instruction_parser.instruction.ins_up.substate.type;
+                    assert_int_equal(parsed_substate_type, expected_instruction.substate_type);
+                }
             }
         }
     }
@@ -186,6 +220,10 @@ static void do_test_parse_tx(test_vector_t test_vector) {
 
     // Must not allow burning/minting
     assert_true(transaction.have_asserted_no_mint_or_burn);
+
+    char *expected_tx_fee = test_vector.expected_success.expected_tx_fee;
+    char *expected_total_xrd_amount = test_vector.expected_success.expected_total_xrd_amount;
+    uint8_t *expected_hash = test_vector.expected_success.expected_hash;
 
     // Assert hash
     assert_memory_equal(tx_parser.signing.hasher.hash, expected_hash, HASH_LEN);
@@ -263,7 +301,7 @@ static void do_test_parse_tx(test_vector_t test_vector) {
  * |
  * |- END
  */
-static void test_tx_2_transfer_1_stake(void **state) {
+static void test_success_transfer_transfer_stake(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
@@ -330,21 +368,23 @@ static void test_tx_2_transfer_1_stake(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 9,
         .expected_instructions = expected_instructions,
-        .expected_tx_fee = "2",
-        .expected_total_xrd_amount = "29999999999999999998",
-        .expected_hash =
-            {
-                // clang-format off
+        .my_public_key_hex = "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
+        .should_fail = false,
+        .expected_success = {
+            .expected_tx_fee = "2",
+            .expected_total_xrd_amount = "29999999999999999998",
+            .expected_hash =
+                {
+                    // clang-format off
     	        0x83, 0xf4, 0x54, 0x4f, 0xf1, 0xfb, 0xab, 0xc7,
             	0xbe, 0x39, 0xc6, 0xf5, 0x31, 0xc3, 0xf3, 0x7f,
             	0xc5, 0x0e, 0x0a, 0x0b, 0x65, 0x3a, 0xfd, 0xb2,
             	0x2c, 0xc9, 0xf8, 0xe8, 0xaa, 0x46, 0x1f, 0xc9
-                // clang-format on
-            },  //         expected hash:
-                //         83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
-        .my_public_key_hex = "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
+                    // clang-format on
+                },  //         expected hash:
+                    //         83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
 
-    };
+        }};
 
     do_test_parse_tx(test_vector);
 }
@@ -405,7 +445,7 @@ static void test_tx_2_transfer_1_stake(void **state) {
  *
  * @param state
  */
-static void test_Fee_Stake_Transfer(void **state) {
+static void test_success_transfer_transfer_stake_transfer_with_change(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
@@ -498,20 +538,22 @@ static void test_Fee_Stake_Transfer(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .expected_tx_fee = "3735928559",
-        .expected_total_xrd_amount = "40000000003735928552",
-        .expected_hash =
-            {
-                // clang-format off
+        .my_public_key_hex = "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
+        .should_fail = false,
+        .expected_success = {
+            .expected_tx_fee = "3735928559",
+            .expected_total_xrd_amount = "40000000003735928552",
+            .expected_hash =
+                {
+                    // clang-format off
       0x42, 0x32, 0x5f, 0x68, 0xc1, 0x60, 0x71, 0xd0,
       0xf2, 0x44, 0xbe, 0x9a, 0x73, 0x82, 0xb3, 0x4e,
       0x52, 0x03, 0x7c, 0x4c, 0x6b, 0xa6, 0x35, 0x43,
       0xfc, 0x68, 0x56, 0x22, 0x0f, 0x42, 0x27, 0x0d
-                // clang-format on
-            },  //         expected hash:
-                //         42325f68c16071d0f244be9a7382b34e52037c4c6ba63543fc6856220f42270d
-        .my_public_key_hex = "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
-    };
+                    // clang-format on
+                },  //         expected hash:
+                    //         42325f68c16071d0f244be9a7382b34e52037c4c6ba63543fc6856220f42270d
+        }};
 
     do_test_parse_tx(test_vector);
 }
@@ -573,7 +615,7 @@ static void test_Fee_Stake_Transfer(void **state) {
 
  *
  */
-static void test_Transfer_PartialTransfer_Transfer_Stake(void **state) {
+static void test_success_transfer_transfer_with_change_transfer_stake(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
@@ -666,19 +708,23 @@ static void test_Transfer_PartialTransfer_Transfer_Stake(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .expected_tx_fee = "266851791263253500516888",
-        .expected_total_xrd_amount = "266901791263253500516880",
-        .expected_hash =
+        .my_public_key_hex = "022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411",
+        .should_fail = false,
+        .expected_success =
             {
-                // clang-format off
+                .expected_tx_fee = "266851791263253500516888",
+                .expected_total_xrd_amount = "266901791263253500516880",
+                .expected_hash =
+                    {
+                        // clang-format off
       0xda, 0xbb, 0xe3, 0xc3, 0x60, 0x1b, 0x3b, 0xbc,
       0x58, 0x63, 0x36, 0x8e, 0x8e, 0x8f, 0x06, 0x1c,
       0x24, 0x42, 0x0a, 0x9b, 0x2e, 0x06, 0x58, 0xad,
       0x50, 0xa7, 0x40, 0xee, 0xb6, 0x16, 0x02, 0xde
-                // clang-format on
-            },  //         expected hash:
-                //         dabbe3c3601b3bbc5863368e8e8f061c24420a9b2e0658ad50a740eeb61602de
-        .my_public_key_hex = "022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411",
+                        // clang-format on
+                    },  //         expected hash:
+                        //         dabbe3c3601b3bbc5863368e8e8f061c24420a9b2e0658ad50a740eeb61602de
+            },
     };
 
     do_test_parse_tx(test_vector);
@@ -736,7 +782,7 @@ brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, amount: 9.000
 brx1qspe4a5ll4r49esdpavy7n8rj5ndmp27rs6jjdrn76pauz0kkx0ye9sw2a6hz, amount: 0.0000 })
  * END
  */
-static void test_Transfer_Unstake_PartialTransfer(void **state) {
+static void test_success_transfer_unstake_transfer_with_change(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
@@ -822,19 +868,23 @@ static void test_Transfer_Unstake_PartialTransfer(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 12,
         .expected_instructions = expected_instructions,
-        .expected_tx_fee = "12345",
-        .expected_total_xrd_amount = "20000000000000012336",
-        .expected_hash =
+        .my_public_key_hex = "039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96",
+        .should_fail = false,
+        .expected_success =
             {
-                // clang-format off
+                .expected_tx_fee = "12345",
+                .expected_total_xrd_amount = "20000000000000012336",
+                .expected_hash =
+                    {
+                        // clang-format off
       0xde, 0x9e, 0x42, 0xd3, 0x9c, 0x8a, 0x23, 0xbd,
       0x39, 0xa7, 0xde, 0xc8, 0x0a, 0xa3, 0x13, 0xed,
       0x3e, 0x0c, 0x70, 0x95, 0x87, 0x3f, 0xc9, 0xf7,
       0x10, 0x4e, 0x48, 0x1b, 0x43, 0x20, 0x68, 0xc4
-                // clang-format on
-            },  //         expected hash:
-                //         de9e42d39c8a23bd39a7dec80aa313ed3e0c7095873fc9f7104e481b432068c4
-        .my_public_key_hex = "039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96",
+                        // clang-format on
+                    },  //         expected hash:
+                        //         de9e42d39c8a23bd39a7dec80aa313ed3e0c7095873fc9f7104e481b432068c4
+            },
     };
 
     do_test_parse_tx(test_vector);
@@ -892,7 +942,7 @@ static void test_Transfer_Unstake_PartialTransfer(void **state) {
  vb1qtkprascfqu5q2mc7kn0hcl9ah05rjuentyu8tsvmvey4vql3cljqltylt4, amount: 10.0000 })
       * END
  */
-static void test_Transfer_PartialTransfer_Unstake(void **state) {
+static void test_success_transfer_transfer_with_change_unstake(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
@@ -978,19 +1028,23 @@ static void test_Transfer_PartialTransfer_Unstake(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 12,
         .expected_instructions = expected_instructions,
-        .expected_tx_fee = "987654321",
-        .expected_total_xrd_amount = "20000000000987654312",
-        .expected_hash =
+        .my_public_key_hex = "02b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a",
+        .should_fail = false,
+        .expected_success =
             {
-                // clang-format off
+                .expected_tx_fee = "987654321",
+                .expected_total_xrd_amount = "20000000000987654312",
+                .expected_hash =
+                    {
+                        // clang-format off
       0x18, 0x59, 0xc7, 0xa1, 0x1b, 0x46, 0xae, 0xfb,
       0x28, 0x86, 0x0f, 0x37, 0xaf, 0xff, 0x4f, 0xcf,
       0x5a, 0xac, 0x2c, 0x4c, 0x99, 0x5a, 0x65, 0x42,
       0x9a, 0x4f, 0x00, 0xf3, 0x3e, 0x42, 0x98, 0xa3
-                // clang-format on
-            },  //         expected hash:
-                //         1859c7a11b46aefb28860f37afff4fcf5aac2c4c995a65429a4f00f33e4298a3
-        .my_public_key_hex = "02b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a",
+                        // clang-format on
+                    },  //         expected hash:
+                        //         1859c7a11b46aefb28860f37afff4fcf5aac2c4c995a65429a4f00f33e4298a3
+            },
     };
 
     do_test_parse_tx(test_vector);
@@ -1041,7 +1095,7 @@ static void test_Transfer_PartialTransfer_Unstake(void **state) {
  rri: xrd_rb1qya85pwq, owner: brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk,
  amount: 0.0000 }) END
  */
-static void test_Transfer_PartialTransfer_PartialTransfer(void **state) {
+static void test_success_transfer_transfer_with_change_transfer_with_change(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
@@ -1133,34 +1187,136 @@ static void test_Transfer_PartialTransfer_PartialTransfer(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .expected_tx_fee = "64222",
-        .expected_total_xrd_amount = "30000000000000064206",
-        .expected_hash =
+        .my_public_key_hex = "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
+        .should_fail = false,
+        .expected_success =
             {
-                // clang-format off
+                .expected_tx_fee = "64222",
+                .expected_total_xrd_amount = "30000000000000064206",
+                .expected_hash =
+                    {
+                        // clang-format off
       0x52, 0xe8, 0x97, 0x42, 0x10, 0xec, 0x91, 0xae,
       0x34, 0x9b, 0x7d, 0x9c, 0x01, 0x6f, 0xcd, 0xfc,
       0x24, 0x08, 0xb3, 0x99, 0x4d, 0xbc, 0xa8, 0x9d,
       0x0a, 0x81, 0xdc, 0x0e, 0x19, 0x75, 0xa1, 0x3b
-                // clang-format on
-            },  //         expected hash:
-                //         52e8974210ec91ae349b7d9c016fcdfc2408b3994dbca89d0a81dc0e1975a13b
-        .my_public_key_hex = "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
+                        // clang-format on
+                    },  //         expected hash:
+                        //         52e8974210ec91ae349b7d9c016fcdfc2408b3994dbca89d0a81dc0e1975a13b
+            },
     };
 
     do_test_parse_tx(test_vector);
 }
 
-int main() {
-    const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_tx_2_transfer_1_stake),
-        cmocka_unit_test(test_Fee_Stake_Transfer),
-        cmocka_unit_test(test_Transfer_PartialTransfer_Transfer_Stake),
-        cmocka_unit_test(test_Transfer_Unstake_PartialTransfer),
-        cmocka_unit_test(test_Transfer_PartialTransfer_Unstake),
-        cmocka_unit_test(test_Transfer_PartialTransfer_PartialTransfer),
+static void test_failure_missing_header(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
+                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
 
     };
 
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 4,
+        .expected_instructions = expected_instructions,
+        .my_public_key_hex =
+            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
+        .should_fail = true,
+        .expected_failing_instruction = {
+            .index_of_failing_instruction = 0,
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_DISABLE_MINT_AND_BURN_FLAG_NOT_SET,
+                .parse_failure =
+                    {0},  // lack of HEADER instruction is not a parse failure, it is a logic error.
+            }}};
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_invalid_header_invalid_version(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0aff01",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 2,
+        .expected_instructions = expected_instructions,
+        .my_public_key_hex =
+            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
+        .should_fail = true,
+        .expected_failing_instruction = {
+            .index_of_failing_instruction = 0,
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_INVALID_HEADER,
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+int main() {
+    const struct CMUnitTest success_complex_tx[] = {
+        cmocka_unit_test(test_success_transfer_transfer_stake),
+        cmocka_unit_test(test_success_transfer_transfer_stake_transfer_with_change),
+        cmocka_unit_test(test_success_transfer_transfer_with_change_transfer_stake),
+        cmocka_unit_test(test_success_transfer_unstake_transfer_with_change),
+        cmocka_unit_test(test_success_transfer_transfer_with_change_unstake),
+        cmocka_unit_test(test_success_transfer_transfer_with_change_transfer_with_change),
+    };
+
+    const struct CMUnitTest failing_txs[] = {
+        cmocka_unit_test(test_failure_missing_header),
+        cmocka_unit_test(test_failure_invalid_header_invalid_version),
+    };
+
+    int status;
+    print_message("\n~~~***===<| TEST GROUP: 'success_complex_tx'  |>===***~~~\n");
+    status = cmocka_run_group_tests(success_complex_tx, NULL, NULL);
+    print_message("\n~~~***===<| TEST GROUP: 'failing_txs'  |>===***~~~\n");
+    status += cmocka_run_group_tests(failing_txs, NULL, NULL);
+    return status;
 }
