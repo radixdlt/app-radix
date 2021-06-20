@@ -337,6 +337,9 @@ void dbg_print_parse_process_instruction_outcome(parse_and_process_instruction_o
         case PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL:
             print_message("'PARSE_TX_FEE_FROM_SYSCALL_FAIL'");
             break;
+        case PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE:
+            print_message("'TX_DOES_NOT_CONTAIN_TX_FEE'");
+            break;
         case PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END:
             print_message("'LAST_INS_WAS_NOT_INS_END'");
             break;

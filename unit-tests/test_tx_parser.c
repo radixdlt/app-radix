@@ -160,7 +160,7 @@ static void do_test_parse_tx(test_vector_t test_vector) {
 
     expected_instruction_t expected_instruction;
     parse_and_process_instruction_outcome_t outcome;
-    bool parse_in_successful = false;
+    bool parse_instruction_successful = false;
     re_instruction_type_e parsed_ins_type;
 
     for (i = 0; i < total_number_of_instructions; i++) {
@@ -172,21 +172,22 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         buf.ptr = bytes255;
 
         memset(&outcome, 0, sizeof(outcome));  // so that we can use `assert_memory_equal`.
-        parse_in_successful = parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
+        parse_instruction_successful =
+            parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
         // dbg_print_parse_process_instruction_outcome(&outcome);
 
         if (test_vector.should_fail &&
             i == test_vector.expected_failing_instruction.index_of_failing_instruction) {
-            assert_false(parse_in_successful);
-
-            assert_int_equal(
-                outcome.outcome_type,
-                test_vector.expected_failing_instruction.expected_failure_outcome.outcome_type);
+            assert_false(parse_instruction_successful);
 
             // print_message("\nExpected failure outcome:\n");
             // dbg_print_parse_process_instruction_outcome(
             //     &test_vector.expected_failing_instruction.expected_failure_outcome);
+
+            assert_int_equal(
+                outcome.outcome_type,
+                test_vector.expected_failing_instruction.expected_failure_outcome.outcome_type);
 
             assert_memory_equal(&outcome,
                                 &test_vector.expected_failing_instruction.expected_failure_outcome,
@@ -194,7 +195,7 @@ static void do_test_parse_tx(test_vector_t test_vector) {
             // Done parsing failure.
             return;
         } else {
-            assert_true(parse_in_successful);
+            assert_true(parse_instruction_successful);
 
             if (i == total_number_of_instructions - 1) {
                 // Last
@@ -1264,7 +1265,8 @@ static void test_failure_invalid_header_invalid_version(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0aff01",
+            .ins_hex = "0aff01",  // invalid version byte 0xff instead of valid 0x00 (second byte,
+                                  // "flag" byte is valid though)
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -1298,6 +1300,95 @@ static void test_failure_invalid_header_invalid_version(void **state) {
     do_test_parse_tx(test_vector);
 }
 
+static void test_failure_invalid_header_invalid_flag(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0002",  // invalid "flag" byte: 0x02 instead of valid 0x01 ("version" byte
+                                  // is valid though.)
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 2,
+        .expected_instructions = expected_instructions,
+        .my_public_key_hex =
+            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
+        .should_fail = true,
+        .expected_failing_instruction = {
+            .index_of_failing_instruction = 0,
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_INVALID_HEADER,
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_no_fee_in_tx(void **state) {
+    (void) state;
+
+    // This tx lacks the SYSCALL instruction, containing the tx fee.
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",  // Valid header
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 69,
+            .ins_hex =
+                "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
+                "000000000000000000000000000000000000000000000008ac7230489e7fffc",  // valid token
+                                                                                    // transfer
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    uint16_t total_number_of_instructions = 3;
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = total_number_of_instructions,
+        .expected_instructions = expected_instructions,
+        .my_public_key_hex =
+            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
+        .should_fail = true,
+        .expected_failing_instruction = {
+            .index_of_failing_instruction = total_number_of_instructions - 1, // will not fail until last INS has been parsed.
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE,
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -1311,11 +1402,13 @@ int main() {
     const struct CMUnitTest failing_txs[] = {
         cmocka_unit_test(test_failure_missing_header),
         cmocka_unit_test(test_failure_invalid_header_invalid_version),
+        cmocka_unit_test(test_failure_invalid_header_invalid_flag),
+        cmocka_unit_test(test_failure_no_fee_in_tx),
     };
 
-    int status;
+    int status = 0;
     print_message("\n~~~***===<| TEST GROUP: 'success_complex_tx'  |>===***~~~\n");
-    status = cmocka_run_group_tests(success_complex_tx, NULL, NULL);
+    status += cmocka_run_group_tests(success_complex_tx, NULL, NULL);
     print_message("\n~~~***===<| TEST GROUP: 'failing_txs'  |>===***~~~\n");
     status += cmocka_run_group_tests(failing_txs, NULL, NULL);
     return status;

@@ -114,6 +114,10 @@ target_link_libraries(instruction PUBLIC substate_id)
 
 add_library(instruction_type SHARED ../src/instruction/instruction_type.c)
 add_library(transaction SHARED ../src/transaction/transaction.c)
+
+# We MUST explicitly state that `transaction.c` depends on `uint256.c (method: `gt256`)`
+target_link_libraries(transaction PUBLIC uint256)
+
 add_library(transaction_parser SHARED ../src/transaction/transaction_parser.c)
 
 # We MUST explicitly state that `transaction_parser.c` depends on `uint256.c` (method: `readu256BE`)
@@ -121,6 +125,9 @@ target_link_libraries(transaction_parser PUBLIC uint256)
 
 # We MUST explicitly state that `transaction_parser.c` depends on `hasher.c` (method: `init_hasher`, `update_hash_twice`)
 target_link_libraries(transaction_parser PUBLIC hasher)
+
+# We MUST explicitly state that `transaction_parser.c` depends on `transaction.c` (method: `is_tx_fee_set`)
+target_link_libraries(transaction_parser PUBLIC transaction)
 
 add_library(transaction_metadata SHARED ../src/transaction/transaction_metadata.c)
 add_library(instruction_display_config SHARED ../src/transaction/instruction_display_config.c)

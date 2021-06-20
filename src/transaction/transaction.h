@@ -10,3 +10,6 @@ typedef struct {
     bool have_asserted_no_mint_or_burn;
 
 } transaction_t;
+
+
+bool is_tx_fee_set(transaction_t *transaction);
