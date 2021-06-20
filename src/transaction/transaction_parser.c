@@ -38,9 +38,6 @@ status_word_t status_word_for_parse_and_process_ins_failure(
 /**
  * @brief Parse transaction fee from SYSCALL instruction.
  *
- * When SYSCALL is used for tx fee, it MUST have length 33, and the first byte (a version byte),
- * MUST be 0x00, and the remaining 32 bytes should be parsed as a UInt256.
- *
  * @param syscall A syscall instruction to parse from.
  * @param tx_fee target uint256 to put result of parsing in
  * @return true if successful
@@ -48,10 +45,6 @@ status_word_t status_word_for_parse_and_process_ins_failure(
  */
 bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
     if (syscall->call_data.length != 33) {
-        return false;
-    }
-    uint8_t required_tx_fee_version_byte = 0x00;
-    if (syscall->call_data.data[0] != required_tx_fee_version_byte) {
         return false;
     }
 
