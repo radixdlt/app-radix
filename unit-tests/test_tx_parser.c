@@ -80,27 +80,72 @@ typedef struct {
 } expected_success_t;
 
 typedef struct {
-    uint16_t index_of_failing_instruction;
     parse_and_process_instruction_outcome_t expected_failure_outcome;
-} expected_failing_instruction_t;
+    uint16_t index_of_failing_instruction;
+
+    bool contains_misleading_tx_size_used_to_trigger_failure;
+    uint32_t misleading_tx_size_used_to_trigger_failure;
+} expected_failure_t;
+
+typedef enum {
+    EXPECTED_RESULT_SUCCESS,
+    EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+} expected_result_e;
 
 typedef struct {
+    expected_result_e expected_result;
+
     uint16_t total_number_of_instructions;
     expected_instruction_t *expected_instructions;
 
-    bool should_fail;
-
     union {
-        expected_failing_instruction_t expected_failing_instruction;
         expected_success_t expected_success;
+        expected_failure_t expected_failure;
     };
 } test_vector_t;
 
+static void dbg_print_expected_result(expected_result_e expected_result) {
+    print_message("Expected result:\n");
+    switch (expected_result) {
+        case EXPECTED_RESULT_SUCCESS:
+            print_message("'SUCCESS'");
+            return;
+        case EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION:
+            print_message("'FAILURE_REASON_SPECIFIC_INSTRUCTION'");
+            return;
+    }
+    print_message("\n");
+}
+
+static void dbg_print_test_vector(test_vector_t *test_vector) {
+    print_message("\nTEST VECTOR:\n");
+    dbg_print_expected_result(test_vector->expected_result);
+    if (test_vector->expected_result != EXPECTED_RESULT_SUCCESS) {
+        print_message("\nExpected failure outcome:\n");
+        dbg_print_parse_process_instruction_outcome(
+            &test_vector->expected_failure.expected_failure_outcome);
+
+        if (test_vector->expected_result == EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION) {
+            print_message("Expected to fail while parsing/processing instruction at index: %d\n",
+                          test_vector->expected_failure.index_of_failing_instruction);
+        }
+    }
+    print_message("#instructions: %d\n", test_vector->total_number_of_instructions);
+    for (int i = 0; i < test_vector->total_number_of_instructions; i++) {
+        print_message("\t");
+        expected_instruction_t expected_instruction = test_vector->expected_instructions[i];
+        dbg_print_re_ins_type(expected_instruction.instruction_type);
+    }
+}
+
 static void do_test_parse_tx(test_vector_t test_vector) {
+    // dbg_print_test_vector(&test_vector);
     uint16_t total_number_of_instructions = test_vector.total_number_of_instructions;
     expected_instruction_t *expected_instructions = test_vector.expected_instructions;
 
-    if (test_vector.should_fail) {
+    bool expected_failure = test_vector.expected_result != EXPECTED_RESULT_SUCCESS;
+
+    if (expected_failure) {
         hex_to_bin("0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
                    pub_key_bytes,
                    PUBLIC_KEY_COMPRESSED_LEN);
@@ -112,10 +157,15 @@ static void do_test_parse_tx(test_vector_t test_vector) {
 
     size_t i;
     uint32_t tx_byte_count = 0;
-    for (i = 0; i < total_number_of_instructions; i++) {
-        expected_instruction_t *expected_instruction = &expected_instructions[i];
-        size_t instruction_size = expected_instruction->ins_len;
-        tx_byte_count += instruction_size;
+    if (expected_failure &&
+        test_vector.expected_failure.contains_misleading_tx_size_used_to_trigger_failure) {
+        tx_byte_count = test_vector.expected_failure.misleading_tx_size_used_to_trigger_failure;
+    } else {
+        for (i = 0; i < total_number_of_instructions; i++) {
+            expected_instruction_t *expected_instruction = &expected_instructions[i];
+            size_t instruction_size = expected_instruction->ins_len;
+            tx_byte_count += instruction_size;
+        }
     }
 
     char output[UINT256_DEC_STRING_MAX_LENGTH] = {0};
@@ -171,6 +221,7 @@ static void do_test_parse_tx(test_vector_t test_vector) {
     re_instruction_type_e parsed_ins_type;
 
     for (i = 0; i < total_number_of_instructions; i++) {
+        bool is_last_instruction = i == total_number_of_instructions - 1;
         expected_instruction = expected_instructions[i];
         size_t instruction_size = expected_instruction.ins_len;
         buf.offset = 0;
@@ -179,32 +230,39 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         buf.ptr = bytes255;
 
         memset(&outcome, 0, sizeof(outcome));  // so that we can use `assert_memory_equal`.
+
+        // Try parse and process, might fail, if so we should assert failure matches expected
+        // one
         parse_instruction_successful =
             parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
         // dbg_print_parse_process_instruction_outcome(&outcome);
 
-        if (test_vector.should_fail &&
-            i == test_vector.expected_failing_instruction.index_of_failing_instruction) {
+        bool expect_to_fail_at_this_specific_instruction =
+            (test_vector.expected_result == EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION) &&
+            (i == test_vector.expected_failure.index_of_failing_instruction);
+
+        if (expected_failure && expect_to_fail_at_this_specific_instruction) {
+            // Should not have succeded to parse or process since we expecte failure.
             assert_false(parse_instruction_successful);
 
-            // print_message("\nExpected failure outcome:\n");
-            // dbg_print_parse_process_instruction_outcome(
-            //     &test_vector.expected_failing_instruction.expected_failure_outcome);
+            // Assert we know the failure reason
+            assert_int_equal(outcome.outcome_type,
+                             test_vector.expected_failure.expected_failure_outcome.outcome_type);
 
-            assert_int_equal(
-                outcome.outcome_type,
-                test_vector.expected_failing_instruction.expected_failure_outcome.outcome_type);
-
+            // Assert we know the underlying failure reason
             assert_memory_equal(&outcome,
-                                &test_vector.expected_failing_instruction.expected_failure_outcome,
+                                &test_vector.expected_failure.expected_failure_outcome,
                                 sizeof(outcome));
+
             // Done parsing failure.
             return;
         } else {
+            // Even though we might expect failure when parsing/processing some instruction in
+            // the transaction we are not there yet, or we expect the whole tx to be valid.
             assert_true(parse_instruction_successful);
 
-            if (i == total_number_of_instructions - 1) {
+            if (is_last_instruction) {
                 // Last
                 assert_int_equal(outcome.outcome_type,
                                  PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION);
@@ -376,7 +434,7 @@ static void test_success_transfer_transfer_stake(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 9,
         .expected_instructions = expected_instructions,
-        .should_fail = false,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
         .expected_success = {
             .my_public_key_hex =
                 "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
@@ -405,8 +463,8 @@ static void test_success_transfer_transfer_stake(void **state) {
 
       Instructions:
       |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash: 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f,
- index: 3 })
+      |- DOWN(SubstateId { hash:
+ 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f, index: 3 })
       |- SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
       |- UP(Tokens { rri: 0x01, owner:
  0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
@@ -426,15 +484,16 @@ static void test_success_transfer_transfer_stake(void **state) {
  0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
  9999999999999999997 } })
       |- UP(Tokens { rri: 0x01, owner:
- 0x04036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7, amount: U256 { raw: 1 } })
+ 0x04036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7, amount: U256 { raw: 1 }
+ })
       |- END
 
 
     More human readable
 
       HEADER(0, 1)
-      DOWN(SubstateId { hash: 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f,
- index: 3 })
+      DOWN(SubstateId { hash:
+ 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f, index: 3 })
       SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
       UP(Tokens { rri: xrd_rb1qya85pwq, owner:
  brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 19.0000 })
@@ -442,10 +501,9 @@ static void test_success_transfer_transfer_stake(void **state) {
       LDOWN(2)
       UP(Tokens { rri: xrd_rb1qya85pwq, owner:
  brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
-      UP(PreparedStake { owner: brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd,
- delegate: vb1qt7h9c2t4efstkm975why0s2dzj55jwushggwk6y6083aqzp8h5gwr7x4gz, amount: 10.0000 })
-      END
-      LDOWN(5)
+      UP(PreparedStake { owner:
+ brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, delegate:
+ vb1qt7h9c2t4efstkm975why0s2dzj55jwushggwk6y6083aqzp8h5gwr7x4gz, amount: 10.0000 }) END LDOWN(5)
       UP(Tokens { rri: xrd_rb1qya85pwq, owner:
  brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
       UP(Tokens { rri: xrd_rb1qya85pwq, owner:
@@ -547,7 +605,7 @@ static void test_success_transfer_transfer_stake_transfer_with_change(void **sta
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .should_fail = false,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
         .expected_success = {
             .my_public_key_hex =
                 "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
@@ -576,8 +634,8 @@ static void test_success_transfer_transfer_stake_transfer_with_change(void **sta
 
       Instructions:
       |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash: 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028,
- index: 3 })
+      |- DOWN(SubstateId { hash:
+ 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028, index: 3 })
       |- SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
       |- UP(Tokens { rri: 0x01, owner:
  0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
@@ -588,7 +646,8 @@ static void test_success_transfer_transfer_stake_transfer_with_change(void **sta
  0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
  19999999999999999997 } })
       |- UP(Tokens { rri: 0x01, owner:
- 0x04022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411, amount: U256 { raw: 1 } })
+ 0x04022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411, amount: U256 { raw: 1 }
+ })
       |- END
       |- LDOWN(5)
       |- UP(Tokens { rri: 0x01, owner:
@@ -604,8 +663,8 @@ static void test_success_transfer_transfer_stake_transfer_with_change(void **sta
       More human readable:
 
       HEADER(0, 1)
-      DOWN(SubstateId { hash: 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028,
- index: 3 })
+      DOWN(SubstateId { hash:
+ 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028, index: 3 })
       SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
       UP(Tokens { rri: xrd_rb1qya85pwq, owner:
  brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 19.0000 })
@@ -619,9 +678,9 @@ static void test_success_transfer_transfer_stake_transfer_with_change(void **sta
       LDOWN(5)
       UP(Tokens { rri: xrd_rb1qya85pwq, owner:
  brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 9.0000 })
-      UP(PreparedStake { owner: brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7,
- delegate: vb1qdal2tlawdhd5e25kwmmq04w870zhkd5k8q3uue42xg5q0led9s6cxpe65y, amount: 10.0000 })
-      END
+      UP(PreparedStake { owner:
+ brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, delegate:
+ vb1qdal2tlawdhd5e25kwmmq04w870zhkd5k8q3uue42xg5q0led9s6cxpe65y, amount: 10.0000 }) END
 
  *
  */
@@ -718,7 +777,7 @@ static void test_success_transfer_transfer_with_change_transfer_stake(void **sta
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .should_fail = false,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
         .expected_success =
             {
                 .my_public_key_hex =
@@ -750,15 +809,15 @@ static void test_success_transfer_transfer_with_change_transfer_stake(void **sta
 
       Instructions:
       |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash: 0x14f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f3087475,
- index: 1 })
+      |- DOWN(SubstateId { hash:
+0x14f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f3087475, index: 1 })
       |- SYSCALL(0x000000000000000000000000000000000000000000000000000000000000003039)
       |- UP(Tokens { rri: 0x01, owner:
  0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
  9999999999999999996 } })
       |- END
-      |- DOWN(SubstateId { hash: 0x5e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab7,
- index: 7 })
+      |- DOWN(SubstateId { hash:
+0x5e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab7, index: 7 })
       |- UP(PreparedUnstake { delegate:
  0x031fa3fe2db67d482ef3b3b6f6facf874cf1502af8a463d8ac75f378a09d78f012, owner:
  0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
@@ -769,7 +828,8 @@ static void test_success_transfer_transfer_with_change_transfer_stake(void **sta
  0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
  9999999999999999995 } })
       |- UP(Tokens { rri: 0x01, owner:
- 0x04039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96, amount: U256 { raw: 1 } })
+ 0x04039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96, amount: U256 { raw: 1 }
+})
       |- END
 
       More human readable:
@@ -783,8 +843,9 @@ brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, amount: 9.000
  * END
  * DOWN(SubstateId { hash: 0x5e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab7,
 index: 7 })
- * UP(PreparedUnstake { owner: brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8,
-delegate: vb1qv068l3dke75sthnkwm0d7k0sax0z5p2lzjx8k9vwheh3gya0rcpynlr3g7, amount: 10.0000 })
+ * UP(PreparedUnstake { owner:
+brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, delegate:
+vb1qv068l3dke75sthnkwm0d7k0sax0z5p2lzjx8k9vwheh3gya0rcpynlr3g7, amount: 10.0000 })
  * END
  * LDOWN(2)
  * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
@@ -879,7 +940,7 @@ static void test_success_transfer_unstake_transfer_with_change(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 12,
         .expected_instructions = expected_instructions,
-        .should_fail = false,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
         .expected_success =
             {
                 .my_public_key_hex =
@@ -910,8 +971,8 @@ static void test_success_transfer_unstake_transfer_with_change(void **state) {
 
       Instructions:
       |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash: 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04,
- index: 1 })
+      |- DOWN(SubstateId { hash:
+ 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04, index: 1 })
       |- SYSCALL(0x00000000000000000000000000000000000000000000000000000000003ade68b1)
       |- UP(Tokens { rri: 0x01, owner:
  0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
@@ -922,10 +983,11 @@ static void test_success_transfer_unstake_transfer_with_change(void **state) {
  0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
  9999999999999999995 } })
       |- UP(Tokens { rri: 0x01, owner:
- 0x0402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a, amount: U256 { raw: 1 } })
+ 0x0402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a, amount: U256 { raw: 1 }
+ })
       |- END
-      |- DOWN(SubstateId { hash: 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3,
- index: 7 })
+      |- DOWN(SubstateId { hash:
+ 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3, index: 7 })
       |- UP(PreparedUnstake { delegate:
  0x02ec11f6184839402b78f5a6fbe3e5eddf41cb999ac9c3ae0cdb324ab01f8e3f20, owner:
  0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
@@ -935,8 +997,8 @@ static void test_success_transfer_unstake_transfer_with_change(void **state) {
       Human readable:
 
       *HEADER(0, 1)
-      * DOWN(SubstateId { hash: 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04,
- index: 1 })
+      * DOWN(SubstateId { hash:
+ 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04, index: 1 })
       * SYSCALL(0x00000000000000000000000000000000000000000000000000000000003ade68b1)
       * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
  brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, amount: 9.0000 })
@@ -947,8 +1009,8 @@ static void test_success_transfer_unstake_transfer_with_change(void **state) {
       * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
  brx1qsptsam74d2t4zqcewprw6jhnryu0gp9cgt0kpfxdeu5ekx97rw567sz8utwe, amount: 0.0000 })
       * END
-      * DOWN(SubstateId { hash: 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3,
- index: 7 })
+      * DOWN(SubstateId { hash:
+ 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3, index: 7 })
       * UP(PreparedUnstake { owner:
  brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, delegate:
  vb1qtkprascfqu5q2mc7kn0hcl9ah05rjuentyu8tsvmvey4vql3cljqltylt4, amount: 10.0000 })
@@ -1040,7 +1102,7 @@ static void test_success_transfer_transfer_with_change_unstake(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 12,
         .expected_instructions = expected_instructions,
-        .should_fail = false,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
         .expected_success =
             {
                 .my_public_key_hex =
@@ -1073,8 +1135,8 @@ static void test_success_transfer_transfer_with_change_unstake(void **state) {
 
       Instructions:
       |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash: 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2,
- index: 1 })
+      |- DOWN(SubstateId { hash:
+ 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2, index: 1 })
       |- SYSCALL(0x00000000000000000000000000000000000000000000000000000000000000fade)
       |- UP(Tokens { rri: 0x01, owner:
  0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
@@ -1085,28 +1147,32 @@ static void test_success_transfer_transfer_with_change_unstake(void **state) {
  0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
  9999999999999999995 } })
       |- UP(Tokens { rri: 0x01, owner:
- 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 1 } })
+ 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 1 }
+ })
       |- END
       |- LDOWN(5)
       |- UP(Tokens { rri: 0x01, owner:
  0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
  9999999999999999993 } })
       |- UP(Tokens { rri: 0x01, owner:
- 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 2 } })
+ 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 2 }
+ })
       |- END
 
 
       HEADER(0, 1)
-      DOWN(SubstateId { hash: 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2,
- index: 1 }) SYSCALL(0x00000000000000000000000000000000000000000000000000000000000000fade) UP(Tokens
- { rri: xrd_rb1qya85pwq, owner: brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73,
+      DOWN(SubstateId { hash:
+ 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2, index: 1 })
+ SYSCALL(0x00000000000000000000000000000000000000000000000000000000000000fade) UP(Tokens { rri:
+ xrd_rb1qya85pwq, owner: brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73,
  amount: 9.0000 }) END LDOWN(2) UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens {
- rri: xrd_rb1qya85pwq, owner: brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk,
- amount: 0.0000 }) END LDOWN(5) UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens {
- rri: xrd_rb1qya85pwq, owner: brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk,
- amount: 0.0000 }) END
+ brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens
+ { rri: xrd_rb1qya85pwq, owner:
+ brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk, amount: 0.0000 }) END
+ LDOWN(5) UP(Tokens { rri: xrd_rb1qya85pwq, owner:
+ brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens
+ { rri: xrd_rb1qya85pwq, owner:
+ brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk, amount: 0.0000 }) END
  */
 static void test_success_transfer_transfer_with_change_transfer_with_change(void **state) {
     (void) state;
@@ -1200,7 +1266,7 @@ static void test_success_transfer_transfer_with_change_transfer_with_change(void
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .should_fail = false,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
         .expected_success =
             {
                 .my_public_key_hex =
@@ -1258,14 +1324,16 @@ static void test_failure_missing_header(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 4,
         .expected_instructions = expected_instructions,
-        .should_fail = true,
-        .expected_failing_instruction = {
-            .index_of_failing_instruction = 0,
-            .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_DISABLE_MINT_AND_BURN_FLAG_NOT_SET,
-                .parse_failure =
-                    {0},  // lack of HEADER instruction is not a parse failure, it is a logic error.
-            }}};
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure =
+            {
+                .expected_failure_outcome =
+                    {
+                        .outcome_type = PARSE_PROCESS_INS_DISABLE_MINT_AND_BURN_FLAG_NOT_SET,
+                    },
+                .index_of_failing_instruction = 0,
+            },
+    };
 
     do_test_parse_tx(test_vector);
 }
@@ -1276,8 +1344,8 @@ static void test_failure_invalid_header_invalid_version(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0aff01",  // invalid version byte 0xff instead of valid 0x00 (second byte,
-                                  // "flag" byte is valid though)
+            .ins_hex = "0aff01",  // invalid version byte 0xff instead of valid 0x00 (second
+                                  // byte, "flag" byte is valid though)
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -1293,16 +1361,16 @@ static void test_failure_invalid_header_invalid_version(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 2,
         .expected_instructions = expected_instructions,
-        .should_fail = true,
-        .expected_failing_instruction = {
-            .index_of_failing_instruction = 0,
-            .expected_failure_outcome = {
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .expected_failure_outcome = { 
                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
                 .parse_failure = {
                     .outcome_type = PARSE_INS_INVALID_HEADER,
                 }
-            }
-        }
+            },
+            .index_of_failing_instruction = 0,
+        },
     };
     // clang-format on
 
@@ -1315,8 +1383,8 @@ static void test_failure_invalid_header_invalid_flag(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0a0002",  // invalid "flag" byte: 0x02 instead of valid 0x01 ("version" byte
-                                  // is valid though.)
+            .ins_hex = "0a0002",  // invalid "flag" byte: 0x02 instead of valid 0x01 ("version"
+                                  // byte is valid though.)
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -1332,8 +1400,8 @@ static void test_failure_invalid_header_invalid_flag(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 2,
         .expected_instructions = expected_instructions,
-        .should_fail = true,
-        .expected_failing_instruction = {
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
             .index_of_failing_instruction = 0,
             .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
@@ -1363,7 +1431,8 @@ static void test_failure_no_fee_in_tx(void **state) {
             .ins_len = 69,
             .ins_hex =
                 "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                "000000000000000000000000000000000000000000000008ac7230489e7fffc",  // valid token
+                "000000000000000000000000000000000000000000000008ac7230489e7fffc",  // valid
+                                                                                    // token
                                                                                     // transfer
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
@@ -1381,12 +1450,13 @@ static void test_failure_no_fee_in_tx(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
-        .should_fail = true,
-        .expected_failing_instruction = {
-            .index_of_failing_instruction = total_number_of_instructions - 1, // will not fail until last INS has been parsed.
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
             .expected_failure_outcome = {
+                // PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL
                 .outcome_type = PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE,
-            }
+            },
+            .index_of_failing_instruction = total_number_of_instructions - 1, // will not fail until last INS has been parsed.
         }
     };
     // clang-format on
@@ -1441,8 +1511,8 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 5,
         .expected_instructions = expected_instructions,
-        .should_fail = true,
-        .expected_failing_instruction = {
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
             .index_of_failing_instruction = 2, 
             .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL,
@@ -1492,11 +1562,98 @@ static void test_failure_tx_without_end_instruction(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
-        .should_fail = true,
-        .expected_failing_instruction = {
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
             .index_of_failing_instruction = total_number_of_instructions - 1, 
             .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END,
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    uint16_t total_number_of_instructions = 3;
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = total_number_of_instructions,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .contains_misleading_tx_size_used_to_trigger_failure = true,
+            .misleading_tx_size_used_to_trigger_failure = 123456789, // we mislead here, actual size is 39 bytes.
+            .index_of_failing_instruction = total_number_of_instructions - 1, // fail at last
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH,
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 3,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .contains_misleading_tx_size_used_to_trigger_failure = true,
+            .misleading_tx_size_used_to_trigger_failure = 5, // we mislead here, actual size is 39 bytes.
+            .index_of_failing_instruction = 1, // fail at second, because already after second we have parsed too many bytes.
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH,
             }
         }
     };
@@ -1522,6 +1679,8 @@ int main() {
         cmocka_unit_test(test_failure_no_fee_in_tx),
         cmocka_unit_test(test_failure_invalid_syscall_too_few_bytes),
         cmocka_unit_test(test_failure_tx_without_end_instruction),
+        cmocka_unit_test(test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count),
+        cmocka_unit_test(test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count),
     };
 
     int status = 0;

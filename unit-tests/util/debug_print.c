@@ -6,36 +6,36 @@
 #include "../../src/instruction/substate/stake_share.h"
 #include "../../src/instruction/substate/substate_id.h"
 
-// static void dbg_print_re_ins_type(re_instruction_type_e ins_type) {
-//     print_message("Instruction type: ");
-//     switch (ins_type) {
-//         case INS_DOWN:
-//             print_message("'DOWN'");
-//             break;
-//         case INS_LDOWN:
-//             print_message("'LDOWN'");
-//             break;
-//         case INS_UP:
-//             print_message("'UP'");
-//             break;
-//         case INS_END:
-//             print_message("'END'");
-//             break;
-//         case INS_MSG:
-//             print_message("'MSG'");
-//             break;
-//         case INS_SYSCALL:
-//             print_message("'SYSCALL'");
-//             break;
-//         case INS_HEADER:
-//             print_message("'HEADER'");
-//             break;
-//         default:
-//             print_message("UNKNOWN instruction type: %d", ins_type);
-//             break;
-//     }
-//     print_message("\n");
-// }
+void dbg_print_re_ins_type(re_instruction_type_e ins_type) {
+    print_message("Instruction type: ");
+    switch (ins_type) {
+        case INS_DOWN:
+            print_message("'DOWN'");
+            break;
+        case INS_LDOWN:
+            print_message("'LDOWN'");
+            break;
+        case INS_UP:
+            print_message("'UP'");
+            break;
+        case INS_END:
+            print_message("'END'");
+            break;
+        case INS_MSG:
+            print_message("'MSG'");
+            break;
+        case INS_SYSCALL:
+            print_message("'SYSCALL'");
+            break;
+        case INS_HEADER:
+            print_message("'HEADER'");
+            break;
+        default:
+            print_message("UNKNOWN instruction type: %d", ins_type);
+            break;
+    }
+    print_message("\n");
+}
 
 // static void dbg_print_uint256(uint256_t *uint256) {
 //     char amount[UINT256_DEC_STRING_MAX_LENGTH + 1] = {0};
