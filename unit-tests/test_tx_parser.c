@@ -1293,6 +1293,7 @@ static void test_failure_missing_header(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
+        // Missing header
         {
             .ins_len = 37,
             .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
@@ -1423,17 +1424,14 @@ static void test_failure_no_fee_in_tx(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0a0001",  // Valid header
+            .ins_hex = "0a0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 69,
-            .ins_hex =
-                "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                "000000000000000000000000000000000000000000000008ac7230489e7fffc",  // valid
-                                                                                    // token
-                                                                                    // transfer
+            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
+                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
@@ -1453,7 +1451,6 @@ static void test_failure_no_fee_in_tx(void **state) {
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
         .expected_failure = {
             .expected_failure_outcome = {
-                // PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL
                 .outcome_type = PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE,
             },
             .index_of_failing_instruction = total_number_of_instructions - 1, // will not fail until last INS has been parsed.
@@ -1471,7 +1468,7 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0a0001",  // valid header
+            .ins_hex = "0a0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -1662,6 +1659,65 @@ static void test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_cou
     do_test_parse_tx(test_vector);
 }
 
+static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
+    (void) state;
+
+    // This tx contains an invalid SYSCALL instruction => fail to parse tx fee
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
+                       "0000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "02",           // Unsupported instruction type `VDOWN`.
+            .instruction_type = 0x02,  // Unsupported.
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE,
+                    .unsupported_instruction_type_value = 0x02,
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -1681,6 +1737,9 @@ int main() {
         cmocka_unit_test(test_failure_tx_without_end_instruction),
         cmocka_unit_test(test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count),
         cmocka_unit_test(test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count),
+
+        // Unsupported/Invalid Instructions
+        cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x02),
     };
 
     int status = 0;
