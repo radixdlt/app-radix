@@ -175,15 +175,15 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         parse_instruction_successful =
             parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
-        // dbg_print_parse_process_instruction_outcome(&outcome);
+        dbg_print_parse_process_instruction_outcome(&outcome);
 
         if (test_vector.should_fail &&
             i == test_vector.expected_failing_instruction.index_of_failing_instruction) {
             assert_false(parse_instruction_successful);
 
-            // print_message("\nExpected failure outcome:\n");
-            // dbg_print_parse_process_instruction_outcome(
-            //     &test_vector.expected_failing_instruction.expected_failure_outcome);
+            print_message("\nExpected failure outcome:\n");
+            dbg_print_parse_process_instruction_outcome(
+                &test_vector.expected_failing_instruction.expected_failure_outcome);
 
             assert_int_equal(
                 outcome.outcome_type,
@@ -1451,61 +1451,51 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     do_test_parse_tx(test_vector);
 }
 
-
-static void test_failure_invalid_syscall_invalid_flag(void **state) {
+static void test_failure_tx_without_end_instruction(void **state) {
     (void) state;
 
-    // This tx contains an invalid SYSCALL instruction => fail to parse tx fee
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0a0001",  // valid header
+            .ins_hex = "0a0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
-                       "0000001",
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 35,
-            .ins_hex = "0901000000000000000000000000000000000000000000000000000000000000000"
-                       "007",  // invalid, expected 0x0921, where `0x09` denotes `SYSCALL`
-                               // and `0x21`, being hex for 0d33, telling us SYSCALL
-                               // contains of 33 bytes, instead this hex specifies 0x01.
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466"
-                       "612dae20"
+            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
                        "000000000000000000000000000000000000000000000008ac7230489e7fffc",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
+        // Should have an END instruction here, but we don't
     };
+
+    uint16_t total_number_of_instructions = 4;
 
     // clang-format off
     test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 5,
+        .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
         .my_public_key_hex =
             "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
         .should_fail = true,
         .expected_failing_instruction = {
-            .index_of_failing_instruction = 2, 
+            .index_of_failing_instruction = total_number_of_instructions - 1, 
             .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL,
+                .outcome_type = PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END,
             }
         }
     };
@@ -1530,6 +1520,7 @@ int main() {
         cmocka_unit_test(test_failure_invalid_header_invalid_flag),
         cmocka_unit_test(test_failure_no_fee_in_tx),
         cmocka_unit_test(test_failure_invalid_syscall_too_few_bytes),
+        cmocka_unit_test(test_failure_tx_without_end_instruction),
     };
 
     int status = 0;
