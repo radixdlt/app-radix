@@ -226,8 +226,18 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         size_t instruction_size = expected_instruction.ins_len;
         buf.offset = 0;
         buf.size = instruction_size;
+        memset(bytes255, 0, sizeof(bytes255));
         hex_to_bin(expected_instruction.ins_hex, bytes255, instruction_size);
         buf.ptr = bytes255;
+
+        if (i == 3) {
+            print_message("Printing bufer\n");
+            print_message("Size: %zu\n", buf.size);
+            for (int j = 0; j < buf.size; ++j) {
+                print_message("%02x", buf.ptr[j]);
+            }
+            print_message("\n");
+        }
 
         memset(&outcome, 0, sizeof(outcome));  // so that we can use `assert_memory_equal`.
 
@@ -1659,10 +1669,10 @@ static void test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_cou
     do_test_parse_tx(test_vector);
 }
 
-static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
-    (void) state;
+static void test_failure_unsupported_instruction(char *unsupported_as_hex) {
+    uint8_t unsupported_instruction;
+    hex_to_bin(unsupported_as_hex, &unsupported_instruction, 1);
 
-    // This tx contains an invalid SYSCALL instruction => fail to parse tx fee
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
@@ -1685,8 +1695,8 @@ static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
         },
         {
             .ins_len = 1,
-            .ins_hex = "02",           // Unsupported instruction type `VDOWN`.
-            .instruction_type = 0x02,  // Unsupported.
+            .ins_hex = unsupported_as_hex,
+            .instruction_type = unsupported_instruction,
             .substate_type = IRRELEVANT,
         },
         {
@@ -1708,7 +1718,7 @@ static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
                 .parse_failure = {
                     .outcome_type = PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE,
-                    .unsupported_instruction_type_value = 0x02,
+                    .unsupported_instruction_type_value = unsupported_instruction,
                 }
             }
         }
@@ -1716,6 +1726,16 @@ static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
     // clang-format on
 
     do_test_parse_tx(test_vector);
+}
+
+static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("02");
+}
+
+static void test_failure_unsupported_instruction_vdownarg_0x03(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("03");
 }
 
 int main() {
@@ -1740,6 +1760,7 @@ int main() {
 
         // Unsupported/Invalid Instructions
         cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x02),
+        cmocka_unit_test(test_failure_unsupported_instruction_vdownarg_0x03),
     };
 
     int status = 0;
