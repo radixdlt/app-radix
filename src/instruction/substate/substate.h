@@ -1,15 +1,13 @@
-
 #pragma once
 
+#include "../../types/buffer.h"
+#include "../../types/public_key.h"
+
 #include "substate_type.h"
-#include "../common/buffer.h"
 #include "tokens.h"
 #include "prepared_stake.h"
 #include "prepared_unstake.h"
 #include "stake_share.h"
-#include "cx.h"
-
-#include "../../common/public_key.h"
 
 typedef struct {
     re_substate_type_e type;
@@ -38,15 +36,13 @@ typedef struct {
     union {
         uint8_t unrecognized_substate_type_value;
         uint8_t unsupported_substate_type_value;
-        parse_tokens_outcome_e tokens_failure;
-        parse_prepared_stake_outcome_e prepared_stake_failure;
-        parse_prepared_unstake_outcome_e prepared_unstake_failure;
-        parse_stake_share_outcome_e stake_share_failure;
+        parse_tokens_outcome_t tokens_failure;
+        parse_prepared_stake_outcome_t prepared_stake_failure;
+        parse_prepared_unstake_outcome_t prepared_unstake_failure;
+        parse_stake_share_outcome_t stake_share_failure;
     };
 } parse_substate_outcome_t;
 
 bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substate_t *substate);
 
 uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failure_reason);
-
-bool does_substate_need_to_be_displayed(substate_t *substate, public_key_t *my_public_key);

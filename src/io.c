@@ -23,7 +23,7 @@
 #include "io.h"
 #include "globals.h"
 #include "sw.h"
-#include "common/buffer.h"
+#include "types/buffer.h"
 #include "common/write.h"
 
 uint32_t G_output_len = 0;

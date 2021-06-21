@@ -13,7 +13,15 @@
         "string": "c",
         "vector": "c",
         "__locale": "c",
-        "cstdio": "c"
+        "cstdio": "c",
+        "system_error": "c",
+        "__split_buffer": "c",
+        "array": "c",
+        "bitset": "c",
+        "initializer_list": "c",
+        "string_view": "c",
+        "unordered_map": "c",
+        "utility": "c"
     },
     "C_Cpp.clang_format_path": "${workspaceRoot}/.clang-format",
     "editor.formatOnSave": true,

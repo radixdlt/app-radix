@@ -30,294 +30,196 @@
 #include "../globals.h"
 #include "../crypto.h"
 #include "../ui/display.h"
-#include "../common/buffer.h"
+
+#include "../types/buffer.h"
+#include "../types/status_word.h"
+#include "../types/public_key.h"
 #include "../instruction/instruction.h"
+
 #include "../common/bech32_encode.h"
-#include "../helper/send_response.h"
 #include "../common/read.h"    // read_u16_be, read_u32_be
 #include "../common/format.h"  // print_uint256
+#include "../transaction/transaction_parser.h"
 
-static void initiate_hasher() {
-    cx_sha256_init(&G_context.tx_info.hasher);
-}
+#include "../helper/send_response.h"
 
-static void hash(const uint8_t *in, const size_t in_len, bool should_finalize) {
-    update_hash(&G_context.tx_info.hasher,
-                in,
-                in_len,
-                should_finalize,
-                G_context.sig_info.m_hash,
-                HASH_LEN);
-}
+typedef enum {
+    SETUP_SIGN_TX_FAILED_TO_PARSE_TX_CONFIG_FROM_BUFFER,
+    SETUP_SIGN_TX_FAILED_TO_PARSE_INIT_PARSER_WITH_CONFIG,
+} setup_sign_tx_outcome_e;
 
-static int handle_first_metadata_apdu(buffer_t *buffer) {
-    explicit_bzero(&G_context, sizeof(G_context));
+typedef struct {
+    setup_sign_tx_outcome_e outcome_type;
+    union {
+        parse_tx_config_outcome_e parse_config_failure;
+        init_tx_parser_outcome_t init_tx_parser_failure;
+    };
+} setup_sign_tx_outcome_t;
 
-    // PARSE BIP32
-    if (!buffer_read_u8(buffer, &G_context.bip32_path_len) ||
-        !buffer_read_bip32_path(buffer, G_context.bip32_path, (size_t) G_context.bip32_path_len)) {
-        return io_send_sw(ERR_CMD_SIGN_TX_PARSE_BIP32_PATH_FAILURE);
+status_word_t status_word_for_setup_sign_tx_failure(setup_sign_tx_outcome_t *failure) {
+    switch (failure->outcome_type) {
+        case SETUP_SIGN_TX_FAILED_TO_PARSE_TX_CONFIG_FROM_BUFFER:
+            switch (failure->parse_config_failure) {
+                case PARSE_TX_CONFIG_BIP32_FAILURE:
+                    return ERR_CMD_SIGN_TX_PARSE_BIP32_PATH_FAILURE;
+                case PARSE_TX_CONFIG_TX_SIZE_FAILURE:
+                    return ERR_CMD_SIGN_TX_PARSE_TX_SIZE_FAILURE;
+                case PARSE_TX_CONFIG_INSTRUCTION_COUNT_FAILURE:
+                    return ERR_CMD_SIGN_TX_PARSE_INSTRUCTION_COUNT_FAILURE;
+                case PARSE_TX_CONFIG_OPTIONAL_RRI_HRP_FAILURE:
+                    return ERR_CMD_SIGN_TX_PARSE_HRP_FAILED_TO_READ;
+            }
+        case SETUP_SIGN_TX_FAILED_TO_PARSE_INIT_PARSER_WITH_CONFIG:
+            return ERR_CMD_SIGN_TX_INVALID_CONFIG;
     }
+}
 
+static bool derive_my_public_key(derived_public_key_t *my_derived_pubkey) {
     // Derive public key according to BIP32 path
     cx_ecfp_private_key_t private_key = {0};
     cx_ecfp_public_key_t public_key = {0};
-    crypto_derive_private_key(&private_key,
-                              G_context.pk_info.chain_code,
-                              G_context.bip32_path,
-                              G_context.bip32_path_len);
-    // Generate corresponding public key
-    crypto_init_public_key(&private_key,
-                           &public_key,
-                           G_context.pk_info.raw_uncompressed_public_key);
-    if (!crypto_compress_public_key(&public_key, &G_context.tx_info.my_public_key)) {
-        return io_send_sw(ERR_CMD_SIGN_TX_FAILED_TO_COMPRESS_MY_KEY);
-    }
-    // Reset private key
+
+    // SHOULD _NOT_ return early if `crypto_derive_private_key` or `crypto_init_public_key` fails,
+    // because we SHOULD zero out `private_key`.
+    bool success = crypto_derive_private_key(&private_key, &my_derived_pubkey->bip32_path) &&
+                   crypto_init_public_key(&private_key, &public_key);
+
     explicit_bzero(&private_key, sizeof(private_key));
 
-    // PARSE TX size count
-    PRINTF("Parsing tx size.\n");
-    if (!buffer_read_u32(buffer, &G_context.tx_info.tx_byte_count, BE)) {
-        return io_send_sw(ERR_CMD_SIGN_TX_PARSE_TX_SIZE_FAILURE);
-    }
-    G_context.tx_info.tx_bytes_received_count = 0;
-    PRINTF("Parsed tx size: #%d bytes.\n", G_context.tx_info.tx_byte_count);
-
-    // PARSE instruction count
-    PRINTF("Parsing instruction count.\n");
-    if (!buffer_read_u16(buffer, &G_context.tx_info.total_number_of_instructions, BE)) {
-        return io_send_sw(ERR_CMD_SIGN_TX_PARSE_INSTRUCTION_COUNT_FAILURE);
-    }
-    PRINTF("Parsed instruction count: #%d.\n", G_context.tx_info.total_number_of_instructions);
-    G_context.tx_info.number_of_instructions_received = 0;
-
-    // PARSE OPTIONAL HRP of non native token being transferred.
-    uint8_t hrp_size_len;
-    if (!buffer_read_u8(buffer, &hrp_size_len)) {
-        return io_send_sw(ERR_CMD_SIGN_TX_PARSE_HRP_LEN_FAILURE);
-    }
-    if (hrp_size_len > MAX_BECH32_HRP_PART_LEN) {
-        return io_send_sw(ERR_CMD_SIGN_TX_PARSE_HRP_TOO_LONG);
+    if (!success) {
+        return false;
     }
 
-    if (!buffer_move_fill_target(buffer,
-                                 (uint8_t *) G_context.tx_info.hrp_non_native_token,
-                                 hrp_size_len)) {
-        return io_send_sw(ERR_CMD_SIGN_TX_PARSE_HRP_FAILED_TO_READ);
+    return crypto_compress_public_key(&public_key, &my_derived_pubkey->address.public_key);
+}
+
+static cx_sha256_t hasher_ledger;
+
+static void init_impl_hasher() {
+    // Setup Ledger SDK hasher
+    cx_sha256_init(&hasher_ledger);
+}
+
+static bool update_hash_ledger_sdk(buffer_t *buffer, bool finalize, uint8_t *out) {
+    return sha256_hash_ledger_sdk(&hasher_ledger, buffer, finalize, out);
+}
+
+/**
+ * @brief Initiate the sign transaction flow. If successful return \code true, else \code false and
+ * \p outcome will contain the failure reason.
+ *
+ * @param buffer
+ * @param outcome Reason for failure.
+ * @return true
+ * @return false
+ */
+static bool init_sign_transaction_flow(buffer_t *buffer,
+                                       setup_sign_tx_outcome_t *outcome,
+                                       transaction_parser_t *tx_parser) {
+    init_transaction_parser_config_t parsed_config;
+    if (!parse_tx_parser_config(buffer, &outcome->parse_config_failure, &parsed_config)) {
+        PRINTF("Failed to parse transaction parser config from buffer.\n");
+        outcome->outcome_type = SETUP_SIGN_TX_FAILED_TO_PARSE_TX_CONFIG_FROM_BUFFER;
+        return false;
     }
-    G_context.tx_info.hrp_non_native_token_len = hrp_size_len;
 
-    // SETUP hasher
-    initiate_hasher();
+    derive_my_pubkey_key_fn derive_my_pubkey = &derive_my_public_key;
 
-    // SETUP state
+    if (!init_tx_parser_with_config(tx_parser,
+                                    derive_my_pubkey,
+                                    &update_hash_ledger_sdk,
+                                    &init_impl_hasher,
+                                    &parsed_config,
+                                    &outcome->init_tx_parser_failure)) {
+        PRINTF("Failed to initialize transaction parser.\n");
+        outcome->outcome_type = SETUP_SIGN_TX_FAILED_TO_PARSE_INIT_PARSER_WITH_CONFIG;
+        return false;
+    }
+    return true;
+}
+
+static int handle_initial_setup_apdu(buffer_t *buffer, transaction_parser_t *tx_parser) {
+    // Reset all data.
+    explicit_bzero(&G_context, sizeof(G_context));
+
+    // Setup parsers for flow
+    setup_sign_tx_outcome_t outcome;
+    if (!init_sign_transaction_flow(buffer, &outcome, tx_parser)) {
+        PRINTF("Failed to initate sign transaction flow.\n");
+        status_word_t error_code = status_word_for_setup_sign_tx_failure(&outcome);
+        return io_send_sw(error_code);
+    }
+
+    // Setup state
     G_context.req_type = CONFIRM_TRANSACTION;
     G_context.state = STATE_NONE;
-
-    G_context.tx_info.parse_ins_state = STATE_PARSE_INS_READY_TO_PARSE;
 
     return io_send_sw(SW_OK);
 }
 
-/**
- * @brief Parse transaction fee from SYSCALL instruction.
- *
- * When SYSCALL is used for tx fee, it MUST have length 33, and the first byte (a version byte),
- * MUST be 0x00, and the remaining 32 bytes should be parsed as a UInt256.
- *
- * @param syscall A syscall instruction to parse from.
- * @param tx_fee target uint256 to put result of parsing in
- * @return true if successful
- * @return false if fail
- */
-static int parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
-    PRINTF("Length of SYSCALL data: %d.\n", syscall->call_data.length);
-    PRINTF("SYSCALL data: %.*H.\n", syscall->call_data.length, syscall->call_data.data);
-
-    if (syscall->call_data.length != 33) {
-        PRINTF(
-            "Failed to parse tx fee from syscall, wrong length, requiring length of 33, but got: "
-            "%d.\n",
-            syscall->call_data.length);
-        return false;
-    }
-    uint8_t required_tx_fee_version_byte = 0x00;
-    if (syscall->call_data.data[0] != required_tx_fee_version_byte) {
-        PRINTF(
-            "Failed to parse tx fee from syscall, incorrect version byte, required: %d, but got: "
-            "%d.\n",
-            required_tx_fee_version_byte,
-            syscall->call_data.data[0]);
-        return false;
+static int ux_finished_parsing_tx(transaction_parser_t *tx_parser) {
+    G_parse_tx_state_finished_parsing_all();
+    G_context.state = STATE_PARSED;
+    if (!tx_parser->instruction_display_config.display_tx_summary) {
+        if (!crypto_sign_message(&tx_parser->signing)) {
+            return io_send_sw(ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL);
+        } else {
+            bool include_hash_in_response = true;
+            return helper_send_response_signature(include_hash_in_response, &tx_parser->signing);
+        }
     }
 
-    readu256BE(syscall->call_data.data + 1, tx_fee);
+    return ui_display_tx_summary(&tx_parser->transaction,
+                                 &tx_parser->signing.my_derived_public_key.bip32_path,
+                                 tx_parser->signing.hasher.hash
 
-    return true;
+    );
 }
 
-static int handle_single_re_ins_apdu(buffer_t *buffer) {
-    // Important to reset memory between subsequent instructions.
-    explicit_bzero(&G_context.tx_info.instruction, sizeof(G_context.tx_info.instruction));
+static int ux_display_new_instruction_if_needed(transaction_parser_t *tx_parser) {
+    G_parse_tx_state_did_parse_new();
+    bool display_ins = does_instruction_need_to_be_displayed(
+                           &tx_parser->instruction_parser.instruction,
+                           &tx_parser->signing.my_derived_public_key.address.public_key) &&
+                       tx_parser->instruction_display_config.display_substate_contents;
 
-    // Parse transaction: incoming Radix Engine instructions, one at a time.
-    if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_NONE ||
-        G_context.tx_info.parse_ins_state != STATE_PARSE_INS_READY_TO_PARSE) {
-        return io_send_sw(ERR_BAD_STATE);
-    }
-
-    G_context.tx_info.tx_bytes_received_count += buffer->size;
-    if (G_context.tx_info.tx_bytes_received_count > G_context.tx_info.tx_byte_count) {
-        PRINTF("Received more bytes than size of transaction. Bad state => abort signing of tx.");
-        return io_send_sw(ERR_BAD_STATE);
-    }
-
-    // Parse newly recieved single Radix Engine instruction
-    parse_instruction_outcome_t ins_result;
-    if (!parse_instruction(buffer, &ins_result, &G_context.tx_info.instruction)) {
-        PRINTF("Failed to parse instruction\n");
-        uint16_t sw = status_word_for_failed_to_parse_ins(&ins_result);
-        return io_send_sw(sw);
-    }
-
-    G_context.tx_info.number_of_instructions_received += 1;
-
-    PRINTF("Finished parsing instruction, have now parsed: %d/%d instructions.\n",
-           G_context.tx_info.number_of_instructions_received,
-           G_context.tx_info.total_number_of_instructions);
-
-    if (G_context.tx_info.instruction.ins_type == INS_HEADER) {
-        bool mint_and_burn_is_forbidden = G_context.tx_info.instruction.ins_header.flag ==
-                                          INS_HEADER_FLAG_DISALLOWING_TOKEN_BURN_AND_TOKEN_MINT;
-        G_context.tx_info.have_asserted_no_mint_or_burn = mint_and_burn_is_forbidden;
+    if (display_ins) {
+        G_parse_tx_state_ins_needs_approval();
+        return ui_display_instruction(&tx_parser->instruction_parser.instruction);
     } else {
-        // Just finished parsing an instruction that was not INS_HEADER
-        if (!G_context.tx_info.have_asserted_no_mint_or_burn) {
-            // ☠️  ILLEGAL TX: might burn/mint tokens ☠️
-            PRINTF(
-                "TX might contain burning or minting of new tokens, but we cannot parse this. This "
-                "is considered a fatal error and we abort parsing this tx now, and return an "
-                "error.\n");
-            return io_send_sw(ERR_CMD_SIGN_TX_DISABLE_MINT_AND_BURN_FLAG_NOT_SET);
-        }
-    }
-
-    // If instruction is SYSCALL, parse out bytes as transaction fee.
-    if (G_context.tx_info.instruction.ins_type == INS_SYSCALL) {
-        PRINTF("Parsing tx fee from SYSCALL.\n");
-
-        if (!parse_tx_fee_from_syscall(&G_context.tx_info.instruction.ins_syscall,
-                                       &G_context.tx_info.tx_fee)) {
-            PRINTF("Failed to parse tx fee from SYSCALL.\n");
-            return io_send_sw(ERR_CMD_SIGN_TX_PARSE_TX_FEE_FROM_SYSCALL_FAIL);
-        }
-
-        PRINTF("Successfully parsed tx fee:");
-        print_uint256(&G_context.tx_info.tx_fee);
-        PRINTF("\n");
-
-        // Add tx fee to total cost
-        add256(&G_context.tx_info.tx_fee,
-               &G_context.tx_info.total_xrd_amount_incl_fee,
-               &G_context.tx_info.total_xrd_amount_incl_fee);
-    } else if (G_context.tx_info.instruction.ins_up.substate.type == SUBSTATE_TYPE_TOKENS &&
-               !public_key_equals(
-                   &G_context.tx_info.my_public_key,
-                   &G_context.tx_info.instruction.ins_up.substate.tokens.owner.public_key) &&
-               G_context.tx_info.instruction.ins_up.substate.tokens.rri.address_type ==
-                   RE_ADDRESS_NATIVE_TOKEN) {
-        PRINTF("Sending XRD in tokens transfer, will add to total cost:");
-        print_uint256(&G_context.tx_info.instruction.ins_up.substate.tokens.amount);
-        PRINTF("\n");
-
-        // Spending XRD => increment total XRD spent counter
-        add256(&G_context.tx_info.instruction.ins_up.substate.tokens.amount,
-               &G_context.tx_info.total_xrd_amount_incl_fee,
-               &G_context.tx_info.total_xrd_amount_incl_fee);
-    }
-
-    bool was_last_apdu = G_context.tx_info.number_of_instructions_received ==
-                         G_context.tx_info.total_number_of_instructions;
-
-    if (was_last_apdu) {
-        if (G_context.tx_info.tx_bytes_received_count != G_context.tx_info.tx_byte_count) {
-            PRINTF(
-                "Number of received bytes does not match number of expected bytes. Bad state => "
-                "abort signing of tx. received count: %d, and tx have size: %d\n",
-                G_context.tx_info.tx_bytes_received_count,
-                G_context.tx_info.tx_byte_count);
-            return io_send_sw(ERR_BAD_STATE);
-        }
-
-        PRINTF("Finished parsing all instructions.\n");
-        G_context.state = STATE_PARSED;
-    }
-
-    // Always update the hasher.
-    hash(buffer->ptr, buffer->size, was_last_apdu);
-
-    if (was_last_apdu) {
-        G_parse_tx_state_finished_parsing_all();
-        if (G_context.tx_info.instruction.ins_type != INS_END) {
-            PRINTF("Expected last instruction to be 'INS_END' but it was not => abort tx signing.");
-            return io_send_sw(ERR_CMD_SIGN_TX_LAST_INSTRUCTION_WAS_NOT_INS_END);
-        }
-
-        // The hash to sign is now in `G_context->sig_info->m_hash` (see method `hash` above.)
-        PRINTF("Finished parsing all instruction.\n");
-
-        if (!G_context.tx_info.display_tx_summary) {
-            PRINTF(
-                "You have specified to skip displaying TX summary UI => sign tx hash "
-                "immediately.\n");
-            if (!crypto_sign_message()) {
-                G_context.state = STATE_NONE;
-                return io_send_sw(ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL);
-            } else {
-                return helper_send_response_signature(true);  // also respond with `hash`: true
-            }
-        }
-
-        return ui_display_tx_summary();
-
-    } else {
-        G_parse_tx_state_did_parse_new();
-
-        // Not done yet => tell host machine to continue sending next RE instruction.
-        if (does_instruction_need_to_be_displayed(&G_context.tx_info.instruction,
-                                                  &G_context.tx_info.my_public_key)) {
-            if (G_context.tx_info.display_substate_contents) {
-                PRINTF("Newly parsed instruction needs to be displayed to user.\n");
-                G_parse_tx_state_ins_needs_approval();
-
-                return ui_display_instruction();
-            } else {
-                PRINTF(
-                    "You have specified to skip displaying contents of instructions => proceeding "
-                    "with parsing next.\n");
-            }
-        } else {
-            PRINTF("Finished with instruction which doesn't need to be displayed.\n");
-        }
-
         G_parse_tx_state_ready_to_parse();
-
-        PRINTF(
-            "There are more instructions to parse to parse => telling host machine to send more "
-            "instructions.\n");
         return io_send_sw(SW_OK);
     }
 }
 
-int handler_sign_tx(buffer_t *cdata, bool is_first_metadata_apdu) {
-    if (is_first_metadata_apdu) {
-        PRINTF("\n.-~=: SIGN_TX called :=~-.\n\n");
-        // First APDU with metadata: parse BIP32 & Radix Engine instructions count
-        return handle_first_metadata_apdu(cdata);
-    } else {
-        return handle_single_re_ins_apdu(cdata);
+static int handle_single_re_ins_apdu(buffer_t *buffer, transaction_parser_t *tx_parser) {
+    parse_and_process_instruction_outcome_t outcome;
+
+    if (!parse_and_process_instruction_from_buffer(buffer, tx_parser, &outcome)) {
+        // Failed to parse and process
+        status_word_t sw_error = status_word_for_parse_and_process_ins_failure(&outcome);
+        return io_send_sw(sw_error);
+    }
+    switch (outcome.outcome_type) {
+        case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_WHOLE_TRANSACTION:
+            return ux_finished_parsing_tx(tx_parser);
+        case PARSE_PROCESS_INS_SUCCESS_FINISHED_PARSING_INS:
+            return ux_display_new_instruction_if_needed(tx_parser);
+        default:
+            PRINTF("\n\nFailed to parse and process instruction from buffer.\n\n");
+            // print_parse_process_instruction_outcome(&outcome);
+            break;
     }
 
-    return 0;
+    return io_send_sw(ERR_BAD_STATE);
+}
+
+int handler_sign_tx(buffer_t *cdata, bool is_initial_setup_apdu) {
+    transaction_parser_t *tx_parser = &G_context.sign_tx_info.transaction_parser;
+    if (is_initial_setup_apdu) {
+        PRINTF("\n.-~=: SIGN_TX called :=~-.\n\n");
+        return handle_initial_setup_apdu(cdata, tx_parser);
+    }
+
+    return handle_single_re_ins_apdu(cdata, tx_parser);
 }

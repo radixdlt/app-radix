@@ -1,14 +1,14 @@
 #pragma once
 
 #include <stdint.h>  // uint8_t
+
 #include "instruction_type.h"
 
+#include "../types/re_bytes.h"
+#include "../types/buffer.h"
+#include "../types/public_key.h"
 #include "substate/substate_id.h"
 #include "substate/substate.h"
-#include "re_bytes.h"
-#include "cx.h"
-
-#include "../common/public_key.h"
 
 #define INS_HEADER_REQUIRED_VERSION                           0x00
 #define INS_HEADER_FLAG_DISALLOWING_TOKEN_BURN_AND_TOKEN_MINT 0x01

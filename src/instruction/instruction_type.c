@@ -1,5 +1,4 @@
 #include "instruction_type.h"
-#include "os.h"
 
 bool is_re_ins_type_known(int raw) {
     return raw <= RE_INSTRUCTION_TYPE_LAST_KNOWN;
@@ -19,37 +18,6 @@ bool is_re_ins_type_supported(int raw) {
     return false;
 }
 
-void print_re_ins_type(re_instruction_type_e ins_type) {
-    PRINTF("Instruction type: ");
-    switch (ins_type) {
-        case INS_DOWN:
-            PRINTF("'DOWN'");
-            break;
-        case INS_LDOWN:
-            PRINTF("'LDOWN'");
-            break;
-        case INS_UP:
-            PRINTF("'UP'");
-            break;
-        case INS_END:
-            PRINTF("'END'");
-            break;
-        case INS_MSG:
-            PRINTF("'MSG'");
-            break;
-        case INS_SYSCALL:
-            PRINTF("'SYSCALL'");
-            break;
-        case INS_HEADER:
-            PRINTF("'HEADER'");
-            break;
-        default:
-            PRINTF("UNKNOWN instruction type: %d", ins_type);
-            break;
-    }
-    PRINTF("\n");
-}
-
 bool have_payload_to_parse(re_instruction_type_e ins_type) {
     switch (ins_type) {
         case INS_DOWN:
@@ -62,4 +30,6 @@ bool have_payload_to_parse(re_instruction_type_e ins_type) {
         case INS_END:
             return false;
     }
+
+    return false;  // should never happen
 }
