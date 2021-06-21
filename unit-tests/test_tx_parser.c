@@ -76,7 +76,7 @@ typedef struct {
     char *expected_tx_fee;
     char *expected_total_xrd_amount;
     uint8_t expected_hash[HASH_LEN];
-
+    char *my_public_key_hex;  // used to check token transfer change
 } expected_success_t;
 
 typedef struct {
@@ -87,7 +87,6 @@ typedef struct {
 typedef struct {
     uint16_t total_number_of_instructions;
     expected_instruction_t *expected_instructions;
-    char *my_public_key_hex;  // used to check token transfer change
 
     bool should_fail;
 
@@ -101,7 +100,15 @@ static void do_test_parse_tx(test_vector_t test_vector) {
     uint16_t total_number_of_instructions = test_vector.total_number_of_instructions;
     expected_instruction_t *expected_instructions = test_vector.expected_instructions;
 
-    hex_to_bin(test_vector.my_public_key_hex, pub_key_bytes, PUBLIC_KEY_COMPRESSED_LEN);
+    if (test_vector.should_fail) {
+        hex_to_bin("0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
+                   pub_key_bytes,
+                   PUBLIC_KEY_COMPRESSED_LEN);
+    } else {
+        hex_to_bin(test_vector.expected_success.my_public_key_hex,
+                   pub_key_bytes,
+                   PUBLIC_KEY_COMPRESSED_LEN);
+    }
 
     size_t i;
     uint32_t tx_byte_count = 0;
@@ -175,15 +182,15 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         parse_instruction_successful =
             parse_and_process_instruction_from_buffer(&buf, &tx_parser, &outcome);
 
-        dbg_print_parse_process_instruction_outcome(&outcome);
+        // dbg_print_parse_process_instruction_outcome(&outcome);
 
         if (test_vector.should_fail &&
             i == test_vector.expected_failing_instruction.index_of_failing_instruction) {
             assert_false(parse_instruction_successful);
 
-            print_message("\nExpected failure outcome:\n");
-            dbg_print_parse_process_instruction_outcome(
-                &test_vector.expected_failing_instruction.expected_failure_outcome);
+            // print_message("\nExpected failure outcome:\n");
+            // dbg_print_parse_process_instruction_outcome(
+            //     &test_vector.expected_failing_instruction.expected_failure_outcome);
 
             assert_int_equal(
                 outcome.outcome_type,
@@ -369,9 +376,10 @@ static void test_success_transfer_transfer_stake(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 9,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex = "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
         .should_fail = false,
         .expected_success = {
+            .my_public_key_hex =
+                "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
             .expected_tx_fee = "2",
             .expected_total_xrd_amount = "29999999999999999998",
             .expected_hash =
@@ -539,9 +547,10 @@ static void test_success_transfer_transfer_stake_transfer_with_change(void **sta
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex = "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
         .should_fail = false,
         .expected_success = {
+            .my_public_key_hex =
+                "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
             .expected_tx_fee = "3735928559",
             .expected_total_xrd_amount = "40000000003735928552",
             .expected_hash =
@@ -709,10 +718,11 @@ static void test_success_transfer_transfer_with_change_transfer_stake(void **sta
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex = "022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411",
         .should_fail = false,
         .expected_success =
             {
+                .my_public_key_hex =
+                    "022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411",
                 .expected_tx_fee = "266851791263253500516888",
                 .expected_total_xrd_amount = "266901791263253500516880",
                 .expected_hash =
@@ -869,10 +879,11 @@ static void test_success_transfer_unstake_transfer_with_change(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 12,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex = "039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96",
         .should_fail = false,
         .expected_success =
             {
+                .my_public_key_hex =
+                    "039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96",
                 .expected_tx_fee = "12345",
                 .expected_total_xrd_amount = "20000000000000012336",
                 .expected_hash =
@@ -1029,10 +1040,11 @@ static void test_success_transfer_transfer_with_change_unstake(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 12,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex = "02b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a",
         .should_fail = false,
         .expected_success =
             {
+                .my_public_key_hex =
+                    "02b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a",
                 .expected_tx_fee = "987654321",
                 .expected_total_xrd_amount = "20000000000987654312",
                 .expected_hash =
@@ -1188,10 +1200,11 @@ static void test_success_transfer_transfer_with_change_transfer_with_change(void
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 13,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex = "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
         .should_fail = false,
         .expected_success =
             {
+                .my_public_key_hex =
+                    "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
                 .expected_tx_fee = "64222",
                 .expected_total_xrd_amount = "30000000000000064206",
                 .expected_hash =
@@ -1245,8 +1258,6 @@ static void test_failure_missing_header(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 4,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex =
-            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
         .should_fail = true,
         .expected_failing_instruction = {
             .index_of_failing_instruction = 0,
@@ -1282,8 +1293,6 @@ static void test_failure_invalid_header_invalid_version(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 2,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex =
-            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
         .should_fail = true,
         .expected_failing_instruction = {
             .index_of_failing_instruction = 0,
@@ -1323,8 +1332,6 @@ static void test_failure_invalid_header_invalid_flag(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 2,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex =
-            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
         .should_fail = true,
         .expected_failing_instruction = {
             .index_of_failing_instruction = 0,
@@ -1374,8 +1381,6 @@ static void test_failure_no_fee_in_tx(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex =
-            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
         .should_fail = true,
         .expected_failing_instruction = {
             .index_of_failing_instruction = total_number_of_instructions - 1, // will not fail until last INS has been parsed.
@@ -1436,8 +1441,6 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 5,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex =
-            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
         .should_fail = true,
         .expected_failing_instruction = {
             .index_of_failing_instruction = 2, 
@@ -1489,8 +1492,6 @@ static void test_failure_tx_without_end_instruction(void **state) {
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
-        .my_public_key_hex =
-            "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",  // not used
         .should_fail = true,
         .expected_failing_instruction = {
             .index_of_failing_instruction = total_number_of_instructions - 1, 
