@@ -1739,6 +1739,64 @@ static void test_failure_unsupported_instruction_downall_0x08(void **state) {
     test_failure_unsupported_instruction("08");
 }
 
+static void test_failure_unrecognized_instruction(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
+                       "0000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "ff",
+            .instruction_type = 0xff,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE,
+                    .unrecognized_instruction_type_value =  0xff,
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -1764,6 +1822,8 @@ int main() {
         cmocka_unit_test(test_failure_unsupported_instruction_vdownarg_0x03),
         cmocka_unit_test(test_failure_unsupported_instruction_sig_0x07),
         cmocka_unit_test(test_failure_unsupported_instruction_downall_0x08),
+
+        cmocka_unit_test(test_failure_unrecognized_instruction),
 
     };
 
