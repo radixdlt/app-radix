@@ -1955,6 +1955,87 @@ static void test_failure_unsupported_substate_type_exiting_stake_0x0e(void **sta
         "010e");  // 01 for INS_UP, 0e for substate type EXITING STAKE.
 }
 
+static void test_failure_parse_tokens_invalid_rri(
+    parse_address_failure_reason_e underlying_rri_failure,
+    char *ins_hex_invalid_up_tokens,
+    size_t ins_hex_invalid_up_tokens_len) {
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "04c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "0921000000000000000000000000000000000000000000000038821089088b6063da18",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = ins_hex_invalid_up_tokens_len,
+            .ins_hex = ins_hex_invalid_up_tokens,
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+         .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
+                    .substate_failure =  {
+                        .outcome_type = PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS,
+                        .tokens_failure = {
+                            .outcome_type = PARSE_TOKENS_FAILURE_PARSE_RRI,
+                            .rri_parse_failure_reason = underlying_rri_failure,
+                        },
+                    },
+                }
+            }
+        }
+    };
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff(void **state) {
+    (void) state;
+     // 01=INS_UP, 03=TOKENS, ff=first byte of Tokens, being Address, specifying an unrecognized Address Type valie of 0xff
+    test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE, "0103ff", 3);
+}
+
+static void test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00(void **state) {
+    (void) state;
+     // 01=INS_UP, 03=TOKENS, 00=first byte of Tokens, being Address, specifying an unsupported Address Type valie of 0x00 (RE_ADDRESS_SYSTEM).
+    test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE, "010300", 3);
+}
+
+
+static void test_failure_parse_tokens_invalid_rri_hashed_key_too_short(void **state) {
+    (void) state;
+     // 01=INS_UP, 03=TOKENS, 03=first byte of Tokens, being Address, specifying an HashedKeyNonce and ff being just one byte instead of expected 26 bytes => too short.
+    test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES, "010303ff", 4);
+}
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -1989,6 +2070,11 @@ int main() {
         cmocka_unit_test(test_failure_unsupported_substate_type_validator_0x05),
         cmocka_unit_test(test_failure_unsupported_substate_type_unique_0x06),
         cmocka_unit_test(test_failure_unsupported_substate_type_exiting_stake_0x0e),
+
+        // Failed to parse tokens
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_hashed_key_too_short),
     };
 
     int status = 0;

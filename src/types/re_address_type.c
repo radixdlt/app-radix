@@ -1,7 +1,7 @@
 #include "re_address_type.h"
 
 bool is_re_address_type_known(int raw) {
-    return raw >= RE_ADDRESS_NATIVE_TOKEN && raw <= RE_ADDRESS_PUBLIC_KEY;
+    return raw <= RE_ADDRESS_PUBLIC_KEY;
 }
 
 bool is_re_address_type_supported(int raw) {

@@ -76,8 +76,8 @@ void dbg_print_re_ins_type(re_instruction_type_e ins_type) {
 static void dbg_print_parse_address_failure_reason(parse_address_failure_reason_e failure_reason) {
     print_message("Parse address failure reason: ");
     switch (failure_reason) {
-        case PARSE_ADDRESS_FAIL_HASHEDKEY_WRONG_LEN:
-            print_message("'FAIL_HASHEDKEY_WRONG_LEN'");
+        case PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES:
+            print_message("'FAIL_HASHEDKEY_NOT_ENOUGH_BYTES'");
             break;
         case PARSE_ADDRESS_FAIL_PUBKEY_WRONG_LEN:
             print_message("'FAIL_PUBKEY_WRONG_LEN'");
