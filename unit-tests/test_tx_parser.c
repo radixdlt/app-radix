@@ -230,15 +230,6 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         hex_to_bin(expected_instruction.ins_hex, bytes255, instruction_size);
         buf.ptr = bytes255;
 
-        if (i == 3) {
-            print_message("Printing bufer\n");
-            print_message("Size: %zu\n", buf.size);
-            for (int j = 0; j < buf.size; ++j) {
-                print_message("%02x", buf.ptr[j]);
-            }
-            print_message("\n");
-        }
-
         memset(&outcome, 0, sizeof(outcome));  // so that we can use `assert_memory_equal`.
 
         // Try parse and process, might fail, if so we should assert failure matches expected
@@ -1738,6 +1729,16 @@ static void test_failure_unsupported_instruction_vdownarg_0x03(void **state) {
     test_failure_unsupported_instruction("03");
 }
 
+static void test_failure_unsupported_instruction_sig_0x07(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("07");
+}
+
+static void test_failure_unsupported_instruction_downall_0x08(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("08");
+}
+
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -1761,6 +1762,9 @@ int main() {
         // Unsupported/Invalid Instructions
         cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x02),
         cmocka_unit_test(test_failure_unsupported_instruction_vdownarg_0x03),
+        cmocka_unit_test(test_failure_unsupported_instruction_sig_0x07),
+        cmocka_unit_test(test_failure_unsupported_instruction_downall_0x08),
+
     };
 
     int status = 0;
