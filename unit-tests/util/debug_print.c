@@ -76,17 +76,23 @@ void dbg_print_re_ins_type(re_instruction_type_e ins_type) {
 static void dbg_print_parse_address_failure_reason(parse_address_failure_reason_e failure_reason) {
     print_message("Parse address failure reason: ");
     switch (failure_reason) {
-        case PARSE_ADDRESS_FAIL_HASHEDKEY_WRONG_LEN:
-            print_message("'FAIL_HASHEDKEY_WRONG_LEN'");
+        case PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES:
+            print_message("'FAIL_HASHEDKEY_NOT_ENOUGH_BYTES'");
             break;
-        case PARSE_ADDRESS_FAIL_PUBKEY_WRONG_LEN:
-            print_message("'FAIL_PUBKEY_WRONG_LEN'");
+        case PARSE_ADDRESS_FAIL_PUBKEY_NOT_ENOUGH_BYTES:
+            print_message("'FAIL_PUBKEY_NOT_ENOUGH_BYTES'");
             break;
         case PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE:
             print_message("'FAIL_UNRECOGNIZED_ADDRESS_TYPE'");
             break;
         case PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE:
             print_message("'UNSUPPORTED_ADDRESS_TYPE'");
+            break;
+        case PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI:
+            print_message("'EXPECTED_TYPE_COMPATIBLE_WITH_RRI'");
+            break;
+        case PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS:
+            print_message("'EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS'");
             break;
     }
     print_message("\n");
@@ -250,10 +256,12 @@ static void dbg_print_parse_substate_outcome(parse_substate_outcome_t *failure_r
             print_message("'OK'");
             break;
         case PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE:
-            print_message("'FAIL_UNRECOGNIZED_SUBSTATE_TYPE'");
+            print_message("'FAIL_UNRECOGNIZED_SUBSTATE_TYPE': %hu",
+                          failure_reason->unrecognized_substate_type_value);
             break;
         case PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE:
-            print_message("'FAIL_UNSUPPORTED_SUBSTATE_TYPE'");
+            print_message("'FAIL_UNSUPPORTED_SUBSTATE_TYPE': %hu",
+                          failure_reason->unsupported_substate_type_value);
             break;
         case PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS:
             print_message("'FAILED_TO_PARSE_TOKENS' - printing reason:\n");

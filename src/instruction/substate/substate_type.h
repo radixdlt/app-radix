@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define RE_SUBSTATE_TYPE_LAST_KNOWN 0x0e
 
@@ -20,6 +21,6 @@ typedef enum {
     // SUBSTATE_TYPE_EXITING_STAKE = 0x0e,      // Unsupported
 } re_substate_type_e;
 
-bool is_re_substate_type_known(int raw);
+bool is_re_substate_type_known(uint8_t raw);
 
-bool is_re_substate_type_supported(int raw);
+bool is_re_substate_type_supported(uint8_t raw);

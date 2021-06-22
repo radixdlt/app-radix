@@ -226,8 +226,16 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         size_t instruction_size = expected_instruction.ins_len;
         buf.offset = 0;
         buf.size = instruction_size;
+        memset(bytes255, 0, sizeof(bytes255));
         hex_to_bin(expected_instruction.ins_hex, bytes255, instruction_size);
         buf.ptr = bytes255;
+
+        // print_message("Printing bufer\n");
+        // print_message("Size: %zu\n", buf.size);
+        // for (int j = 0; j < buf.size; ++j) {
+        //     print_message("%02x", buf.ptr[j]);
+        // }
+        // print_message("\n");
 
         memset(&outcome, 0, sizeof(outcome));  // so that we can use `assert_memory_equal`.
 
@@ -1293,6 +1301,7 @@ static void test_failure_missing_header(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
+        // Missing header
         {
             .ins_len = 37,
             .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
@@ -1423,17 +1432,14 @@ static void test_failure_no_fee_in_tx(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0a0001",  // Valid header
+            .ins_hex = "0a0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 69,
-            .ins_hex =
-                "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                "000000000000000000000000000000000000000000000008ac7230489e7fffc",  // valid
-                                                                                    // token
-                                                                                    // transfer
+            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
+                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
@@ -1453,7 +1459,6 @@ static void test_failure_no_fee_in_tx(void **state) {
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
         .expected_failure = {
             .expected_failure_outcome = {
-                // PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL
                 .outcome_type = PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE,
             },
             .index_of_failing_instruction = total_number_of_instructions - 1, // will not fail until last INS has been parsed.
@@ -1471,7 +1476,7 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
-            .ins_hex = "0a0001",  // valid header
+            .ins_hex = "0a0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -1662,6 +1667,443 @@ static void test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_cou
     do_test_parse_tx(test_vector);
 }
 
+static void test_failure_unrecognized_instruction(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
+                       "0000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "ff",
+            .instruction_type = 0xff,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE,
+                    .unrecognized_instruction_type_value =  0xff,
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_unsupported_instruction(char *unsupported_as_hex) {
+    uint8_t unsupported_instruction;
+    hex_to_bin(unsupported_as_hex, &unsupported_instruction, 1);
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
+                       "0000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = unsupported_as_hex,
+            .instruction_type = unsupported_instruction,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE,
+                    .unsupported_instruction_type_value = unsupported_instruction,
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("02");
+}
+
+static void test_failure_unsupported_instruction_vdownarg_0x03(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("03");
+}
+
+static void test_failure_unsupported_instruction_sig_0x07(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("07");
+}
+
+static void test_failure_unsupported_instruction_downall_0x08(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("08");
+}
+
+static void test_failure_unrecognized_substate_type(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
+                       "0000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 2,
+            .ins_hex = "01ff",  // 0x01 is INS_UP, and 0xff is an unrecognized substate type
+            .instruction_type = INS_UP,
+            .substate_type = 0xff,  // Unrecognized
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+         .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
+                    .substate_failure =  {
+                        .outcome_type = PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE,
+                        .unrecognized_substate_type_value = 0xff,
+                    },
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_unsupported_substate_type(char *unsupported_ins_as_hex) {
+    uint8_t unsupported_substate;
+    hex_to_bin(unsupported_ins_as_hex + 2, &unsupported_substate, 1);
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 2,
+            .ins_hex = unsupported_ins_as_hex,
+            .instruction_type = INS_UP,
+            .substate_type = unsupported_substate,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+         .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
+                    .substate_failure =  {
+                        .outcome_type = PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE,
+                        .unsupported_substate_type_value = unsupported_substate,
+                    },
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_unsupported_substate_type_re_address_0x00(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "0100");  // 01 for INS_UP, 00 for substate type RE_ADDRESS.
+}
+
+static void test_failure_unsupported_substate_type_token_definition_0x02(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "0102");  // 01 for INS_UP, 02 for substate type TOKEN_DEFINITION.
+}
+
+static void test_failure_unsupported_substate_type_validator_0x05(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "0105");  // 01 for INS_UP, 05 for substate type VALIDATOR.
+}
+
+static void test_failure_unsupported_substate_type_unique_0x06(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("0106");  // 01 for INS_UP, 06 for substate type UNIQUE.
+}
+
+static void test_failure_unsupported_substate_type_exiting_stake_0x0e(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "010e");  // 01 for INS_UP, 0e for substate type EXITING STAKE.
+}
+
+static void base_test_failure_parse_token(parse_tokens_outcome_t tokens_failure,
+                                          char *ins_hex_invalid_up_tokens,
+                                          size_t ins_hex_invalid_up_tokens_len) {
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "04c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "0921000000000000000000000000000000000000000000000038821089088b6063da18",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = ins_hex_invalid_up_tokens_len,
+            .ins_hex = ins_hex_invalid_up_tokens,
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {.index_of_failing_instruction = 3,
+                             .expected_failure_outcome = {
+                                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                                 .parse_failure = {
+                                     .outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
+                                     .substate_failure =
+                                         {
+                                             .outcome_type = PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS,
+                                             .tokens_failure = tokens_failure,
+                                         },
+                                 }}}};
+
+    do_test_parse_tx(test_vector);
+}
+
+static void base_test_failure_parse_tokens_invalid_rri(
+    parse_address_failure_reason_e underlying_rri_failure,
+    char *ins_hex_invalid_up_tokens,
+    size_t ins_hex_invalid_up_tokens_len) {
+    base_test_failure_parse_token(
+        (parse_tokens_outcome_t){
+            .outcome_type = PARSE_TOKENS_FAILURE_PARSE_RRI,
+            .rri_parse_failure_reason = underlying_rri_failure,
+        },
+        ins_hex_invalid_up_tokens,
+        ins_hex_invalid_up_tokens_len);
+}
+
+static void test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff(void **state) {
+    (void) state;
+    // 01=INS_UP, 03=TOKENS, ff=first byte of Tokens, being Address, specifying an unrecognized
+    // Address Type value of 0xff
+    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE,
+                                               "0103ff",
+                                               3);
+}
+
+static void test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00(
+    void **state) {
+    (void) state;
+    // 01=INS_UP, 03=TOKENS, 00=first byte of Tokens, being Address, specifying an unsupported
+    // Address Type value of 0x00 (RE_ADDRESS_SYSTEM).
+    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE,
+                                               "010300",
+                                               3);
+}
+
+static void test_failure_parse_tokens_invalid_rri_hashed_key_too_short(void **state) {
+    (void) state;
+    // 01=INS_UP, 03=TOKENS, 03=first byte of Tokens, being Address, specifying an HashedKeyNonce
+    // and `0xff` being just one byte instead of expected 26 bytes => too short.
+    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES,
+                                               "010303ff",
+                                               4);
+}
+
+static void test_failure_parse_tokens_invalid_rri_incompatible_address_type(void **state) {
+    (void) state;
+    // 01=INS_UP, 03=TOKENS, 04=first byte of Tokens, being Address, specifying an PublicKey, which
+    // is incompatible with RRI.
+    base_test_failure_parse_tokens_invalid_rri(
+        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI,
+        "0103040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
+        36);
+}
+
+static void base_test_failure_parse_tokens_invalid_owner(
+    parse_address_failure_reason_e underlying_owner_failure,
+    char *ins_hex_invalid_up_tokens,
+    size_t ins_hex_invalid_up_tokens_len) {
+    base_test_failure_parse_token(
+        (parse_tokens_outcome_t){
+            .outcome_type = PARSE_TOKENS_FAILURE_PARSE_OWNER,
+            .owner_parse_failure_reason = underlying_owner_failure,
+        },
+        ins_hex_invalid_up_tokens,
+        ins_hex_invalid_up_tokens_len);
+}
+
+static void test_failure_parse_tokens_invalid_owner_address_type_0x01_system(void **state) {
+    (void) state;
+    base_test_failure_parse_tokens_invalid_owner(
+        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS,
+        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
+        "01",  // specifying RE_ADDRESS_SYSTEM (used for RRI), which is invalid for account address
+        4);
+}
+
+static void test_failure_parse_tokens_invalid_owner_address_type_0x03_hashed_pubkey(void **state) {
+    (void) state;
+    base_test_failure_parse_tokens_invalid_owner(
+        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS,
+        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
+        "03ababdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",  // specifying
+                                                                   // RE_ADDRESS_HASHED_KEY_NONCE
+                                                                   // (used for RRI), which is
+                                                                   // invalid for account address
+        30);
+}
+
+static void test_failure_parse_tokens_invalid_owner_too_few_bytes(void **state) {
+    (void) state;
+    base_test_failure_parse_tokens_invalid_owner(
+        PARSE_ADDRESS_FAIL_PUBKEY_NOT_ENOUGH_BYTES,
+        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
+        "04ff",   // valid type, but too few bytes
+        5);
+}
+
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -1681,12 +2123,37 @@ int main() {
         cmocka_unit_test(test_failure_tx_without_end_instruction),
         cmocka_unit_test(test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count),
         cmocka_unit_test(test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count),
+
+        // Unsupported/Invalid Instructions
+        cmocka_unit_test(test_failure_unrecognized_instruction),
+        cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x02),
+        cmocka_unit_test(test_failure_unsupported_instruction_vdownarg_0x03),
+        cmocka_unit_test(test_failure_unsupported_instruction_sig_0x07),
+        cmocka_unit_test(test_failure_unsupported_instruction_downall_0x08),
+
+        // Unsupported/Invalid Substate Types
+        cmocka_unit_test(test_failure_unrecognized_substate_type),
+        cmocka_unit_test(test_failure_unsupported_substate_type_re_address_0x00),
+        cmocka_unit_test(test_failure_unsupported_substate_type_token_definition_0x02),
+        cmocka_unit_test(test_failure_unsupported_substate_type_validator_0x05),
+        cmocka_unit_test(test_failure_unsupported_substate_type_unique_0x06),
+        cmocka_unit_test(test_failure_unsupported_substate_type_exiting_stake_0x0e),
+
+        // Failed to parse tokens
+        // Invalid RRI
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_hashed_key_too_short),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_incompatible_address_type),
+        // Invalid Owner
+        cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x01_system),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x03_hashed_pubkey),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_owner_too_few_bytes),
+
     };
 
     int status = 0;
-    print_message("\n~~~***===<| TEST GROUP: 'success_complex_tx'  |>===***~~~\n");
-    status += cmocka_run_group_tests(success_complex_tx, NULL, NULL);
-    print_message("\n~~~***===<| TEST GROUP: 'failing_txs'  |>===***~~~\n");
-    status += cmocka_run_group_tests(failing_txs, NULL, NULL);
+    status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
+    status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
     return status;
 }

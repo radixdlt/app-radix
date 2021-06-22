@@ -31,7 +31,7 @@ bool parse_re_address(buffer_t *buffer,
             break;
         case RE_ADDRESS_HASHED_KEY_NONCE:
             if (!buffer_move_fill_target(buffer, address->hashed_key, RE_ADDR_HASHED_KEY_LEN)) {
-                *failure_reason = PARSE_ADDRESS_FAIL_HASHEDKEY_WRONG_LEN;
+                *failure_reason = PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES;
                 return false;
             }
             break;
@@ -39,7 +39,7 @@ bool parse_re_address(buffer_t *buffer,
             if (!buffer_move_fill_target(buffer,
                                          address->public_key.compressed,
                                          PUBLIC_KEY_COMPRESSED_LEN)) {
-                *failure_reason = PARSE_ADDRESS_FAIL_PUBKEY_WRONG_LEN;
+                *failure_reason = PARSE_ADDRESS_FAIL_PUBKEY_NOT_ENOUGH_BYTES;
                 return false;
             }
             break;
