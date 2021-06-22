@@ -230,6 +230,13 @@ static void do_test_parse_tx(test_vector_t test_vector) {
         hex_to_bin(expected_instruction.ins_hex, bytes255, instruction_size);
         buf.ptr = bytes255;
 
+        // print_message("Printing bufer\n");
+        // print_message("Size: %zu\n", buf.size);
+        // for (int j = 0; j < buf.size; ++j) {
+        //     print_message("%02x", buf.ptr[j]);
+        // }
+        // print_message("\n");
+
         memset(&outcome, 0, sizeof(outcome));  // so that we can use `assert_memory_equal`.
 
         // Try parse and process, might fail, if so we should assert failure matches expected
@@ -1797,6 +1804,96 @@ static void test_failure_unrecognized_instruction(void **state) {
     do_test_parse_tx(test_vector);
 }
 
+static void test_failure_unsupported_substate_type(char *unsupported_ins_as_hex) {
+    uint8_t unsupported_substate;
+    hex_to_bin(unsupported_ins_as_hex + 2, &unsupported_substate, 1);
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 37,
+            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_len = 2,
+            .ins_hex = unsupported_ins_as_hex,
+            .instruction_type = INS_UP,
+            .substate_type = unsupported_substate,
+        },
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+    };
+
+    // clang-format off
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 5,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+         .expected_failure = {
+            .index_of_failing_instruction = 3, 
+            .expected_failure_outcome = {
+                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                .parse_failure = {
+                    .outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
+                    .substate_failure =  {
+                        .outcome_type = PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE,
+                        .unsupported_substate_type_value = unsupported_substate,
+                    },
+                }
+            }
+        }
+    };
+    // clang-format on
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_unsupported_substate_type_re_address_0x00(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "0100");  // 01 for INS_UP, 00 for substate type RE_ADDRESS.
+}
+
+static void test_failure_unsupported_substate_type_token_definition_0x02(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "0102");  // 01 for INS_UP, 02 for substate type TOKEN_DEFINITION.
+}
+
+static void test_failure_unsupported_substate_type_validator_0x05(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "0105");  // 01 for INS_UP, 05 for substate type VALIDATOR.
+}
+
+static void test_failure_unsupported_substate_type_unique_0x06(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("0106");  // 01 for INS_UP, 06 for substate type UNIQUE.
+}
+
+static void test_failure_unsupported_substate_type_exiting_stake_0x0e(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type(
+        "010e");  // 01 for INS_UP, 0e for substate type EXITING STAKE.
+}
+
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -1825,6 +1922,11 @@ int main() {
 
         cmocka_unit_test(test_failure_unrecognized_instruction),
 
+        cmocka_unit_test(test_failure_unsupported_substate_type_re_address_0x00),
+        cmocka_unit_test(test_failure_unsupported_substate_type_token_definition_0x02),
+        cmocka_unit_test(test_failure_unsupported_substate_type_validator_0x05),
+        cmocka_unit_test(test_failure_unsupported_substate_type_unique_0x06),
+        cmocka_unit_test(test_failure_unsupported_substate_type_exiting_stake_0x0e),
     };
 
     int status = 0;

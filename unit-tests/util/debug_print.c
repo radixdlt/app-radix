@@ -250,10 +250,12 @@ static void dbg_print_parse_substate_outcome(parse_substate_outcome_t *failure_r
             print_message("'OK'");
             break;
         case PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE:
-            print_message("'FAIL_UNRECOGNIZED_SUBSTATE_TYPE'");
+            print_message("'FAIL_UNRECOGNIZED_SUBSTATE_TYPE': %hu",
+                          failure_reason->unrecognized_substate_type_value);
             break;
         case PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE:
-            print_message("'FAIL_UNSUPPORTED_SUBSTATE_TYPE'");
+            print_message("'FAIL_UNSUPPORTED_SUBSTATE_TYPE': %hu",
+                          failure_reason->unsupported_substate_type_value);
             break;
         case PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS:
             print_message("'FAILED_TO_PARSE_TOKENS' - printing reason:\n");
