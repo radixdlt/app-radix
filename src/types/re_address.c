@@ -39,7 +39,7 @@ bool parse_re_address(buffer_t *buffer,
             if (!buffer_move_fill_target(buffer,
                                          address->public_key.compressed,
                                          PUBLIC_KEY_COMPRESSED_LEN)) {
-                *failure_reason = PARSE_ADDRESS_FAIL_PUBKEY_WRONG_LEN;
+                *failure_reason = PARSE_ADDRESS_FAIL_PUBKEY_NOT_ENOUGH_BYTES;
                 return false;
             }
             break;

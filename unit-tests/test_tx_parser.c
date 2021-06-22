@@ -2020,22 +2020,29 @@ static void test_failure_parse_tokens_invalid_rri(
 
 static void test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff(void **state) {
     (void) state;
-     // 01=INS_UP, 03=TOKENS, ff=first byte of Tokens, being Address, specifying an unrecognized Address Type valie of 0xff
+     // 01=INS_UP, 03=TOKENS, ff=first byte of Tokens, being Address, specifying an unrecognized Address Type value of 0xff
     test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE, "0103ff", 3);
 }
 
 static void test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00(void **state) {
     (void) state;
-     // 01=INS_UP, 03=TOKENS, 00=first byte of Tokens, being Address, specifying an unsupported Address Type valie of 0x00 (RE_ADDRESS_SYSTEM).
+     // 01=INS_UP, 03=TOKENS, 00=first byte of Tokens, being Address, specifying an unsupported Address Type value of 0x00 (RE_ADDRESS_SYSTEM).
     test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE, "010300", 3);
 }
 
 
 static void test_failure_parse_tokens_invalid_rri_hashed_key_too_short(void **state) {
     (void) state;
-     // 01=INS_UP, 03=TOKENS, 03=first byte of Tokens, being Address, specifying an HashedKeyNonce and ff being just one byte instead of expected 26 bytes => too short.
+     // 01=INS_UP, 03=TOKENS, 03=first byte of Tokens, being Address, specifying an HashedKeyNonce and `0xff` being just one byte instead of expected 26 bytes => too short.
     test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES, "010303ff", 4);
 }
+
+static void test_failure_parse_tokens_invalid_rri_incompatible_address_type(void **state) {
+    (void) state;
+     // 01=INS_UP, 03=TOKENS, 04=first byte of Tokens, being Address, specifying an PublicKey, which is incompatible with RRI.
+    test_failure_parse_tokens_invalid_rri(PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI, "0103040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9", 36);
+}
+
 int main() {
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
@@ -2075,12 +2082,11 @@ int main() {
         cmocka_unit_test(test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff),
         cmocka_unit_test(test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00),
         cmocka_unit_test(test_failure_parse_tokens_invalid_rri_hashed_key_too_short),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_incompatible_address_type),
     };
 
     int status = 0;
-    print_message("\n~~~***===<| TEST GROUP: 'success_complex_tx'  |>===***~~~\n");
-    status += cmocka_run_group_tests(success_complex_tx, NULL, NULL);
-    print_message("\n~~~***===<| TEST GROUP: 'failing_txs'  |>===***~~~\n");
-    status += cmocka_run_group_tests(failing_txs, NULL, NULL);
+    status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
+    status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
     return status;
 }

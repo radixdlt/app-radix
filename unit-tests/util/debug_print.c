@@ -79,14 +79,20 @@ static void dbg_print_parse_address_failure_reason(parse_address_failure_reason_
         case PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES:
             print_message("'FAIL_HASHEDKEY_NOT_ENOUGH_BYTES'");
             break;
-        case PARSE_ADDRESS_FAIL_PUBKEY_WRONG_LEN:
-            print_message("'FAIL_PUBKEY_WRONG_LEN'");
+        case PARSE_ADDRESS_FAIL_PUBKEY_NOT_ENOUGH_BYTES:
+            print_message("'FAIL_PUBKEY_NOT_ENOUGH_BYTES'");
             break;
         case PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE:
             print_message("'FAIL_UNRECOGNIZED_ADDRESS_TYPE'");
             break;
         case PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE:
             print_message("'UNSUPPORTED_ADDRESS_TYPE'");
+            break;
+        case PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI:
+            print_message("'EXPECTED_TYPE_COMPATIBLE_WITH_RRI'");
+            break;
+        case PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS:
+            print_message("'EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS'");
             break;
     }
     print_message("\n");
