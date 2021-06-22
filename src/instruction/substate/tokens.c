@@ -20,7 +20,7 @@ bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *t
     }
 
     // Parse field 'owner'
-    if (!parse_re_address(buffer, &outcome->rri_parse_failure_reason, &tokens->owner)) {
+    if (!parse_re_address(buffer, &outcome->owner_parse_failure_reason, &tokens->owner)) {
         PRINTF("Failed to parse 'owner' in substate 'TOKENS'.\n");
         outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_OWNER;
         return false;
@@ -28,8 +28,8 @@ bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *t
 
     if (tokens->owner.address_type != RE_ADDRESS_PUBLIC_KEY) {
         // Wrong address type in context of account address.
-        outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_RRI;
-        outcome->rri_parse_failure_reason =
+        outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_OWNER;
+        outcome->owner_parse_failure_reason =
             PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS;
         return false;
     }
