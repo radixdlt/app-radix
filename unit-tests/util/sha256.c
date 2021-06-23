@@ -15,7 +15,7 @@
 // FROM: https://github.com/B-Con/crypto-algorithms/blob/master/sha256_test.c
 
 /*************************** HEADER FILES ***************************/
-#include <stdlib.h>
+#include <stdint.h>
 #include <memory.h>
 #include "sha256.h"
 
