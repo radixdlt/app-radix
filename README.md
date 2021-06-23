@@ -9,12 +9,31 @@ This is a [Radix DLT](https://www.radixdlt.com/) Ledger Nano S and X app.
 
 # Setup development
 
-Here is the official [Getting Started](https://ledger.readthedocs.io/en/latest/userspace/introduction.html) guide for a dev environment. 
+Here is the official [Setup](https://ledger.readthedocs.io/en/latest/userspace/setup.html) guide for a dev environment. 
 
 
 > ⚠️ The official guide is not updated and does not work properly for Nano S with firmware 2.0.0 nor with Ledger Nano X. ⚠️
 > PLEASE FOLLOW THE GUIDE IN THIS `README`INSTEAD.
 
+## Required Packages
+
+### Required for compilation
+```sh
+sudo apt install gcc-multilib g++-multilib
+```
+
+### Side loading
+
+#### USB
+If you wish to load applications on your device, you will also need to add the appropriate udev rules.
+```sh
+wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash
+```
+
+#### Communicate with Ledger device
+```sh
+sudo apt install virtualenv libudev-dev libusb-1.0-0-dev
+```
 
 ## Locations
 
