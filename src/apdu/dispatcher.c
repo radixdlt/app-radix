@@ -32,8 +32,11 @@
 #include "../handler/sign_hash.h"
 #include "../handler/ecdh.h"
 
-// (Ascii code for 'M', as in "Metadata")
+// 77 is ascii code for 'M', as in "Metadata"
 #define P1_FIRST_METADATA_APDU 77
+
+// 73 is ascii code for 'I', as in "Instruction"
+#define P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU 73
 
 static void fill_buffer(buffer_t *buf, const command_t *cmd) {
     buf->ptr = cmd->data;
@@ -74,6 +77,10 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_get_public_key(&buf, (bool) cmd->p1);
         case SIGN_TX:
+            if (!(cmd->p1 == P1_FIRST_METADATA_APDU || cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU) {
+                return io_send_sw(SW_WRONG_P1P2);
+            }
+            
             if (!cmd->data) {
                 return io_send_sw(SW_WRONG_DATA_LENGTH);
             }
@@ -81,7 +88,7 @@ int apdu_dispatcher(const command_t *cmd) {
             bool is_first_metadata_apdu = cmd->p1 == P1_FIRST_METADATA_APDU;
             return handler_sign_tx(&buf, is_first_metadata_apdu);
         case SIGN_HASH:
-            if (cmd->p1 > 1 || cmd->p2 > 0) {
+            if (cmd->p1 > 0 || cmd->p2 > 0) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
 

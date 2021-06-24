@@ -27,7 +27,9 @@ static bool parse_tx_parser_config_tx_metadata(buffer_t *buffer,
     }
     metadata->number_of_instructions_received = 0;
 
-    // PARSE OPTIONAL HRP of non native token being transferred.
+    // PARSE OPTIONAL HRP of non native token being transferred,
+    // N.B. that we should ALWAYS get the LENGTH of this OPTIONAL
+    // HRP, i.e. the value `0` if non HRP is present.
     if (!buffer_read_u8(buffer, &metadata->hrp_non_native_token_len) ||
         metadata->hrp_non_native_token_len > MAX_BECH32_HRP_PART_LEN ||
         !buffer_move_fill_target(buffer,
