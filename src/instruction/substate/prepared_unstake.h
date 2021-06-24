@@ -1,7 +1,9 @@
-#include "../re_address.h"
-#include "../uint256.h"
-#include "../../constants.h"
-#include "../../common/public_key.h"
+#pragma once
+
+#include "../../types/re_address.h"
+#include "../../types/uint256.h"
+#include "../../types/public_key.h"
+#include "../../types/buffer.h"
 
 typedef struct {
     re_address_t

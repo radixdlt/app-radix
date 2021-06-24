@@ -2,6 +2,8 @@
 
 #include <stdbool.h>  // bool
 
+#include "../../state.h"  // bool user_accepted_t
+
 /**
  * Action for public key validation and export.
  *
@@ -9,17 +11,17 @@
  *   User choice (either approved or rejectd).
  *
  */
-void ui_action_validate_pubkey(bool choice);
+void ui_action_validate_pubkey(user_accepted_t user_accepted);
 
 /**
  * Action for signature information validation.
  * From sign hash flow.
  *
- * @param[in] choice
+ * @param[in] user_accepted
  *   User choice (either approved or rejectd).
  *
  */
-void ui_action_validate_sign_hash(bool choice);
+void ui_action_validate_sign_hash(user_accepted_t user_accepted);
 
 /**
  * Action for signature information validation.
@@ -27,17 +29,24 @@ void ui_action_validate_sign_hash(bool choice);
  * hash flow, because we should respond with
  * calculated hash back to host machine.
  *
- * @param[in] choice
+ * @param[in] user_accepted
  *   User choice (either approved or rejectd).
  *
  */
-void ui_action_validate_sign_tx(bool choice);
+void ui_action_validate_sign_tx(user_accepted_t user_accepted);
 
 /**
  * Action for shared key validation and export.
  *
- * @param[in] choice
+ * @param[in] user_accepted
  *   User choice (either approved or rejectd).
  *
  */
-void ui_action_validate_sharedkey(bool choice);
+void ui_action_validate_sharedkey(user_accepted_t user_accepted);
+
+/**
+ * @brief Action for single parsed instruction validation.
+ *
+ * @param[in] user_accepted User choice (either approved or rejectd).
+ */
+void ui_action_validate_instruction(user_accepted_t user_accepted);

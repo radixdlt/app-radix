@@ -23,7 +23,7 @@
 #include "../io.h"
 #include "../sw.h"
 #include "../state.h"
-#include "common/buffer.h"
+#include "types/buffer.h"
 
 int handler_get_app_name() {
     PRINTF("\n.-~=: GET_APP_NAME called :=~-.\n\n");

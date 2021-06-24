@@ -1,9 +1,8 @@
 #pragma once
 
-#include "../re_address.h"
-#include "../uint256.h"
-#include "cx.h"
-#include "../../common/public_key.h"
+#include "../../types/re_address.h"
+#include "../../types/uint256.h"
+#include "../../types/public_key.h"
 
 typedef struct {
     re_address_t rri;
@@ -16,10 +15,10 @@ typedef struct {
  *
  */
 typedef enum {
-    PARSE_TOKENS_OK = 0,
-    PARSE_TOKENS_FAILURE_PARSE_RRI = 1,
-    PARSE_TOKENS_FAILURE_PARSE_OWNER = 2,
-    PARSE_TOKENS_FAILURE_PARSE_AMOUNT = 3,
+    PARSE_TOKENS_OK,
+    PARSE_TOKENS_FAILURE_PARSE_RRI,
+    PARSE_TOKENS_FAILURE_PARSE_OWNER,
+    PARSE_TOKENS_FAILURE_PARSE_AMOUNT,
 } parse_tokens_outcome_e;
 
 typedef struct {
@@ -47,5 +46,3 @@ typedef struct {
 bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *tokens);
 
 uint16_t status_word_for_failed_to_parse_tokens(parse_tokens_outcome_e failure_reason);
-
-bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key);

@@ -6,7 +6,7 @@
 #include "os_io_seproxyhal.h"
 
 #include "state.h"
-#include "common/buffer.h"
+#include "types/buffer.h"
 
 void io_seproxyhal_display(const bagl_element_t *element);
 

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../re_address.h"
-#include "../uint256.h"
 #include "../../constants.h"
+
+#include "../../types/re_address.h"
+#include "../../types/uint256.h"
 
 typedef struct {
     public_key_t public_key;

@@ -1,34 +1,10 @@
 #include "state.h"
 #include "globals.h"
-#include "os.h"
 
-static void print_parse_tx_ins_state(parse_tx_ins_state_e state) {
-    PRINTF("Parse tx ins state: ");
-    switch (state) {
-        case STATE_PARSE_INS_READY_TO_PARSE:
-            PRINTF("'READY_TO_PARSE'");
-            break;
-        case STATE_PARSE_INS_PARSED_INSTRUCTION:
-            PRINTF("'PARSED_INSTRUCTION'");
-            break;
-        case STATE_PARSE_INS_NEEDS_APPROVAL:
-            PRINTF("'NEEDS_APPROVAL'");
-            break;
-        case STATE_PARSE_INS_APPROVED:
-            PRINTF("'APPROVED'");
-            break;
-        case STATE_PARSE_INS_FINISHED_PARSING_ALL_INS:
-            PRINTF("'FINISHED_PARSING_ALL_INS'");
-            break;
-        default:
-            PRINTF("UNKNOWN parse tx ins state: %d", state);
-            break;
-    }
-    PRINTF("\n");
-}
 
 void G_update_parse_tx_ins_state(parse_tx_ins_state_e new_state) {
-    parse_tx_ins_state_e current_state = G_context.tx_info.parse_ins_state;
+    parse_tx_ins_state_e current_state =
+        G_context.sign_tx_info.transaction_parser.instruction_parser.state;
 
     bool valid_transition = false;
 
@@ -67,17 +43,18 @@ void G_update_parse_tx_ins_state(parse_tx_ins_state_e new_state) {
     }
 
     if (!valid_transition) {
-        PRINTF("Invalid state transition\n");
-        PRINTF("FROM: ");
-        print_parse_tx_ins_state(current_state);
-        PRINTF("TO: ");
-        print_parse_tx_ins_state(new_state);
-        PRINTF("Considered bad state => abort tx signing");
+        // PRINTF("Invalid state transition\n");
+        // PRINTF("FROM: ");
+        // print_parse_tx_ins_state(current_state);
+        // PRINTF("TO: ");
+        // print_parse_tx_ins_state(new_state);
+        // PRINTF("Considered bad state => abort tx signing");
+        
         io_send_sw(ERR_BAD_STATE);
         return;
     }
 
-    G_context.tx_info.parse_ins_state = new_state;
+    G_context.sign_tx_info.transaction_parser.instruction_parser.state = new_state;
 }
 
 void G_parse_tx_state_ready_to_parse() {
@@ -95,6 +72,7 @@ void G_parse_tx_state_ins_needs_approval() {
 void G_parse_tx_state_did_approve_ins() {
     G_update_parse_tx_ins_state(STATE_PARSE_INS_APPROVED);
 }
+
 void G_parse_tx_state_finished_parsing_all() {
     G_update_parse_tx_ins_state(STATE_PARSE_INS_FINISHED_PARSING_ALL_INS);
 }

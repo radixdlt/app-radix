@@ -2,6 +2,9 @@
 
 This is a [Radix DLT](https://www.radixdlt.com/) Ledger Nano S and X app.
 
+## Inspiration
+This Ledger app is **heavily** based on [Ledger HQ's boilerplate app](https://github.com/LedgerHQ/app-boilerplate), please use that as source of future improvement and further development. Ledger's boilerplate app contains fuzzing and integration tests using the Ledger emulatur Speculos
+
 
 > ⚠️  Building the app from source is only confirmed to be working on Ubuntu 20.04, but should probably work on 18.04 as well ⚠️
 
@@ -9,12 +12,31 @@ This is a [Radix DLT](https://www.radixdlt.com/) Ledger Nano S and X app.
 
 # Setup development
 
-Here is the official [Getting Started](https://ledger.readthedocs.io/en/latest/userspace/introduction.html) guide for a dev environment. 
+Here is the official [Setup](https://ledger.readthedocs.io/en/latest/userspace/setup.html) guide for a dev environment. 
 
 
 > ⚠️ The official guide is not updated and does not work properly for Nano S with firmware 2.0.0 nor with Ledger Nano X. ⚠️
 > PLEASE FOLLOW THE GUIDE IN THIS `README`INSTEAD.
 
+## Required Packages
+
+### Required for compilation
+```sh
+sudo apt install gcc-multilib g++-multilib
+```
+
+### Side loading
+
+#### USB
+If you wish to load applications on your device, you will also need to add the appropriate udev rules.
+```sh
+wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash
+```
+
+#### Communicate with Ledger device
+```sh
+sudo apt install virtualenv libudev-dev libusb-1.0-0-dev
+```
 
 ## Locations
 
@@ -333,7 +355,7 @@ Make sure you are using the correct `targetId` for Ledger Nano S/X.
 
 # Documentation
 
-High level documentation such as [APDU](doc/APDU.md), [commands](doc/COMMANDS.md) and [transaction serialization](doc/TRANSACTION.md) are included in developer documentation which can be generated with [doxygen](https://www.doxygen.nl)
+High level documentation such as [APDU](doc/APDU.md), [commands](doc/COMMANDS.md) and [transaction parsing](doc/TRANSACTION.md) are included in developer documentation which can be generated with [doxygen](https://www.doxygen.nl)
 
 ```sh
 doxygen .doxygen/Doxyfile
@@ -342,6 +364,8 @@ doxygen .doxygen/Doxyfile
 the process outputs HTML and LaTeX documentations in `doc/html` and `doc/latex` folders.
 
 # Tests & Continuous Integration
+
+> ❌ NOT DONE YET FOR THIS APP.
 
 The flow processed in [GitHub Actions](https://github.com/features/actions) is the following:
 

@@ -22,5 +22,4 @@ bool is_re_ins_type_known(int raw);
 
 bool is_re_ins_type_supported(int raw);
 
-void print_re_ins_type(re_instruction_type_e ins_type);
 bool have_payload_to_parse(re_instruction_type_e ins_type);

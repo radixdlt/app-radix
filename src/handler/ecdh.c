@@ -16,7 +16,7 @@
  *****************************************************************************/
 
 #include "ecdh.h"
-#include "../common/buffer.h"
+#include "../types/buffer.h"
 
 #include "os.h"
 #include "sw.h"     // SW_WRONG_DATA_LENGTH
@@ -33,8 +33,8 @@ int handler_ecdh(buffer_t *cdata, bool display) {
     G_context.req_type = CONFIRM_ECDH;
     G_context.state = STATE_NONE;
 
-    if (!buffer_read_u8(cdata, &G_context.bip32_path_len) ||
-        !buffer_read_bip32_path(cdata, G_context.bip32_path, (size_t) G_context.bip32_path_len)) {
+    if (!buffer_read_u8(cdata, &G_context.ecdh_info.my_derived_public_key.bip32_path.path_len) ||
+        !buffer_read_bip32_path(cdata, &G_context.ecdh_info.my_derived_public_key.bip32_path)) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
@@ -67,7 +67,8 @@ int handler_ecdh(buffer_t *cdata, bool display) {
            G_context.ecdh_info.other_party_public_key.W);
 
     if (display) {
-        return ui_display_ecdh();
+        return ui_display_ecdh(&G_context.ecdh_info.my_derived_public_key,
+                               &G_context.ecdh_info.other_party_address);
     }
 
     return helper_send_response_sharedkey();
