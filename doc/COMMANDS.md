@@ -82,7 +82,7 @@ This is a **limitation**, this Ledger App **only supports one non-XRD token per 
 
 The response `0x9000` (**Status Word** (`SW`) for `"OK"`) tells the host machine (TypeScript library) to proceed sending instructions.
 
-If parsing of the intial setup metadata failed an error code from [`sw_custom.h`](../src/sw_custom.h) will be sent.
+If parsing of the intial setup metadata failed an error code from [`sw_custom.h`](../../src/sw_custom.h) will be sent.
 
 | Response length (bytes) | SW | RData |
 | --- | --- | --- |
