@@ -77,7 +77,7 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_get_public_key(&buf, (bool) cmd->p1);
         case SIGN_TX:
-            if (!(cmd->p1 == P1_FIRST_METADATA_APDU || cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU) {
+            if (!(cmd->p1 == P1_FIRST_METADATA_APDU || cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU)) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
             
