@@ -2104,7 +2104,158 @@ static void test_failure_parse_tokens_invalid_owner_too_few_bytes(void **state) 
         5);
 }
 
+static void base_test_rri_format_hrp(char *hashed_key_hex,
+                                     char *hrp,
+                                     const size_t hrp_len,
+                                     char *expected_rri) {
+    re_address_t address = (re_address_t){
+        .address_type = RE_ADDRESS_HASHED_KEY_NONCE,
+        .hashed_key = {0},
+    };
+    hex_to_bin(hashed_key_hex, address.hashed_key, RE_ADDR_HASHED_KEY_LEN);
+
+    char out[150];
+    memset(out, 0, sizeof(out));
+
+    bool success = format_other_token_from_re_address(&address, hrp, hrp_len, out, sizeof(out));
+    assert_true(success);
+    assert_string_equal(out, expected_rri);
+}
+
+static void base_test_rri_format_hrp_abba_deadbeef(char *hrp,
+                                                   const size_t hrp_len,
+                                                   char *expected_rri) {
+    base_test_rri_format_hrp("abbadeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                             hrp,
+                             hrp_len,
+                             expected_rri);
+}
+
+static void test_rri_format_hrp_6_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "stella";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "stella_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsa766sk");
+}
+
+static void test_rri_format_hrp_7_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "marantz";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "marantz_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsypduqu");
+}
+
+static void test_rri_format_hrp_8_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "nintendo";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "nintendo_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsrepq7q");
+}
+
+static void test_rri_format_hrp_9_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "deadlocks";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "deadlocks_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhssxkuvg");
+}
+
+static void test_rri_format_hrp_10_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "cryptocarp";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "cryptocarp_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs22mk4k");
+}
+
+static void test_rri_format_hrp_11_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "frostbitten";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "frostbitten_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs9hvdqj");
+}
+
+static void test_rri_format_hrp_12_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "jeopordizing";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "jeopordizing_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs97d2cr");
+}
+
+static void test_rri_format_hrp_13_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "paradoxically";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "paradoxically_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs5t2ggh");
+}
+
+static void test_rri_format_hrp_14_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "transformation";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "transformation_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsp2ls68");
+}
+
+static void test_rri_format_hrp_15_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "insignificantly";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "insignificantly_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsh2e8gx");
+}
+
+static void test_rri_format_hrp_16_chars(void **state) {
+    (void) state;
+
+    char hrp[] = "characterisation";
+    base_test_rri_format_hrp_abba_deadbeef(
+        hrp,
+        strlen(hrp),
+        "characterisation_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsdyejyy");
+}
+
 int main() {
+    const struct CMUnitTest rri_formatting[] = {
+        cmocka_unit_test(test_rri_format_hrp_6_chars),
+        cmocka_unit_test(test_rri_format_hrp_7_chars),
+        cmocka_unit_test(test_rri_format_hrp_8_chars),
+        cmocka_unit_test(test_rri_format_hrp_9_chars),
+        cmocka_unit_test(test_rri_format_hrp_10_chars),
+        cmocka_unit_test(test_rri_format_hrp_11_chars),
+        cmocka_unit_test(test_rri_format_hrp_12_chars),
+        cmocka_unit_test(test_rri_format_hrp_13_chars),
+        cmocka_unit_test(test_rri_format_hrp_14_chars),
+        cmocka_unit_test(test_rri_format_hrp_15_chars),
+        cmocka_unit_test(test_rri_format_hrp_16_chars),
+    };
+
     const struct CMUnitTest success_complex_tx[] = {
         cmocka_unit_test(test_success_transfer_transfer_stake),
         cmocka_unit_test(test_success_transfer_transfer_stake_transfer_with_change),
@@ -2153,6 +2304,8 @@ int main() {
     };
 
     int status = 0;
+
+    status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
     status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
     status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
     return status;
