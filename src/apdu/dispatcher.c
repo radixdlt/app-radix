@@ -65,7 +65,7 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_get_app_name();
         case GET_PUBLIC_KEY:
-            if (cmd->p1 > 1 || cmd->p2 > 0) {
+            if (cmd->p1 > 1 || cmd->p2 > 1) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
 
@@ -75,12 +75,16 @@ int apdu_dispatcher(const command_t *cmd) {
 
             fill_buffer(&buf, cmd);
 
-            return handler_get_public_key(&buf, (bool) cmd->p1);
+            bool display = (bool) cmd->p1 == 1;
+            bool address_verification_only = (bool) cmd->p2 == 1;
+
+            return handler_get_public_key(&buf, display, address_verification_only);
         case SIGN_TX:
-            if (!(cmd->p1 == P1_FIRST_METADATA_APDU || cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU)) {
+            if (!(cmd->p1 == P1_FIRST_METADATA_APDU ||
+                  cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU)) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
-            
+
             if (!cmd->data) {
                 return io_send_sw(SW_WRONG_DATA_LENGTH);
             }

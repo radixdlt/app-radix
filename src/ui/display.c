@@ -138,7 +138,11 @@ UX_STEP_CB(ux_display_reject_step,
 /// ####                               ####
 /// #######################################
 // Step with icon and text
-UX_STEP_NOCB(ux_display_confirm_addr_step, pn, {&C_icon_eye, "Confirm Address"});
+UX_STEP_NOCB(ux_display_derive_account_step, pn, {&C_icon_eye, "Derive account"});
+
+// Step with icon and text
+UX_STEP_NOCB(ux_display_verify_addr_step, pn, {&C_icon_eye, "Verify address"});
+
 // Step with title/text for BIP32 path
 UX_STEP_NOCB(ux_display_path_step,
              bnnn_paging,
@@ -154,20 +158,29 @@ UX_STEP_NOCB(ux_display_address_step,
                  .text = g_address,
              });
 
-// FLOW to display address and BIP32 path:
-// #1 screen: eye icon + "Confirm Address"
+// FLOW to display BIP32 path and account address:
+// #1 screen: eye icon + "Derive account"
 // #2 screen: display BIP32 Path
-// #3 screen: display address
+// #3 screen: display account address
 // #4 screen: approve button
 // #5 screen: reject button
-UX_FLOW(ux_display_pubkey_flow,
-        &ux_display_confirm_addr_step,
+UX_FLOW(ux_display_derive_account_flow,
+        &ux_display_derive_account_step,
         &ux_display_path_step,
         &ux_display_address_step,
         &ux_display_approve_step,
         &ux_display_reject_step);
 
-int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_public_key) {
+// FLOW to display only account address
+// #1 screen: eye icon + "Verify Address"
+// #2 screen: display address
+UX_FLOW(ux_display_verify_address_flow,
+        &ux_display_verify_addr_step,
+        &ux_display_address_step,
+        &ux_display_approve_step);
+
+int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_public_key,
+                                           bool address_verification_only) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_ADDRESS || G_context.state != STATE_NONE) {
@@ -175,7 +188,7 @@ int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_publ
         return io_send_sw(ERR_BAD_STATE);
     }
 
-    // Prepare BIP32 path for display
+    // Prepare BIP32 path for display (skipped if `address_verification_only`)
     if (!format_bip32_path(&my_derived_public_key->bip32_path)) {
         return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
     }
@@ -188,8 +201,13 @@ int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_publ
     // Prepare send_response callback if user APPROVEs
     g_validate_callback = &ui_action_validate_pubkey;
 
-    // Initialize (start) the UX flow for SIGN_TX
-    ux_flow_init(0, ux_display_pubkey_flow, NULL);
+    // Initialize (start) the UX flow for display public key/address info
+    if (address_verification_only) {
+        // This skips showing BIP32 path
+        ux_flow_init(0, ux_display_verify_address_flow, NULL);
+    } else {
+        ux_flow_init(0, ux_display_derive_account_flow, NULL);
+    }
 
     return 0;
 }
