@@ -174,7 +174,7 @@ UX_FLOW(ux_display_pubkey_flow,
 UX_FLOW(ux_display_verify_address_flow,
         &ux_display_verify_addr_step,
         &ux_display_address_step,
-        ux_display_approve_step);
+        &ux_display_approve_step);
 
 int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_public_key,
                                            bool address_verification_only) {

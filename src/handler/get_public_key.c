@@ -66,7 +66,8 @@ int handler_get_public_key(buffer_t *cdata, bool display, bool address_verificat
     explicit_bzero(&private_key, sizeof(private_key));
 
     if (display) {
-        return ui_display_address_from_get_pubkey_cmd(&ctx->my_derived_public_key);
+        return ui_display_address_from_get_pubkey_cmd(&ctx->my_derived_public_key,
+                                                      address_verification_only);
     } else {
         return helper_send_response_pubkey();
     }

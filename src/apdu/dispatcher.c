@@ -75,10 +75,10 @@ int apdu_dispatcher(const command_t *cmd) {
 
             fill_buffer(&buf, cmd);
 
-            bool display = (bool) cmd->p1;
-            bool address_verification_only = (bool) cmd->p2;
+            bool display = (bool) cmd->p1 == 1;
+            bool address_verification_only = (bool) cmd->p2 == 1;
 
-            return handler_get_public_key(&buf, );
+            return handler_get_public_key(&buf, display, address_verification_only);
         case SIGN_TX:
             if (!(cmd->p1 == P1_FIRST_METADATA_APDU ||
                   cmd->p1 == P1_SINGLE_RADIX_ENGINE_INSTRUCTION_APDU)) {

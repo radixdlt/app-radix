@@ -24,4 +24,4 @@
  * @return zero or positive integer if success, negative integer otherwise.
  *
  */
-int handler_get_public_key(buffer_t *cdata, bool display, bool address_verification_only) {
+int handler_get_public_key(buffer_t *cdata, bool display, bool address_verification_only);

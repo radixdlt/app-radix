@@ -348,9 +348,6 @@ void dbg_print_parse_process_instruction_outcome(parse_and_process_instruction_o
         case PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE:
             print_message("'TX_DOES_NOT_CONTAIN_TX_FEE'");
             break;
-        case PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END:
-            print_message("'LAST_INS_WAS_NOT_INS_END'");
-            break;
         case PARSE_PROCESS_INS_FAILED_TO_PARSE:
             print_message("'FAILED_TO_PARSE' - printing reason:\n");
             dbg_print_parse_instruction_outcome(&outcome->parse_failure);
