@@ -138,6 +138,9 @@ UX_STEP_CB(ux_display_reject_step,
 /// ####                               ####
 /// #######################################
 // Step with icon and text
+UX_STEP_NOCB(ux_display_derive_account_step, pn, {&C_icon_eye, "Derive account"});
+
+// Step with icon and text
 UX_STEP_NOCB(ux_display_verify_addr_step, pn, {&C_icon_eye, "Verify address"});
 
 // Step with title/text for BIP32 path
@@ -155,14 +158,14 @@ UX_STEP_NOCB(ux_display_address_step,
                  .text = g_address,
              });
 
-// FLOW to display address and BIP32 path:
-// #1 screen: eye icon + "Verify Address"
+// FLOW to display BIP32 path and account address:
+// #1 screen: eye icon + "Derive account"
 // #2 screen: display BIP32 Path
-// #3 screen: display address
+// #3 screen: display account address
 // #4 screen: approve button
 // #5 screen: reject button
-UX_FLOW(ux_display_pubkey_flow,
-        &ux_display_verify_addr_step,
+UX_FLOW(ux_display_derive_account_flow,
+        &ux_display_derive_account_step,
         &ux_display_path_step,
         &ux_display_address_step,
         &ux_display_approve_step,
@@ -203,7 +206,7 @@ int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_publ
         // This skips showing BIP32 path
         ux_flow_init(0, ux_display_verify_address_flow, NULL);
     } else {
-        ux_flow_init(0, ux_display_pubkey_flow, NULL);
+        ux_flow_init(0, ux_display_derive_account_flow, NULL);
     }
 
     return 0;
