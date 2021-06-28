@@ -252,7 +252,7 @@ python -m ledgerblue.loadApp \
 --fileName bin/app.hex \
 --appName Radix \
 --dataSize $((0x`cat debug/app.map |grep _envram_data | tr -s ' ' | cut -f2 -d' '|cut -f2 -d'x'` - 0x`cat debug/app.map |grep _nvram_data | tr -s ' ' | cut -f2 -d' '|cut -f2 -d'x'`)) \
---icon 010000000000ffffffffffffffffffffffffe1ffe1fffc7ffc47fe4ffe1fff3fffffffffffffffffff \
+--icon 0100000000ffffff00ffffffffffffffffffe1fffdfffce7fe4ffe1fffbfffffffffffffffffffffff \
 --rootPrivateKey b5b2eacb2debcf4903060e0fa2a139354fe29be9e4ac7c433f694a3d93297eaa
 ```
 
