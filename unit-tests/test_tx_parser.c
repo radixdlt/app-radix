@@ -1529,57 +1529,6 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     do_test_parse_tx(test_vector);
 }
 
-static void test_failure_tx_without_end_instruction(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        // Should have an END instruction here, but we don't
-    };
-
-    uint16_t total_number_of_instructions = 4;
-
-    // clang-format off
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = total_number_of_instructions,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
-        .expected_failure = {
-            .index_of_failing_instruction = total_number_of_instructions - 1, 
-            .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END,
-            }
-        }
-    };
-    // clang-format on
-
-    do_test_parse_tx(test_vector);
-}
-
 static void test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count(void **state) {
     (void) state;
 
@@ -2271,7 +2220,6 @@ int main() {
         cmocka_unit_test(test_failure_invalid_header_invalid_flag),
         cmocka_unit_test(test_failure_no_fee_in_tx),
         cmocka_unit_test(test_failure_invalid_syscall_too_few_bytes),
-        cmocka_unit_test(test_failure_tx_without_end_instruction),
         cmocka_unit_test(test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count),
         cmocka_unit_test(test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count),
 

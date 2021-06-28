@@ -373,7 +373,6 @@ enum generic_identifiers_radix {
 // Various exceptions during Sign TX flow
 #define ERR_CMD_SIGN_TX_DISABLE_MINT_AND_BURN_FLAG_NOT_SET (ERR_CMD_SIGN_TX + ERR_BYTE_E0)
 #define ERR_CMD_SIGN_TX_ECDSA_SIGN_FAIL                    (ERR_CMD_SIGN_TX + ERR_BYTE_E1)
-#define ERR_CMD_SIGN_TX_LAST_INSTRUCTION_WAS_NOT_INS_END   (ERR_CMD_SIGN_TX + ERR_BYTE_E2)
 
 /// *-------------------------------*
 /// |  CMD: SIGN_HASH (C7XX)        |
