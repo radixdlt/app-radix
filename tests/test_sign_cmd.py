@@ -9,7 +9,7 @@ from radix_client.transaction import Transaction
 
 
 def test_sign_tx(cmd, button):
-    bip32_path: str = "m/44'/536'/0'/0/0"
+    bip32_path: str = "m/44'/1022'/0'/0/0"
 
     pub_key, chain_code = cmd.get_public_key(
         bip32_path=bip32_path, display=False
