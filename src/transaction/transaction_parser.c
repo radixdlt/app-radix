@@ -26,8 +26,6 @@ status_word_t status_word_for_parse_and_process_ins_failure(
             return ERR_CMD_SIGN_TX_PARSE_TX_FEE_FROM_SYSCALL_FAIL;
         case PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE:
             return ERR_CMD_SIGN_TX_TX_DID_NOT_CONTAIN_TX_FEE;
-        case PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END:
-            return ERR_CMD_SIGN_TX_LAST_INSTRUCTION_WAS_NOT_INS_END;
         case PARSE_PROCESS_INS_FAILED_TO_PARSE:
             return status_word_for_failed_to_parse_ins(&failure->parse_failure);
     }
@@ -146,11 +144,6 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
 
         if (tx_metadata->tx_bytes_received_count != tx_metadata->tx_byte_count) {
             outcome->outcome_type = PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH;
-            return false;
-        }
-
-        if (instruction_parser->instruction.ins_type != INS_END) {
-            outcome->outcome_type = PARSE_PROCESS_INS_LAST_INS_WAS_NOT_INS_END;
             return false;
         }
 
