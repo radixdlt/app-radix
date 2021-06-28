@@ -14,15 +14,18 @@ typedef void (*action_validate_cb)(user_accepted_t);
  * @return 0 if success, negative integer otherwise.
  *
  */
-int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_public_key);
 
-/**
- * Display BIP32 and hash on the device and ask confirmation to sign hash with key at BIP32 path.
- *
- * @return 0 if success, negative integer otherwise.
- *
- */
-int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_len);
+int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_public_key,
+                                           bool address_verification_only)
+
+    /**
+     * Display BIP32 and hash on the device and ask confirmation to sign hash with key at BIP32
+     * path.
+     *
+     * @return 0 if success, negative integer otherwise.
+     *
+     */
+    int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_len);
 
 /**
  * Display BIP32 and pub key of other parth on the device and ask confirmation to sign derive a

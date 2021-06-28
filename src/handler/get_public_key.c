@@ -36,7 +36,7 @@
 
 #include "../types/bip32_path.h"
 
-int handler_get_public_key(buffer_t *cdata, bool display) {
+int handler_get_public_key(buffer_t *cdata, bool display, bool address_verification_only) {
     PRINTF("\n.-~=: GET_PUBLIC_KEY called :=~-.\n\n");
     explicit_bzero(&G_context, sizeof(G_context));
     get_public_key_ctx_t *ctx = &G_context.pk_info;
