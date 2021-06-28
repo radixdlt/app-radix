@@ -45,7 +45,7 @@
 
 | CLA | INS | P1 | P2 | Lc | CData |
 | --- | --- | --- | --- | --- | --- |
-| 0xAA | 0x05 | 0x00 (no display) <br> 0x01 (display) | 0x00 | 1 + 4n | `len(bip32_path) (1)` \|\|<br> `bip32_path{1} (4)` \|\|<br>`...` \|\|<br>`bip32_path{n} (4)` |
+| 0xAA | 0x05 | 0x00 (no display) <br> 0x01 (display) | 0x00 (display BIP32 as well) <br> 0x01 (skip displaying BIP32) | 1 + 4n | `len(bip32_path) (1)` \|\|<br> `bip32_path{1} (4)` \|\|<br>`...` \|\|<br>`bip32_path{n} (4)` |
 
 ### Response
 
