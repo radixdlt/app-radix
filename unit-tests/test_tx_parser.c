@@ -326,13 +326,17 @@ static void test_failure_missing_header(void **state) {
         // Missing header
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
@@ -345,7 +349,9 @@ static void test_failure_missing_header(void **state) {
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -382,7 +388,9 @@ static void test_failure_invalid_header_invalid_version(void **state) {
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -421,7 +429,9 @@ static void test_failure_invalid_header_invalid_flag(void **state) {
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -454,7 +464,9 @@ static void test_failure_no_fee_in_tx(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -467,7 +479,9 @@ static void test_failure_no_fee_in_tx(void **state) {
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -498,7 +512,9 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -528,7 +544,9 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -557,19 +575,25 @@ static void test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_coun
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -601,19 +625,25 @@ static void test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_cou
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -644,7 +674,9 @@ static void test_failure_unrecognized_instruction(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -657,19 +689,25 @@ static void test_failure_unrecognized_instruction(void **state) {
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "ff",
+            // clang-format on
             .instruction_type = 0xff,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -703,7 +741,9 @@ static void test_failure_unsupported_instruction(char *unsupported_as_hex) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -716,7 +756,9 @@ static void test_failure_unsupported_instruction(char *unsupported_as_hex) {
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
@@ -728,7 +770,9 @@ static void test_failure_unsupported_instruction(char *unsupported_as_hex) {
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -781,7 +825,9 @@ static void test_failure_unrecognized_substate_type(void **state) {
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
@@ -794,19 +840,25 @@ static void test_failure_unrecognized_substate_type(void **state) {
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 2,
+            // clang-format off
             .ins_hex = "01ff",  // 0x01 is INS_UP, and 0xff is an unrecognized substate type
+            // clang-format on
             .instruction_type = INS_UP,
             .substate_type = 0xff,  // Unrecognized
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -843,19 +895,25 @@ static void test_failure_unsupported_substate_type(char *unsupported_ins_as_hex)
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
@@ -867,7 +925,9 @@ static void test_failure_unsupported_substate_type(char *unsupported_ins_as_hex)
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -932,31 +992,40 @@ static void base_test_failure_parse_token(parse_tokens_outcome_t tokens_failure,
     expected_instruction_t expected_instructions[] = {
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "04c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "0921000000000000000000000000000000000000000000000038821089088b6063da18",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
             .ins_len = ins_hex_invalid_up_tokens_len,
+            // clang-format off
             .ins_hex = ins_hex_invalid_up_tokens,
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
@@ -1262,28 +1331,30 @@ static void test_success_token_transfer_only_xrd(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
-
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "04a0686a487f9d3adf4892a358e4460cda432068f069e5e9f4c815af21bc3dd1d600000000",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1291,21 +1362,22 @@ static void test_success_token_transfer_only_xrd(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 5,
+            // clang-format off
             .ins_hex = "0500000000",
+            // clang-format on
             .instruction_type = INS_LDOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1321,21 +1393,22 @@ static void test_success_token_transfer_only_xrd(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "0921010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1343,10 +1416,11 @@ static void test_success_token_transfer_only_xrd(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         }};
@@ -1424,28 +1498,30 @@ static void test_success_token_transfer_only_xrd_with_msg(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
-
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "04973b739777f86d706b1ff85aaab35065e8de03da0fe83bbedf30a0acc0ec4ea500000001",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000deadde0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1453,21 +1529,22 @@ static void test_success_token_transfer_only_xrd_with_msg(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 5,
+            // clang-format off
             .ins_hex = "0500000000",
+            // clang-format on
             .instruction_type = INS_LDOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1483,21 +1560,22 @@ static void test_success_token_transfer_only_xrd_with_msg(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "0921010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1505,17 +1583,19 @@ static void test_success_token_transfer_only_xrd_with_msg(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 7,
+            // clang-format off
             .ins_hex = "060548656c6c6f",
+            // clang-format on
             .instruction_type = INS_MSG,
             .substate_type = IRRELEVANT,
         }};
@@ -1611,56 +1691,62 @@ static void test_success_token_transfer_xrd_and_non_xrd_mixed(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
-
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "046ae6ca1c740d4b7d1a9d07ddad52ca62226851ac9f595e390a6e5ab3bf4f626b00000003",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "04973b739777f86d706b1ff85aaab35065e8de03da0fe83bbedf30a0acc0ec4ea500000003",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "04a0686a487f9d3adf4892a358e4460cda432068f069e5e9f4c815af21bc3dd1d600000003",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "04b1f4197b20e6c64bee1f751b76a779293481c910f413c0fcafc0b993e10b137100000000",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1708,21 +1794,22 @@ static void test_success_token_transfer_xrd_and_non_xrd_mixed(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "0921010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1730,10 +1817,11 @@ static void test_success_token_transfer_xrd_and_non_xrd_mixed(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         }};
@@ -1806,42 +1894,46 @@ static void test_success_xrd_transfer_to_self(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
-
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "040c7e6ad291944d3fdf50cd278651e4d20ad28536b529004008a4c3938dce092c00000003",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "046ae6ca1c740d4b7d1a9d07ddad52ca62226851ac9f595e390a6e5ab3bf4f626b00000000",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1849,7 +1941,6 @@ static void test_success_xrd_transfer_to_self(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1857,21 +1948,22 @@ static void test_success_xrd_transfer_to_self(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "0921010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1879,10 +1971,11 @@ static void test_success_xrd_transfer_to_self(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         }};
@@ -1963,28 +2056,30 @@ static void test_success_token_transfer_and_stake(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
-
         {
             .ins_len = 3,
+            // clang-format off
             .ins_hex = "0a0001",
+            // clang-format on
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "040c7e6ad291944d3fdf50cd278651e4d20ad28536b529004008a4c3938dce092c00000001",
+            // clang-format on
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "092100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -1992,21 +2087,22 @@ static void test_success_token_transfer_and_stake(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 5,
+            // clang-format off
             .ins_hex = "0500000000",
+            // clang-format on
             .instruction_type = INS_LDOWN,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -2014,14 +2110,14 @@ static void test_success_token_transfer_and_stake(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 37,
+            // clang-format off
             .ins_hex = "0eaf99885ac063393a2849d4b0df36c5ec3164408132526caf59f53d1239be2bf800000000",
+            // clang-format on
             .instruction_type = INS_READ,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 102,
             .ins_hex = "0106000356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7040"
@@ -2030,21 +2126,22 @@ static void test_success_token_transfer_and_stake(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 35,
+            // clang-format off
             .ins_hex = "0921010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            // clang-format on
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
-
         {
             .ins_len = 70,
             .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
@@ -2052,10 +2149,11 @@ static void test_success_token_transfer_and_stake(void **state) {
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
-
         {
             .ins_len = 1,
+            // clang-format off
             .ins_hex = "00",
+            // clang-format on
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         }};
