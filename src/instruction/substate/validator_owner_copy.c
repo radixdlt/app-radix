@@ -8,7 +8,7 @@ bool parse_validator_owner_copy(buffer_t *buffer,
                                 validator_owner_copy_t *validator_owner_copy) {
     // Parse field 'reserved'
     if (!buffer_read_u8(buffer, &validator_owner_copy->reserved)) {
-        PRINTF("Failed to parse 'delegate' in substate 'VALIDATOR_OWNER_COPY'.\n");
+        PRINTF("Failed to parse 'reserved' in substate 'VALIDATOR_OWNER_COPY'.\n");
         outcome->outcome_type = PARSE_VALIDATOR_OWNER_COPY_FAILURE_RESERVED;
         return false;
     }

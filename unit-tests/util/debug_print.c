@@ -303,6 +303,12 @@ static void dbg_print_parse_substate_outcome(parse_substate_outcome_t *failure_r
             print_message("'FAILED_TO_PARSE_STAKE_OWNERSHIP' - printing reason:\n");
             dbg_print_parse_stake_ownership_outcome(&failure_reason->stake_ownership_failure);
             break;
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_VALIDATOR_OWNER_COPY:
+            print_message("'FAILED_TO_PARSE_VALIDATOR_OWNER_COPY'");
+            break;
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_VALIDATOR_ALLOW_DELEGATION_FLAG:
+            print_message("'FAILED_TO_PARSE_VALIDATOR_ALLOW_DELEGATION_FLAG'");
+            break;
     }
     print_message("\n");
 }

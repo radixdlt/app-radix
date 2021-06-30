@@ -9,7 +9,7 @@ bool parse_validator_allow_delegation_flag(
     validator_allow_delegation_flag_t *validator_allow_delegation_flag) {
     // Parse field 'reserved'
     if (!buffer_read_u8(buffer, &validator_allow_delegation_flag->reserved)) {
-        PRINTF("Failed to parse 'delegate' in substate 'VALIDATOR_ALLOW_DELEGATION_FLAG'.\n");
+        PRINTF("Failed to parse 'reserved' in substate 'VALIDATOR_ALLOW_DELEGATION_FLAG'.\n");
         *outcome = PARSE_VALIDATOR_ALLOW_DELEGATION_FLAG_FAILURE_RESERVED;
         return false;
     }

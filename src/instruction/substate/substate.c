@@ -46,8 +46,8 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
             break;
         case SUBSTATE_TYPE_STAKE_OWNERSHIP:
             if (!parse_stake_ownership(buffer,
-                                      &outcome->stake_ownership_failure,
-                                      &substate->stake_ownership)) {
+                                       &outcome->stake_ownership_failure,
+                                       &substate->stake_ownership)) {
                 PRINTF("Failed to parse 'STAKE_OWNERSHIP'.\n");
 
                 outcome->outcome_type = PARSE_SUBSTATE_FAILED_TO_PARSE_STAKE_OWNERSHIP;
@@ -106,6 +106,9 @@ uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failu
         case PARSE_SUBSTATE_FAILED_TO_PARSE_PREPARED_STAKE:
             return status_word_for_failed_to_parse_prepared_stake(
                 failure_reason.prepared_stake_failure.outcome_type);
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_STAKE_OWNERSHIP:
+            return status_word_for_failed_to_parse_stake_ownership(
+                failure_reason.stake_ownership_failure.outcome_type);
         case PARSE_SUBSTATE_FAILED_TO_PARSE_PREPARED_UNSTAKE:
             return status_word_for_failed_to_parse_prepared_unstake(
                 failure_reason.prepared_unstake_failure.outcome_type);

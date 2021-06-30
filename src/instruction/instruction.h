@@ -10,10 +10,10 @@
 #include "substate/substate_id.h"
 #include "substate/substate.h"
 
-// There should only be one and only one INS_SYSCALL with SYSCALL_TX_FEE_RESERVE_PUT. 
+// There should only be one and only one INS_SYSCALL with SYSCALL_TX_FEE_RESERVE_PUT.
 // (There may be 0 or more INS_SYSCALL with SYSCALL_TX_FEE_RESERVE_TAKE)
 // 	fee_paid = put_amt - sum(take_amt)
-#define INS_SYSCALL_TX_FEE_RESERVE_PUT 0x00
+#define INS_SYSCALL_TX_FEE_RESERVE_PUT  0x00
 #define INS_SYSCALL_TX_FEE_RESERVE_TAKE 0x01
 
 #define INS_HEADER_REQUIRED_VERSION                           0x00
@@ -36,6 +36,13 @@ typedef struct {
 } re_ins_up_t;
 
 /**
+ * Structure the RE instruction `INS_VREAD.
+ */
+typedef struct {
+    substate_t substate;
+} re_ins_vread_t;
+
+/**
  * Structure the RE instruction `INS_LDOWN.
  */
 typedef struct {
@@ -48,6 +55,13 @@ typedef struct {
 typedef struct {
     substate_id_t substate_id;
 } re_ins_down_t;
+
+/**
+ * Structure the RE instruction `INS_READ.
+ */
+typedef struct {
+    substate_id_t substate_id;
+} re_ins_read_t;
 
 /**
  * Structure the RE instruction `INS_SYSCALL.
@@ -75,6 +89,8 @@ typedef struct {
         re_ins_ldown_t ins_ldown;
         re_ins_down_t ins_down;
         re_ins_up_t ins_up;
+        re_ins_vread_t ins_vread;
+        re_ins_read_t ins_read;
         re_ins_syscall_t ins_syscall;
         re_ins_header_t ins_header;
     };  /// payload of non empty supported instructions
@@ -82,16 +98,16 @@ typedef struct {
 } re_instruction_t;
 
 typedef enum {
-    PARSE_INS_OK = 0,
-    PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE = 1,
-    PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE = 2,
-    PARSE_INS_FAILED_TO_PARSE_SUBSTATE = 3,
-    PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID = 4,
-    PARSE_INS_FAILED_TO_PARSE_SUBSTATE_INDEX = 5,
-    PARSE_INS_FAILED_TO_PARSE_MSG = 6,
-    PARSE_INS_FAILED_TO_PARSE_SYSCALL = 7,
-    PARSE_INS_FAILED_TO_PARSE_HEADER = 8,
-    PARSE_INS_INVALID_HEADER = 9,
+    PARSE_INS_OK,
+    PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE,
+    PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE,
+    PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
+    PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID,
+    PARSE_INS_FAILED_TO_PARSE_SUBSTATE_INDEX,
+    PARSE_INS_FAILED_TO_PARSE_MSG,
+    PARSE_INS_FAILED_TO_PARSE_SYSCALL,
+    PARSE_INS_FAILED_TO_PARSE_HEADER,
+    PARSE_INS_INVALID_HEADER,
 } parse_instruction_outcome_type_e;
 
 typedef struct {

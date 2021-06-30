@@ -42,12 +42,24 @@ bool parse_instruction(buffer_t *buffer,
             if (!parse_substate_id(buffer,
                                    &outcome->substate_id_failure,
                                    &instruction->ins_down.substate_id)) {
-                PRINTF("Failed to parse substate id.\n");
+                PRINTF("Failed to parse substate id for INS_DOWN.\n");
                 outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID;
                 return false;
             }
-            PRINTF("Finished parsing substate ID.\n");
+            PRINTF("Finished parsing substate ID for INS_DOWN.\n");
             break;
+
+        case INS_READ:
+            if (!parse_substate_id(buffer,
+                                   &outcome->substate_id_failure,
+                                   &instruction->ins_read.substate_id)) {
+                PRINTF("Failed to parse substate id for INS_READ.\n");
+                outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID;
+                return false;
+            }
+            PRINTF("Finished parsing substate ID for INS_READ.\n");
+            break;
+
         case INS_LDOWN:
             if (!parse_substate_index(buffer, &instruction->ins_ldown.substate_index)) {
                 PRINTF("Failed to parse substate index.\n");
@@ -60,15 +72,27 @@ bool parse_instruction(buffer_t *buffer,
             if (!parse_substate(buffer,
                                 &outcome->substate_failure,
                                 &instruction->ins_up.substate)) {
-                PRINTF("Failed to parse substate.\n");
+                PRINTF("Failed to parse substate for INS_UP.\n");
                 outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE;
                 return false;
             }
             PRINTF("Finished parsing substate.\n");
             break;
+        case INS_VREAD:
+            if (!parse_substate(buffer,
+                                &outcome->substate_failure,
+                                &instruction->ins_vread.substate)) {
+                PRINTF("Failed to parse substate for INS_VREAD.\n");
+                outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE;
+                return false;
+            }
+            PRINTF("Finished parsing substate.\n");
+            break;
+
         case INS_END:
             PRINTF("Finished parsing END of substate group (empty, nothing to parse).\n");
             break;
+
         case INS_MSG:  // Attached Message
             if (!parse_re_bytes(buffer, &outcome->message_failure, &instruction->ins_msg.message)) {
                 PRINTF("Failed to parse INS_MSG.\n");

@@ -550,7 +550,7 @@ static void ui_display_stake(prepared_stake_t *prepared_stake) {
     PRINTF("START: ui_display_stake.\n");
     prepare_ui_for_new_flow();
     // Prepare 'to validator' address for display
-    if (!format_validator_address_for_display(&prepared_stake->delegate)) {
+    if (!format_validator_address_for_display(&prepared_stake->validator)) {
         io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
         return;
     }
@@ -598,8 +598,8 @@ static void ui_display_unstake(prepared_unstake_t *prepared_unstake) {
     PRINTF("START: ui_display_unstake.\n");
     prepare_ui_for_new_flow();
 
-    // Prepare 'from validator' address for display
-    if (!format_validator_address_for_display(&prepared_unstake->delegate)) {
+    // Prepare 'validator' address for display
+    if (!format_validator_address_for_display(&prepared_unstake->validator)) {
         io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
         return;
     }
