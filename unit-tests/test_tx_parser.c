@@ -26,7 +26,9 @@
 #include "instruction/substate/tokens.h"
 #include "instruction/substate/prepared_stake.h"
 #include "instruction/substate/prepared_unstake.h"
-#include "instruction/substate/stake_share.h"
+#include "instruction/substate/stake_ownership.h"
+#include "instruction/substate/validator_allow_delegation_flag.h"
+#include "instruction/substate/validator_owner_copy.h"
 
 #include "instruction/substate/substate_type.h"
 #include "instruction/substate/substate.h"
