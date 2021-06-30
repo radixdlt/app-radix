@@ -110,8 +110,11 @@ static void dbg_print_parse_prepared_stake_outcome(parse_prepared_stake_outcome_
         case PARSE_PREPARED_STAKE_OK:
             print_message("'OK'");
             break;
-        case PARSE_PREPARED_STAKE_FAILURE_PARSE_DELEGATE:
-            print_message("'FAILURE_PARSE_DELEGATE'");
+        case PARSE_PREPARED_STAKE_FAILURE_PARSE_RESERVED:
+            print_message("'FAILURE_PARSE_RESERVED'");
+            break;
+        case PARSE_PREPARED_STAKE_FAILURE_PARSE_VALIDATOR:
+            print_message("'FAILURE_PARSE_VALIDATOR'");
             break;
         case PARSE_PREPARED_STAKE_FAILURE_PARSE_OWNER:
             print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");
@@ -147,20 +150,23 @@ static void dbg_print_parse_prepared_unstake_outcome(parse_prepared_unstake_outc
     print_message("\n");
 }
 
-static void dbg_print_parse_stake_share_outcome(parse_stake_share_outcome_t *outcome) {
+static void dbg_print_parse_stake_ownership_outcome(parse_stake_ownership_outcome_t *outcome) {
     print_message("parse stake share outcome: ");
     switch (outcome->outcome_type) {
-        case PARSE_STAKE_SHARE_OK:
+        case PARSE_STAKE_OWNERSHIP_OK:
             print_message("'OK'");
             break;
-        case PARSE_STAKE_SHARE_FAILURE_PARSE_PUBLICKEY:
-            print_message("'FAILURE_PARSE_PUBLICKEY'");
+        case PARSE_STAKE_OWNERSHIP_FAILURE_PARSE_RESERVED:
+            print_message("'FAILURE_PARSE_RESERVED'");
             break;
-        case PARSE_STAKE_SHARE_FAILURE_PARSE_OWNER:
+        case PARSE_STAKE_OWNERSHIP_FAILURE_PARSE_VALIDATOR:
+            print_message("'FAILURE_PARSE_VALIDATOR'");
+            break;
+        case PARSE_STAKE_OWNERSHIP_FAILURE_PARSE_OWNER:
             print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");
             dbg_print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
             break;
-        case PARSE_STAKE_SHARE_FAILURE_PARSE_AMOUNT:
+        case PARSE_STAKE_OWNERSHIP_FAILURE_PARSE_AMOUNT:
             print_message("'FAILURE_PARSE_AMOUNT'");
             break;
     }
@@ -217,13 +223,16 @@ static void dbg_print_parse_tokens_outcome(parse_tokens_outcome_t *outcome) {
         case PARSE_TOKENS_OK:
             print_message("'OK'");
             break;
-        case PARSE_TOKENS_FAILURE_PARSE_RRI:
-            print_message("'FAILURE_PARSE_RRI' - printing reason:\n");
-            dbg_print_parse_address_failure_reason(outcome->rri_parse_failure_reason);
+        case PARSE_TOKENS_FAILURE_PARSE_RESERVED:
+            print_message("'FAILURE_PARSE_RESERVED'");
             break;
         case PARSE_TOKENS_FAILURE_PARSE_OWNER:
             print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");
             dbg_print_parse_address_failure_reason(outcome->owner_parse_failure_reason);
+            break;
+        case PARSE_TOKENS_FAILURE_PARSE_RESOURCE:
+            print_message("'FAILURE_PARSE_RESOURCE' - printing reason:\n");
+            dbg_print_parse_address_failure_reason(outcome->resource_parse_failure_reason);
             break;
         case PARSE_TOKENS_FAILURE_PARSE_AMOUNT:
             print_message("'FAILURE_PARSE_AMOUNT'");
@@ -290,9 +299,9 @@ static void dbg_print_parse_substate_outcome(parse_substate_outcome_t *failure_r
             print_message("'FAILED_TO_PARSE_PREPARED_UNSTAKE' - printing reason:\n");
             dbg_print_parse_prepared_unstake_outcome(&failure_reason->prepared_unstake_failure);
             break;
-        case PARSE_SUBSTATE_FAILED_TO_PARSE_SHARE_STAKE:
-            print_message("'FAILED_TO_PARSE_SHARE_STAKE' - printing reason:\n");
-            dbg_print_parse_stake_share_outcome(&failure_reason->stake_share_failure);
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_STAKE_OWNERSHIP:
+            print_message("'FAILED_TO_PARSE_STAKE_OWNERSHIP' - printing reason:\n");
+            dbg_print_parse_stake_ownership_outcome(&failure_reason->stake_ownership_failure);
             break;
     }
     print_message("\n");

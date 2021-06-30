@@ -7,7 +7,7 @@
 #define RE_SUBSTATE_TYPE_LAST_KNOWN 0x12
 
 /**
- * @brief Type of substate, e.g. TOKENS, STAKE, UNSTAKE or STAKE_SHARE.
+ * @brief Type of substate, e.g. TOKENS, STAKE, UNSTAKE or STAKE_OWNERSHIP.
  *
  */
 typedef enum {

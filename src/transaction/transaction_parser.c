@@ -46,8 +46,8 @@ bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
         return false;
     }
 
-    if (syscall->call_data[0] != INS_SYSCALL_TX_FEE_RESERVE_PUT &&
-        syscall->call_data[0] != INS_SYSCALL_TX_FEE_RESERVE_TAKE) {
+    if (syscall->call_data.data[0] != INS_SYSCALL_TX_FEE_RESERVE_PUT &&
+        syscall->call_data.data[0] != INS_SYSCALL_TX_FEE_RESERVE_TAKE) {
         // Only these two values above are known to relate to TX fee.
         return false;
     }
@@ -126,12 +126,12 @@ static bool update_tx_fee_and_total_xrd_cost_if_needed(re_ins_syscall_t *syscall
         }
 
         // Subract TAKE tx amount from tx fee
-        sub256(&amount, &transaction->tx_fee, &transaction->tx_fee);
+        minus256(&amount, &transaction->tx_fee, &transaction->tx_fee);
 
         // Subract TAKE tx amount from total cost
-        sub256(&amount,
-               &transaction->total_xrd_amount_incl_fee,
-               &transaction->total_xrd_amount_incl_fee);
+        minus256(&amount,
+                 &transaction->total_xrd_amount_incl_fee,
+                 &transaction->total_xrd_amount_incl_fee);
     }
 
     return true;
@@ -199,7 +199,7 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
         // I own the tokens and the rri matches XRD
         bool increment_xrd_grand_total =
             !token_amount_is_change_back_to_me &&
-            instruction_parser->instruction.ins_up.substate.tokens.rri.address_type ==
+            instruction_parser->instruction.ins_up.substate.tokens.resource.address_type ==
                 RE_ADDRESS_NATIVE_TOKEN;
 
         if (increment_xrd_grand_total) {

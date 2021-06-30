@@ -36,7 +36,7 @@ bool parse_validator_owner_copy(buffer_t *buffer,
     return true;
 }
 
-uint16_t status_word_for_failed_to_parse_validator_allow_delegation_Flag(
+uint16_t status_word_for_failed_to_parse_validator_owner_copy(
     parse_validator_owner_copy_outcome_e failure_reason) {
     switch (failure_reason) {
         case PARSE_VALIDATOR_OWNER_COPY_OK:
