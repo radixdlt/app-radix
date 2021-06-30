@@ -115,6 +115,14 @@ UX_STEP_CB(ux_display_approve_step,
                "Approve",
            });
 
+UX_STEP_CB(ux_display_encrypt_step,
+           pb,
+           (*g_validate_callback)(true),
+           {
+               &C_icon_validate_14,
+               "Encrypt",
+           });
+
 // Step with approve button (but with text "Sign tx?")
 UX_STEP_CB(ux_display_approve_sign_tx_step,
            pb,
@@ -123,6 +131,7 @@ UX_STEP_CB(ux_display_approve_sign_tx_step,
                &C_icon_validate_14,
                "Sign tx?",
            });
+
 // Step with reject button
 UX_STEP_CB(ux_display_reject_step,
            pb,
@@ -132,12 +141,20 @@ UX_STEP_CB(ux_display_reject_step,
                "Reject",
            });
 
+// Step with reject button
+UX_STEP_CB(ux_display_cancel_step,
+           pb,
+           (*g_validate_callback)(false),
+           {
+               &C_icon_crossmark,
+               "Cancel",
+           });
+
 /// #######################################
 /// ####                               ####
 /// ####           GET_PUB_KEY         ####
 /// ####                               ####
 /// #######################################
-// Step with icon and text
 UX_STEP_NOCB(ux_display_derive_account_step, pn, {&C_icon_eye, "Derive account"});
 
 // Step with icon and text
@@ -160,13 +177,11 @@ UX_STEP_NOCB(ux_display_address_step,
 
 // FLOW to display BIP32 path and account address:
 // #1 screen: eye icon + "Derive account"
-// #2 screen: display BIP32 Path
-// #3 screen: display account address
-// #4 screen: approve button
-// #5 screen: reject button
+// #2 screen: display account address
+// #3 screen: approve button
+// #4 screen: reject button
 UX_FLOW(ux_display_derive_account_flow,
         &ux_display_derive_account_step,
-        &ux_display_path_step,
         &ux_display_address_step,
         &ux_display_approve_step,
         &ux_display_reject_step);
@@ -278,36 +293,26 @@ int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_le
 /// ####                               ####
 /// #######################################
 // Step with icon and text
-UX_STEP_NOCB(ux_display_confirm_other_pubkey_step, pn, {&C_icon_eye, "ECDH with?"});
+UX_STEP_NOCB(ux_display_confirm_other_pubkey_step, pn, {&C_icon_eye, "Encrypt msg?"});
 
 // Step with title/text for public key of other party
 UX_STEP_NOCB(ux_display_other_party_address_step,
              bnnn_paging,
              {
-                 .title = "Pubkey other",
+                 .title = "To:",
                  .text = g_address,
-             });
-
-// Step with title/text for BIP32 path
-UX_STEP_NOCB(ux_display_path_key_step,
-             bnnn_paging,
-             {
-                 .title = "Your key at",
-                 .text = g_bip32_path,
              });
 
 // FLOW to display other party pubkey and BIP32 path:
 // #1 screen: eye icon + "ECDH with?"
 // #3 screen: display address of other party
-// #2 screen: display BIP32 Path
 // #4 screen: approve button
 // #5 screen: reject button
 UX_FLOW(ux_display_ecdh_flow,
         &ux_display_confirm_other_pubkey_step,
         &ux_display_other_party_address_step,
-        &ux_display_path_key_step,
-        &ux_display_approve_step,
-        &ux_display_reject_step);
+        &ux_display_encrypt_step,  // "Encrypt"
+        &ux_display_cancel_step);  // "Cancel"
 
 int ui_display_ecdh(derived_public_key_t *my_derived_public_key,
                     re_address_t *other_party_address) {
@@ -353,40 +358,21 @@ UX_STEP_NOCB(ux_display_review_tx_summary_step,
                  "Review",
                  "Transaction",
              });
-// Step with title/text for amount
-UX_STEP_NOCB(ux_display_total_xrd_incl_fee_amount_step,
-             bnnn_paging,
-             {
-                 .title = "Total XRD",
-                 .text = g_amount,
-             });
 
 // Step with title/text for amount
 UX_STEP_NOCB(ux_display_tx_fee_amount_step,
              bnnn_paging,
              {
-                 .title = "Fee in XRD",
+                 .title = "XRD Fee (E-18):",
                  .text = g_tx_fee,
              });
 
-// Step with title/text for amount
-UX_STEP_NOCB(ux_display_tx_hash_step,
-             bnnn_paging,
-             {
-                 .title = "Hash of TX",
-                 .text = g_hash,
-             });
-
 // FLOW to display summary of transaction information:
-UX_FLOW(
-    ux_display_tx_summary_flow,
-    &ux_display_review_tx_summary_step,          // #1 screen: eye icon + "Review Transaction"
-    &ux_display_tx_fee_amount_step,              // #2 screen: display tx fee amount
-    &ux_display_total_xrd_incl_fee_amount_step,  // #3 screen: display total XRD amount
-    &ux_display_tx_hash_step,                    // #4 screen: display tx hash
-    &ux_display_sign_with_key_at_path_step,  // # 5 screen: display Bip32 path for key to sign with
-    &ux_display_approve_sign_tx_step,        // #6 screen: approve button
-    &ux_display_reject_step);                // #7 screen: reject button
+UX_FLOW(ux_display_tx_summary_flow,
+        &ux_display_review_tx_summary_step,  // #1 screen: eye icon + "Review Transaction"
+        &ux_display_tx_fee_amount_step,      // #2 screen: display tx fee amount
+        &ux_display_approve_sign_tx_step,    // #3 screen: approve button // "Sign tx?"
+        &ux_display_reject_step);            // #4  screen: reject button // "Reject"
 
 int ui_display_tx_summary(transaction_t *transaction,
                           bip32_path_t *bip32_path,
@@ -398,17 +384,12 @@ int ui_display_tx_summary(transaction_t *transaction,
         return io_send_sw(ERR_BAD_STATE);
     }
 
-    // Prepare BIP32 path for display
-    if (!format_bip32_path(bip32_path)) {
-        return io_send_sw(ERR_DISPLAY_BIP32_PATH_FAIL);
-    }
-
     char amount[DISPLAYED_AMOUNT_LEN] = {0};
 
     if (!to_string_uint256(&transaction->tx_fee, amount, sizeof(amount))) {
         return io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
     }
-    snprintf(g_tx_fee, sizeof(g_tx_fee), "E-18 XRD: %.*s", sizeof(amount), amount);
+    snprintf(g_tx_fee, sizeof(g_tx_fee), "%.*s", sizeof(amount), amount);
     PRINTF("Tx fee: %s\n", g_tx_fee);
 
     explicit_bzero(amount, sizeof(amount));
@@ -416,11 +397,8 @@ int ui_display_tx_summary(transaction_t *transaction,
         return io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
     }
 
-    snprintf(g_amount, sizeof(g_amount), "E-18 XRD: %.*s", sizeof(amount), amount);
+    snprintf(g_amount, sizeof(g_amount), "%.*s", sizeof(amount), amount);
     PRINTF("Amount: %s\n", g_amount);
-
-    // Prepare HASH for display
-    snprintf(g_hash, sizeof(g_hash), "%.*h", HASH_LEN, hash);
 
     g_validate_callback = &ui_action_validate_sign_tx;
 
@@ -444,7 +422,7 @@ UX_STEP_NOCB(ux_display_review_ins_up_tokens_step,
 UX_STEP_NOCB(ux_display_recipient_address_step,
              bnnn_paging,
              {
-                 .title = "To",
+                 .title = "To:",
                  .text = g_address,
              });
 
@@ -452,7 +430,7 @@ UX_STEP_NOCB(ux_display_recipient_address_step,
 UX_STEP_NOCB(ux_display_token_rri_step,
              bnnn_paging,
              {
-                 .title = "Token (rri)",
+                 .title = "Token ID:",
                  .text = g_rri,
              });
 
@@ -460,7 +438,7 @@ UX_STEP_NOCB(ux_display_token_rri_step,
 UX_STEP_NOCB(ux_display_amount_step,
              bnnn_paging,
              {
-                 .title = "Amount",
+                 .title = "Amount (E-18):",
                  .text = g_amount,
              });
 
@@ -514,8 +492,8 @@ static void ui_display_tokens(tokens_t *tokens) {
         io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
         return;
     }
-    snprintf(g_amount, sizeof(g_amount), "E-18: %.*s", sizeof(amount), amount);
-    PRINTF("Amount: %s\n", g_amount);
+    snprintf(g_amount, sizeof(g_amount), "%.*s", sizeof(amount), amount);
+    // PRINTF("Amount: %s\n", g_amount);
 
     ux_flow_init(0, ux_display_instruction_tokens_flow, NULL);
 }
@@ -534,7 +512,7 @@ UX_STEP_NOCB(ux_display_review_ins_up_prepared_stake_step,
 UX_STEP_NOCB(ux_display_to_validator_address_step,
              bnnn_paging,
              {
-                 .title = "To validator",
+                 .title = "To validator:",
                  .text = g_address,
              });
 
@@ -569,7 +547,7 @@ static void ui_display_stake(prepared_stake_t *prepared_stake) {
 }
 
 /// $$$$$$$$$$$$$$$$$$$$$$
-/// $$  Untake Tokens   $$
+/// $$  Unstake Tokens   $$
 /// $$$$$$$$$$$$$$$$$$$$$$
 UX_STEP_NOCB(ux_display_review_ins_up_prepared_unstake_step,
              pnn,
@@ -582,7 +560,7 @@ UX_STEP_NOCB(ux_display_review_ins_up_prepared_unstake_step,
 UX_STEP_NOCB(ux_display_from_validator_address_step,
              bnnn_paging,
              {
-                 .title = "From validator",
+                 .title = "From validator:",
                  .text = g_address,
              });
 
