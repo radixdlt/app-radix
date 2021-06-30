@@ -189,8 +189,11 @@ static void dbg_print_parse_substate_id_outcome(parse_substate_id_outcome_e outc
 //         case SUBSTATE_TYPE_PREPARED_STAKE:
 //             print_message("'PREPARED_STAKE'");
 //             break;
-//         case SUBSTATE_TYPE_STAKE_SHARE:
-//             print_message("'STAKE_SHARE'");
+//         case SUBSTATE_TYPE_VALIDATOR_OWNER_COPY:
+//             print_message("'VALIDATOR_OWNER_COPY'");
+//             break;
+//         case SUBSTATE_TYPE_VALIDATOR_ALLOW_DELEGATION_FLAG:
+//             print_message("'VALIDATOR_ALLOW_DELEGATION_FLAG'");
 //             break;
 //         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
 //             print_message("'PREPARED_UNSTAKE'");

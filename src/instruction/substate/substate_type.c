@@ -8,8 +8,9 @@ bool is_re_substate_type_supported(uint8_t raw) {
     switch (raw) {
         case SUBSTATE_TYPE_TOKENS:            // Token transfer
         case SUBSTATE_TYPE_PREPARED_STAKE:    // Stake tokens
-        case SUBSTATE_TYPE_STAKE_SHARE:       // Partial unstake tokens
         case SUBSTATE_TYPE_PREPARED_UNSTAKE:  // Unstake tokens
+        case SUBSTATE_TYPE_VALIDATOR_ALLOW_DELEGATION_FLAG:
+        case SUBSTATE_TYPE_VALIDATOR_OWNER_COPY:
             return true;
     }
     return false;

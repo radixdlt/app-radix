@@ -46,7 +46,93 @@ bool parse_tx_fee_from_syscall(re_ins_syscall_t *syscall, uint256_t *tx_fee) {
         return false;
     }
 
+    if (syscall->call_data[0] != INS_SYSCALL_TX_FEE_RESERVE_PUT &&
+        syscall->call_data[0] != INS_SYSCALL_TX_FEE_RESERVE_TAKE) {
+        // Only these two values above are known to relate to TX fee.
+        return false;
+    }
+
     readu256BE(syscall->call_data.data + 1, tx_fee);
+
+    return true;
+}
+
+/*
+ * Tx fee is calculated like so:
+ * Also a new syscall was added `FEE_RESERVE_TAKE (0x01)`, apart from old `FEE_RESERVE_PUT (0x00)`
+ * to be able to claim back unused fees in the fee reserve. A general user transaction will look
+ * like:
+ *
+ * DOWN <substate_id>
+ * SYSCALL FEE_RESERVE_PUT <put_amt>
+ * ...
+ * SYSCALL FEE_RESERVE_TAKE <take_amt0>
+ * ...
+ * SYSCALL FEE_RESERVE_TAKE <take_amt1>
+ * END
+ * SIG <signature>
+ *
+ * The corresponding fee paid in the transaction is then:
+ * `fee_paid = put_amt - sum(take_amt*)`
+ *
+ * There should only be one and only one `put_amt` value. There may be 0 or more `take_amt` values.
+ *
+ */
+static bool update_tx_fee_and_total_xrd_cost_if_needed(re_ins_syscall_t *syscall,
+                                                       transaction_t *transaction) {
+    bool sys_call_is_tx_fee_put =
+        (bool) syscall->call_data.data[0] == INS_SYSCALL_TX_FEE_RESERVE_PUT;
+    bool sys_call_is_tx_fee_take =
+        (bool) syscall->call_data.data[0] == INS_SYSCALL_TX_FEE_RESERVE_TAKE;
+
+    if (!sys_call_is_tx_fee_put && !sys_call_is_tx_fee_take) {
+        return true;
+    }
+
+    // SYSCALL specifies TX fee
+    uint256_t amount;
+    if (!parse_tx_fee_from_syscall(syscall, &amount)) {
+        return false;
+    }
+
+    if (sys_call_is_tx_fee_put) {
+        if (is_tx_fee_set(transaction)) {
+            // Invalid state, a transaction must not specify more than one SYSCALL with
+            // `TX_FEE_RESERVE_PUT`.
+            return false;
+        }
+
+        // Copy over tx fee.
+        copy256(&transaction->tx_fee, &amount);
+
+        // Add tx fee to total cost
+        add256(&amount,
+               &transaction->total_xrd_amount_incl_fee,
+               &transaction->total_xrd_amount_incl_fee);
+    } else if (sys_call_is_tx_fee_take) {
+        if (!is_tx_fee_set(transaction)) {
+            // Invalid state, a transaction must first specify one (and only one) SYSCALL
+            // with `TX_FEE_RESERVE_PUT` before it specifies SYSCALLs with
+            // `INS_SYSCALL_TX_FEE_RESERVE_TAKE`. We just parsed a `TX_FEE_RESERVE_TAKE`,
+            // but tx fee is zero, meaning we did not earlier parse `TX_FEE_RESERVE_PUT`.
+            return false;
+        }
+
+        if (gt256(&amount, &transaction->tx_fee) ||
+            gt256(&amount, &transaction->total_xrd_amount_incl_fee)) {
+            // Invalid state, just parsed a `TX_FEE_RESERVE_TAKE` which was larger than
+            // amount left from put. This would result in a negative tx fee.
+            return false;
+        }
+
+        // Subract TAKE tx amount from tx fee
+        sub256(&amount, &transaction->tx_fee, &transaction->tx_fee);
+
+        // Subract TAKE tx amount from total cost
+        sub256(&amount,
+               &transaction->total_xrd_amount_incl_fee,
+               &transaction->total_xrd_amount_incl_fee);
+    }
 
     return true;
 }
@@ -96,16 +182,12 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
 
     // If instruction is SYSCALL, parse out bytes as transaction fee.
     if (instruction_parser->instruction.ins_type == INS_SYSCALL) {
-        if (!parse_tx_fee_from_syscall(&instruction_parser->instruction.ins_syscall,
-                                       &tx_parser->transaction.tx_fee)) {
+        if (!update_tx_fee_and_total_xrd_cost_if_needed(
+                &instruction_parser->instruction.ins_syscall,
+                &tx_parser->transaction)) {
             outcome->outcome_type = PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL;
             return false;
         }
-
-        // Add tx fee to total cost
-        add256(&tx_parser->transaction.tx_fee,
-               &tx_parser->transaction.total_xrd_amount_incl_fee,
-               &tx_parser->transaction.total_xrd_amount_incl_fee);
     }
 
     if (instruction_parser->instruction.ins_up.substate.type == SUBSTATE_TYPE_TOKENS) {

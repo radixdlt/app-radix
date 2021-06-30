@@ -44,15 +44,6 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
             }
             PRINTF("Successfully parsed substate of type 'PREPARE_STAKE'.\n");
             break;
-        case SUBSTATE_TYPE_STAKE_SHARE:
-            if (!parse_stake_share(buffer, &outcome->stake_share_failure, &substate->stake_share)) {
-                PRINTF("Failed to parse 'STAKE_SHARE'.\n");
-
-                outcome->outcome_type = PARSE_SUBSTATE_FAILED_TO_PARSE_SHARE_STAKE;
-                return false;
-            }
-            PRINTF("Successfully parsed substate of type 'STAKE_SHARE'.\n");
-            break;
         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
 
             if (!parse_prepared_unstake(buffer,
@@ -64,6 +55,9 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
             }
             PRINTF("Successfully parsed substate of type 'PREPARE_UNSTAKE'.\n");
             break;
+        case SUBSTATE_TYPE_VALIDATOR_OWNER_COPY:
+        case SUBSTATE_TYPE_VALIDATOR_ALLOW_DELEGATION_FLAG:
+            THROW(0x1337);
     }
     outcome->outcome_type = PARSE_SUBSTATE_OK;
     return true;

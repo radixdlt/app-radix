@@ -317,986 +317,6 @@ static void do_test_parse_tx(test_vector_t test_vector) {
     assert_string_equal(output, expected_total_xrd_amount);
 }
 
-/**
- * @brief Test parsing a tx with 9 instructions.
- *
- * Hex string for transaction below:
- * 0x0a000104374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf0000000040921000000000000000000000000000000000000000000000000000000000000000002010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba000000000000000000000000000000000000000000000001158e460913cffffe000500000003010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0000000000000000000000000000000000000000000000008ac7230489e7fffe0104040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a50000000000000000000000000000000000000000000000008ac7230489e8000000
- *
- * String representation of instructions of transaction below:
- *
- * Instructions:
- * |- HEADER(0, 1)
- * |- DOWN(SubstateId { hash:
- * 0x374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf0, index: 4 })
- * |- SYSCALL(0x000000000000000000000000000000000000000000000000000000000000000002)
- * |- UP(Tokens { rri: 0x01, owner:
- * 0x040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba, amount: U256 { raw:
- * 19999999999999999998 } })
- * |- END
- * |- LDOWN(3)
- * |- UP(Tokens { rri: 0x01, owner:
- * 0x040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba, amount: U256 { raw:
- * 9999999999999999998 } })
- * |- UP(PreparedStake { owner:
- * 0x040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba, delegate:
- * 0x02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a5, amount: U256 { raw:
- * 10000000000000000000 } })
- * |- END
- *
- * Further prettified human readable  representation of instructions of tx below:
- *
- * Instructions:
- * |- HEADER(0, 1)
- * |- DOWN(SubstateId { hash:
- * 0x374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf0, index: 4 })
- * |- SYSCALL(0x000000000000000000000000000000000000000000000000000000000000000002)
- * |
- * |- UP(Tokens {
- * |--- rri: xrd_rb1qya85pwq,
- * |--- owner: brx1qsph0wkgqeh9rngddveqcvudt2aum0x2y4tjk6e7a62y86hujggxhws07tsg3,
- * |--- amount: 19.0000
- * |- })
- * |
- * |- END
- * |- LDOWN(3)
- * |
- * |- UP(Tokens {
- * |--- rri: xrd_rb1qya85pwq,
- * |--- owner: brx1qsph0wkgqeh9rngddveqcvudt2aum0x2y4tjk6e7a62y86hujggxhws07tsg3,
- * |--- amount: 9.0000
- * |- })
- * |
- * |- UP(PreparedStake {
- * |--- owner: brx1qsph0wkgqeh9rngddveqcvudt2aum0x2y4tjk6e7a62y86hujggxhws07tsg3,
- * |--- delegate: vb1qtcektgftf2n7wjpmf9gms0cg57lhhrn83dwe6939zma0xv6ufr62ry5ycv,
- * |--- amount: 10.0000
- * |- })
- * |
- * |- END
- */
-static void test_success_transfer_transfer_stake(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf000000004",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "0921000000000000000000000000000000000000000000000000000000000000000002",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
-                       "00000000000000000000000000000000000000000000001158e460913cffffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000003",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "0104040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bb"
-                       "a02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a50000"
-                       "000000000000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 9,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success = {
-            .my_public_key_hex =
-                "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
-            .expected_tx_fee = "2",
-            .expected_total_xrd_amount = "29999999999999999998",
-            .expected_hash =
-                {
-                    // clang-format off
-    	        0x83, 0xf4, 0x54, 0x4f, 0xf1, 0xfb, 0xab, 0xc7,
-            	0xbe, 0x39, 0xc6, 0xf5, 0x31, 0xc3, 0xf3, 0x7f,
-            	0xc5, 0x0e, 0x0a, 0x0b, 0x65, 0x3a, 0xfd, 0xb2,
-            	0x2c, 0xc9, 0xf8, 0xe8, 0xaa, 0x46, 0x1f, 0xc9
-                    // clang-format on
-                },  //         expected hash:
-                    //         83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
-
-        }};
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- * BLOB
- * 0a0001045d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f0000000309210000000000000000000000000000000000000000000000000000000000deadbeef0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155000000000000000000000000000000000000000000000001158e460913cffffe0005000000020103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550000000000000000000000000000000000000000000000008ac7230489e7fffe01040402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e15502fd72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de8870000000000000000000000000000000000000000000000008ac7230489e800000005000000050103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550000000000000000000000000000000000000000000000008ac7230489e7fffd01030104036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7000000000000000000000000000000000000000000000000000000000000000100
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f, index: 3 })
-      |- SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
- 19999999999999999998 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
- 9999999999999999998 } })
-      |- UP(PreparedStake { owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, delegate:
- 0x02fd72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de887, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-      |- LDOWN(5)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
- 9999999999999999997 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7, amount: U256 { raw: 1 }
- })
-      |- END
-
-
-    More human readable
-
-      HEADER(0, 1)
-      DOWN(SubstateId { hash:
- 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f, index: 3 })
-      SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 19.0000 })
-      END
-      LDOWN(2)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
-      UP(PreparedStake { owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, delegate:
- vb1qt7h9c2t4efstkm975why0s2dzj55jwushggwk6y6083aqzp8h5gwr7x4gz, amount: 10.0000 }) END LDOWN(5)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspkkp3tqpz0gyhnp2tnj3l9axrx99nf6p2m0r70hd52vvs3gchdpacsadyal, amount: 0.0000 })
-      END
- *
- * @param state
- */
-static void test_success_transfer_transfer_stake_transfer_with_change(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "045d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f00000003",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "09210000000000000000000000000000000000000000000000000000000000deadbeef",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
-                       "00000000000000000000000000000000000000000000001158e460913cffffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "01040402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e15502f"
-                       "d72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de887000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000005",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffd",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f70"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 13,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success = {
-            .my_public_key_hex =
-                "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
-            .expected_tx_fee = "3735928559",
-            .expected_total_xrd_amount = "40000000003735928552",
-            .expected_hash =
-                {
-                    // clang-format off
-      0x42, 0x32, 0x5f, 0x68, 0xc1, 0x60, 0x71, 0xd0,
-      0xf2, 0x44, 0xbe, 0x9a, 0x73, 0x82, 0xb3, 0x4e,
-      0x52, 0x03, 0x7c, 0x4c, 0x6b, 0xa6, 0x35, 0x43,
-      0xfc, 0x68, 0x56, 0x22, 0x0f, 0x42, 0x27, 0x0d
-                    // clang-format on
-                },  //         expected hash:
-                    //         42325f68c16071d0f244be9a7382b34e52037c4c6ba63543fc6856220f42270d
-        }};
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- *
- * Blob
- 0a000104c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028000000030921000000000000000000000000000000000000000000000038821089088b6063da1801030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b000000000000000000000000000000000000000000000001158e460913cffffe00050000000201030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b000000000000000000000000000000000000000000000001158e460913cffffd01030104022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411000000000000000000000000000000000000000000000000000000000000000100050000000501030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0000000000000000000000000000000000000000000000008ac7230489e7fffd010404035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b037bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac0000000000000000000000000000000000000000000000008ac7230489e8000000
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028, index: 3 })
-      |- SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
- 19999999999999999998 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
- 19999999999999999997 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411, amount: U256 { raw: 1 }
- })
-      |- END
-      |- LDOWN(5)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
- 9999999999999999997 } })
-      |- UP(PreparedStake { owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, delegate:
- 0x037bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-
-
-      More human readable:
-
-      HEADER(0, 1)
-      DOWN(SubstateId { hash:
- 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028, index: 3 })
-      SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 19.0000 })
-      END
-      LDOWN(2)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 19.0000 })
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspzcncgxtpya0rywuq9cwtl550gmcr3qzvts9k582znxfjcc73pgygp9c86v, amount: 0.0000 })
-      END
-      LDOWN(5)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 9.0000 })
-      UP(PreparedStake { owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, delegate:
- vb1qdal2tlawdhd5e25kwmmq04w870zhkd5k8q3uue42xg5q0led9s6cxpe65y, amount: 10.0000 }) END
-
- *
- */
-static void test_success_transfer_transfer_with_change_transfer_stake(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "0921000000000000000000000000000000000000000000000038821089088b6063da18",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
-                       "00000000000000000000000000000000000000000000001158e460913cffffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
-                       "00000000000000000000000000000000000000000000001158e460913cffffd",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a214110"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000005",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffd",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "010404035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b037"
-                       "bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 13,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411",
-                .expected_tx_fee = "266851791263253500516888",
-                .expected_total_xrd_amount = "266901791263253500516880",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0xda, 0xbb, 0xe3, 0xc3, 0x60, 0x1b, 0x3b, 0xbc,
-      0x58, 0x63, 0x36, 0x8e, 0x8e, 0x8f, 0x06, 0x1c,
-      0x24, 0x42, 0x0a, 0x9b, 0x2e, 0x06, 0x58, 0xad,
-      0x50, 0xa7, 0x40, 0xee, 0xb6, 0x16, 0x02, 0xde
-                        // clang-format on
-                    },  //         expected hash:
-                        //         dabbe3c3601b3bbc5863368e8e8f061c24420a9b2e0658ad50a740eeb61602de
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- *
- * Blob
- *
- 0a00010414f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f308747500000001092100000000000000000000000000000000000000000000000000000000000000303901030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700000000000000000000000000000000000000000000000008ac7230489e7fffc00045e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab700000007010d031fa3fe2db67d482ef3b3b6f6facf874cf1502af8a463d8ac75f378a09d78f01204033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700000000000000000000000000000000000000000000000008ac7230489e8000000050000000201030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700000000000000000000000000000000000000000000000008ac7230489e7fffb01030104039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96000000000000000000000000000000000000000000000000000000000000000100
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
-0x14f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f3087475, index: 1 })
-      |- SYSCALL(0x000000000000000000000000000000000000000000000000000000000000003039)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
- 9999999999999999996 } })
-      |- END
-      |- DOWN(SubstateId { hash:
-0x5e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab7, index: 7 })
-      |- UP(PreparedUnstake { delegate:
- 0x031fa3fe2db67d482ef3b3b6f6facf874cf1502af8a463d8ac75f378a09d78f012, owner:
- 0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
- 9999999999999999995 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96, amount: U256 { raw: 1 }
-})
-      |- END
-
-      More human readable:
-
-*  HEADER(0, 1)
-*  DOWN(SubstateId { hash: 0x14f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f3087475,
-index: 1 })
-* SYSCALL(0x000000000000000000000000000000000000000000000000000000000000003039)
- * UP(Tokens{ rri: xrd_rb1qya85pwq, owner:
-brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, amount: 9.0000 })
- * END
- * DOWN(SubstateId { hash: 0x5e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab7,
-index: 7 })
- * UP(PreparedUnstake { owner:
-brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, delegate:
-vb1qv068l3dke75sthnkwm0d7k0sax0z5p2lzjx8k9vwheh3gya0rcpynlr3g7, amount: 10.0000 })
- * END
- * LDOWN(2)
- * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
-brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, amount: 9.0000 })
- * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
-brx1qspe4a5ll4r49esdpavy7n8rj5ndmp27rs6jjdrn76pauz0kkx0ye9sw2a6hz, amount: 0.0000 })
- * END
- */
-static void test_success_transfer_unstake_transfer_with_change(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "0414f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f308747500000001",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "0921000000000000000000000000000000000000000000000000000000000000003039",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "045e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab700000007",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "010d031fa3fe2db67d482ef3b3b6f6facf874cf1502af8a463d8ac75f378a09d78f01204033"
-                       "b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_UNSTAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffb",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c960"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 12,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96",
-                .expected_tx_fee = "12345",
-                .expected_total_xrd_amount = "20000000000000012336",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0xde, 0x9e, 0x42, 0xd3, 0x9c, 0x8a, 0x23, 0xbd,
-      0x39, 0xa7, 0xde, 0xc8, 0x0a, 0xa3, 0x13, 0xed,
-      0x3e, 0x0c, 0x70, 0x95, 0x87, 0x3f, 0xc9, 0xf7,
-      0x10, 0x4e, 0x48, 0x1b, 0x43, 0x20, 0x68, 0xc4
-                        // clang-format on
-                    },  //         expected hash:
-                        //         de9e42d39c8a23bd39a7dec80aa313ed3e0c7095873fc9f7104e481b432068c4
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- * Blob
- *
- 0a000104e31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf0400000001092100000000000000000000000000000000000000000000000000000000003ade68b10103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0000000000000000000000000000000000000000000000008ac7230489e7fffc0005000000020103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0000000000000000000000000000000000000000000000008ac7230489e7fffb0103010402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a00000000000000000000000000000000000000000000000000000000000000010004361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c300000007010d02ec11f6184839402b78f5a6fbe3e5eddf41cb999ac9c3ae0cdb324ab01f8e3f200403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0000000000000000000000000000000000000000000000008ac7230489e8000000
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04, index: 1 })
-      |- SYSCALL(0x00000000000000000000000000000000000000000000000000000000003ade68b1)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
- 9999999999999999996 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
- 9999999999999999995 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a, amount: U256 { raw: 1 }
- })
-      |- END
-      |- DOWN(SubstateId { hash:
- 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3, index: 7 })
-      |- UP(PreparedUnstake { delegate:
- 0x02ec11f6184839402b78f5a6fbe3e5eddf41cb999ac9c3ae0cdb324ab01f8e3f20, owner:
- 0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-
-      Human readable:
-
-      *HEADER(0, 1)
-      * DOWN(SubstateId { hash:
- 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04, index: 1 })
-      * SYSCALL(0x00000000000000000000000000000000000000000000000000000000003ade68b1)
-      * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, amount: 9.0000 })
-      * END
-      * LDOWN(2)
-      * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, amount: 9.0000 })
-      * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsptsam74d2t4zqcewprw6jhnryu0gp9cgt0kpfxdeu5ekx97rw567sz8utwe, amount: 0.0000 })
-      * END
-      * DOWN(SubstateId { hash:
- 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3, index: 7 })
-      * UP(PreparedUnstake { owner:
- brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, delegate:
- vb1qtkprascfqu5q2mc7kn0hcl9ah05rjuentyu8tsvmvey4vql3cljqltylt4, amount: 10.0000 })
-      * END
- */
-static void test_success_transfer_transfer_with_change_unstake(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04e31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf0400000001",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000003ade68b1",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffb",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a0"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c300000007",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "010d02ec11f6184839402b78f5a6fbe3e5eddf41cb999ac9c3ae0cdb324ab01f8e3f200403a"
-                       "8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_UNSTAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 12,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "02b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a",
-                .expected_tx_fee = "987654321",
-                .expected_total_xrd_amount = "20000000000987654312",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0x18, 0x59, 0xc7, 0xa1, 0x1b, 0x46, 0xae, 0xfb,
-      0x28, 0x86, 0x0f, 0x37, 0xaf, 0xff, 0x4f, 0xcf,
-      0x5a, 0xac, 0x2c, 0x4c, 0x99, 0x5a, 0x65, 0x42,
-      0x9a, 0x4f, 0x00, 0xf3, 0x3e, 0x42, 0x98, 0xa3
-                        // clang-format on
-                    },  //         expected hash:
-                        //         1859c7a11b46aefb28860f37afff4fcf5aac2c4c995a65429a4f00f33e4298a3
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- *
- * Blob
- *
- 0a0001044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001092100000000000000000000000000000000000000000000000000000000000000fade01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20000000000000000000000000000000000000000000000008ac7230489e7fffc00050000000201030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20000000000000000000000000000000000000000000000008ac7230489e7fffb010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9000000000000000000000000000000000000000000000000000000000000000100050000000501030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20000000000000000000000000000000000000000000000008ac7230489e7fff9010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9000000000000000000000000000000000000000000000000000000000000000200
-
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2, index: 1 })
-      |- SYSCALL(0x00000000000000000000000000000000000000000000000000000000000000fade)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
- 9999999999999999996 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
- 9999999999999999995 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 1 }
- })
-      |- END
-      |- LDOWN(5)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
- 9999999999999999993 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 2 }
- })
-      |- END
-
-
-      HEADER(0, 1)
-      DOWN(SubstateId { hash:
- 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2, index: 1 })
- SYSCALL(0x00000000000000000000000000000000000000000000000000000000000000fade) UP(Tokens { rri:
- xrd_rb1qya85pwq, owner: brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73,
- amount: 9.0000 }) END LDOWN(2) UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens
- { rri: xrd_rb1qya85pwq, owner:
- brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk, amount: 0.0000 }) END
- LDOWN(5) UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens
- { rri: xrd_rb1qya85pwq, owner:
- brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk, amount: 0.0000 }) END
- */
-static void test_success_transfer_transfer_with_change_transfer_with_change(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffb",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b90"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000005",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fff9",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b90"
-                       "000000000000000000000000000000000000000000000000000000000000002",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 13,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
-                .expected_tx_fee = "64222",
-                .expected_total_xrd_amount = "30000000000000064206",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0x52, 0xe8, 0x97, 0x42, 0x10, 0xec, 0x91, 0xae,
-      0x34, 0x9b, 0x7d, 0x9c, 0x01, 0x6f, 0xcd, 0xfc,
-      0x24, 0x08, 0xb3, 0x99, 0x4d, 0xbc, 0xa8, 0x9d,
-      0x0a, 0x81, 0xdc, 0x0e, 0x19, 0x75, 0xa1, 0x3b
-                        // clang-format on
-                    },  //         expected hash:
-                        //         52e8974210ec91ae349b7d9c016fcdfc2408b3994dbca89d0a81dc0e1975a13b
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
 static void test_failure_missing_header(void **state) {
     (void) state;
 
@@ -2190,6 +1210,167 @@ static void test_rri_format_hrp_16_chars(void **state) {
         "characterisation_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsdyejyy");
 }
 
+/**
+ * @brief Test of successful parsing of TX with #398 bytes and #12 instructions..
+ *
+ * Test parsing transaction with blob:
+ * 0a000104a0686a487f9d3adf4892a358e4460cda432068f069e5e9f4c815af21bc3dd1d600000000
+  092100000000000000000000000000000000000000000000000abbade0b6b3a76400000105000402
+  935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0100000000000000
+  000000000000000000000000000000d3c1e44bf21f037000000005000000000105000402935deebc
+  ad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca010000000000000000000000
+  0000000000000000000000d38bae82445924d00000010500040356959464545aa2787984fe4ac764
+  96721a22f150c0076724ad7190fe3a597bb701000000000000000000000000000000000000000000
+  00003635c9adc5dea00000000921010000000000000000000000000000000000000000000000000d
+  e0b6b3a76400000105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a7
+  2fe427ca010000000000000000000000000000000000000000000000000de0b6b3a764000000
+ *
+ * Deserializes into these instructions:
+ * Instructions:
+|- HEADER(0, 1)
+|- DOWN(SubstateId { hash: 0xa0686a487f9d3adf4892a
+  358e4460cda432068f069e5e9f4c815af21bc3dd1d6, index: 0 })
+|- SYSCALL(0x0000000000
+  0000000000000000000000000000000000000abbade0b6b3a7640000)
+|- UP(Tokens { reserve
+  d: 0, owner: 0x0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42
+  7ca, resource: 0x01, amount: U256 { raw: 999996000000000000000000 } })
+|- END
+|-
+   LDOWN(0)
+|- UP(Tokens { reserved: 0, owner: 0x0402935deebcad35bcf27d05b431276be
+  8fcba26312cd1d54c33ac6748a72fe427ca, resource: 0x01, amount: U256 { raw: 9989960
+  00000000000000000 } })
+|- UP(Tokens { reserved: 0, owner: 0x040356959464545aa278
+  7984fe4ac76496721a22f150c0076724ad7190fe3a597bb7, resource: 0x01, amount: U256 {
+   raw: 1000000000000000000000 } })
+|- END
+|- SYSCALL(0x01000000000000000000000000
+  0000000000000000000000000de0b6b3a7640000)
+|- UP(Tokens { reserved: 0, owner: 0x0
+  402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, resource: 0
+  x01, amount: U256 { raw: 1000000000000000000 } })
+|- END
+ *
+ * Expected hash of transaction:
+ * 2376fa3504b06ad5df0ddfc9baa67af328d1d55a6bbd75e32429b773f18eda6a
+ *
+ */
+
+static void test_success_token_transfer_only_xrd(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+
+        {
+            .ins_len = 3,
+            .ins_hex = "0a0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+
+        {
+            .ins_len = 37,
+            .ins_hex = "04a0686a487f9d3adf4892a358e4460cda432068f069e5e9f4c815af21bc3dd1d600000000",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+
+        {
+            .ins_len = 35,
+            .ins_hex = "092100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+
+        {
+            .ins_len = 70,
+            .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
+                       "100000000000000000000000000000000000000000000d3c1e44bf21f03700000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+
+        {
+            .ins_len = 5,
+            .ins_hex = "0500000000",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+
+        {
+            .ins_len = 70,
+            .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
+                       "100000000000000000000000000000000000000000000d38bae82445924d00000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+
+        {
+            .ins_len = 70,
+            .ins_hex = "010500040356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb70"
+                       "100000000000000000000000000000000000000000000003635c9adc5dea00000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+
+        {
+            .ins_len = 35,
+            .ins_hex = "0921010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+
+        {
+            .ins_len = 70,
+            .ins_hex = "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca0"
+                       "10000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+
+        {
+            .ins_len = 1,
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        }};
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 12,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
+        .expected_success = {
+            .my_public_key_hex =
+                "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
+            .expected_tx_fee = "50684735185526206758912",
+            .expected_total_xrd_amount = "2049677735185526206758912",
+            .expected_hash =
+                {// clang-format off
+      			0x23, 0x76, 0xfa, 0x35, 0x4, 0xb0, 0x6a, 0xd5,
+      			0xdf, 0xd, 0xdf, 0xc9, 0xba, 0xa6, 0x7a, 0xf3,
+      			0x28, 0xd1, 0xd5, 0x5a, 0x6b, 0xbd, 0x75, 0xe3,
+      			0x24, 0x29, 0xb7, 0x73, 0xf1, 0x8e, 0xda, 0x6a
+                  },  // clang-format on
+        }};
+
+    do_test_parse_tx(test_vector);
+}
+
 int main() {
     const struct CMUnitTest rri_formatting[] = {
         cmocka_unit_test(test_rri_format_hrp_6_chars),
@@ -2206,12 +1387,7 @@ int main() {
     };
 
     const struct CMUnitTest success_complex_tx[] = {
-        cmocka_unit_test(test_success_transfer_transfer_stake),
-        cmocka_unit_test(test_success_transfer_transfer_stake_transfer_with_change),
-        cmocka_unit_test(test_success_transfer_transfer_with_change_transfer_stake),
-        cmocka_unit_test(test_success_transfer_unstake_transfer_with_change),
-        cmocka_unit_test(test_success_transfer_transfer_with_change_unstake),
-        cmocka_unit_test(test_success_transfer_transfer_with_change_transfer_with_change),
+        cmocka_unit_test(test_success_token_transfer_only_xrd),
     };
 
     const struct CMUnitTest failing_txs[] = {
@@ -2253,8 +1429,8 @@ int main() {
 
     int status = 0;
 
-    status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
+    // status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
     status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
-    status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
+    // status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
     return status;
 }

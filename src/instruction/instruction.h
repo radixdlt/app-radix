@@ -10,6 +10,12 @@
 #include "substate/substate_id.h"
 #include "substate/substate.h"
 
+// There should only be one and only one INS_SYSCALL with SYSCALL_TX_FEE_RESERVE_PUT. 
+// (There may be 0 or more INS_SYSCALL with SYSCALL_TX_FEE_RESERVE_TAKE)
+// 	fee_paid = put_amt - sum(take_amt)
+#define INS_SYSCALL_TX_FEE_RESERVE_PUT 0x00
+#define INS_SYSCALL_TX_FEE_RESERVE_TAKE 0x01
+
 #define INS_HEADER_REQUIRED_VERSION                           0x00
 #define INS_HEADER_FLAG_DISALLOWING_TOKEN_BURN_AND_TOKEN_MINT 0x01
 

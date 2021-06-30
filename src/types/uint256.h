@@ -109,3 +109,11 @@ bool to_string_uint256_get_len(uint256_t *uint256,
  * @return false If failed.
  */
 bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len);
+
+/**
+ * @brief Checks if \p target > 0
+ *
+ * @param target uint256 to compare with zero.
+ * @return true iff greater than 0, else false.
+ */
+bool is_uint256_greather_than_zero(uint256_t *target);

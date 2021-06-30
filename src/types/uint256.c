@@ -477,3 +477,9 @@ bool to_string_uint256(uint256_t *uint256, char *out, const size_t out_len) {
     size_t discarded = out_len;
     return to_string_uint256_get_len(uint256, out, out_len, &discarded);
 }
+
+bool is_uint256_greather_than_zero(uint256_t *target) {
+    uint256_t zero;
+    clear256(&zero);
+    return gt256(target, &zero);
+}
