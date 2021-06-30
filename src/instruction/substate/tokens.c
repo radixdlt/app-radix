@@ -4,18 +4,10 @@
 // #include "../macros.h"  // ASSERT
 
 bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *tokens) {
-    // Parse field 'rri'
-    if (!parse_re_address(buffer, &outcome->rri_parse_failure_reason, &tokens->rri)) {
-        PRINTF("Failed to parse 'rri' in substate 'TOKENS'.\n");
-        outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_RRI;
-        return false;
-    }
-
-    if (tokens->rri.address_type != RE_ADDRESS_HASHED_KEY_NONCE &&
-        tokens->rri.address_type != RE_ADDRESS_NATIVE_TOKEN) {
-        // Wrong address type in context of RRI.
-        outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_RRI;
-        outcome->rri_parse_failure_reason = PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI;
+    // Parse field 'reserved'
+    if (!buffer_read_u8(buffer, &tokens->reserved)) {
+        PRINTF("Failed to parse 'reserved' in substate 'TOKENS'.\n");
+        outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_RESERVED;
         return false;
     }
 
@@ -25,12 +17,26 @@ bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *t
         outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_OWNER;
         return false;
     }
-
     if (tokens->owner.address_type != RE_ADDRESS_PUBLIC_KEY) {
         // Wrong address type in context of account address.
         outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_OWNER;
         outcome->owner_parse_failure_reason =
             PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS;
+        return false;
+    }
+
+    // Parse field 'resource'
+    if (!parse_re_address(buffer, &outcome->resource_parse_failure_reason, &tokens->resource)) {
+        PRINTF("Failed to parse 'resource' in substate 'TOKENS'.\n");
+        outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_RESOURCE;
+        return false;
+    }
+    if (tokens->resource.address_type != RE_ADDRESS_HASHED_KEY_NONCE &&
+        tokens->resource.address_type != RE_ADDRESS_NATIVE_TOKEN) {
+        // Wrong address type in context of Resource.
+        outcome->outcome_type = PARSE_TOKENS_FAILURE_PARSE_RESOURCE;
+        outcome->resource_parse_failure_reason =
+            PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RESOURCE;
         return false;
     }
 
@@ -50,10 +56,12 @@ uint16_t status_word_for_failed_to_parse_tokens(parse_tokens_outcome_e failure_r
     switch (failure_reason) {
         case PARSE_TOKENS_OK:
             return SW_OK;
-        case PARSE_TOKENS_FAILURE_PARSE_RRI:
-            return ERR_CMD_SIGN_TX_TOKENS_PARSE_RRI_FAILURE;
+        case PARSE_TOKENS_FAILURE_PARSE_RESERVED:
+            return ERR_CMD_SIGN_TX_TOKENS_PARSE_RESERVED_FAILURE;
         case PARSE_TOKENS_FAILURE_PARSE_OWNER:
             return ERR_CMD_SIGN_TX_TOKENS_PARSE_OWNER_FAILURE;
+        case PARSE_TOKENS_FAILURE_PARSE_RESOURCE:
+            return ERR_CMD_SIGN_TX_TOKENS_PARSE_RESOURCE_FAILURE;
         case PARSE_TOKENS_FAILURE_PARSE_AMOUNT:
             return ERR_CMD_SIGN_TX_TOKENS_PARSE_AMOUNT_FAILURE;
     }

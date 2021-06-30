@@ -45,7 +45,6 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
             PRINTF("Successfully parsed substate of type 'PREPARE_STAKE'.\n");
             break;
         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
-
             if (!parse_prepared_unstake(buffer,
                                         &outcome->prepared_unstake_failure,
                                         &substate->prepared_unstake)) {
@@ -56,8 +55,27 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
             PRINTF("Successfully parsed substate of type 'PREPARE_UNSTAKE'.\n");
             break;
         case SUBSTATE_TYPE_VALIDATOR_OWNER_COPY:
+            if (!parse_validator_owner_copy(buffer,
+                                            &outcome->validator_owner_copy_failure,
+                                            &substate->validator_owner_copy)) {
+                PRINTF("Failed to parse 'VALIDATOR_OWNER_COPY'.\n");
+                outcome->outcome_type = PARSE_SUBSTATE_FAILED_TO_PARSE_VALIDATOR_OWNER_COPY;
+                return false;
+            }
+            PRINTF("Successfully parsed substate of type 'VALIDATOR_OWNER_COPY'.\n");
+            break;
         case SUBSTATE_TYPE_VALIDATOR_ALLOW_DELEGATION_FLAG:
-            THROW(0x1337);
+            if (!parse_validator_allow_delegation_flag(
+                    buffer,
+                    &outcome->validator_allow_delegation_flag_failure,
+                    &substate->validator_allow_delegation_flag)) {
+                PRINTF("Failed to parse 'VALIDATOR_ALLOW_DELEGATION_FLAG'.\n");
+                outcome->outcome_type =
+                    PARSE_SUBSTATE_FAILED_TO_PARSE_VALIDATOR_ALLOW_DELEGATION_FLAG;
+                return false;
+            }
+            PRINTF("Successfully parsed substate of type 'VALIDATOR_ALLOW_DELEGATION_FLAG'.\n");
+            break;
     }
     outcome->outcome_type = PARSE_SUBSTATE_OK;
     return true;
@@ -80,9 +98,12 @@ uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failu
         case PARSE_SUBSTATE_FAILED_TO_PARSE_PREPARED_UNSTAKE:
             return status_word_for_failed_to_parse_prepared_unstake(
                 failure_reason.prepared_unstake_failure.outcome_type);
-        case PARSE_SUBSTATE_FAILED_TO_PARSE_SHARE_STAKE:
-            return status_word_for_failed_to_parse_stake_share(
-                failure_reason.stake_share_failure.outcome_type);
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_VALIDATOR_OWNER_COPY:
+            return status_word_for_failed_to_parse_validator_owner_copy(
+                failure_reason.validator_owner_copy_failure.outcome_type);
+        case PARSE_SUBSTATE_FAILED_TO_PARSE_VALIDATOR_ALLOW_DELEGATION_FLAG:
+            return status_word_for_failed_to_parse_validator_allow_delegation_Flag(
+                failure_reason.validator_allow_delegation_flag_failure);
     }
 
     return ERR_BAD_STATE;  // should never happen

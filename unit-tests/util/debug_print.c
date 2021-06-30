@@ -94,8 +94,8 @@ static void dbg_print_parse_address_failure_reason(parse_address_failure_reason_
         case PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE:
             print_message("'UNSUPPORTED_ADDRESS_TYPE'");
             break;
-        case PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI:
-            print_message("'EXPECTED_TYPE_COMPATIBLE_WITH_RRI'");
+        case PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RESOURCE:
+            print_message("'EXPECTED_TYPE_COMPATIBLE_WITH_RESOURCE'");
             break;
         case PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS:
             print_message("'EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS'");
@@ -130,8 +130,11 @@ static void dbg_print_parse_prepared_unstake_outcome(parse_prepared_unstake_outc
         case PARSE_PREPARED_UNSTAKE_OK:
             print_message("'OK'");
             break;
-        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_DELEGATE:
-            print_message("'FAILURE_PARSE_DELEGATE'");
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_RESERVED:
+            print_message("'FAILURE_PARSE_RESERVED'");
+            break;
+        case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_VALIDATOR:
+            print_message("'FAILURE_PARSE_VALIDATOR'");
             break;
         case PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_OWNER:
             print_message("'FAILURE_PARSE_OWNER' - printing reason:\n");

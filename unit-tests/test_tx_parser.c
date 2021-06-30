@@ -1025,7 +1025,7 @@ static void test_failure_parse_tokens_invalid_rri_incompatible_address_type(void
     // 01=INS_UP, 03=TOKENS, 04=first byte of Tokens, being Address, specifying an PublicKey, which
     // is incompatible with RRI.
     base_test_failure_parse_tokens_invalid_rri(
-        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI,
+        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RESOURCE,
         "0103040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
         36);
 }

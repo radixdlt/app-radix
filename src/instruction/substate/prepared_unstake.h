@@ -6,18 +6,21 @@
 #include "../../types/buffer.h"
 
 typedef struct {
-    re_address_t
-        delegate;  // Actually host machine will stream a public key to the Ledger device, but since
-                   // we are going to display it, we will put it in public_key of the address.
+    uint8_t reserved;
+    // The validator public key
+    re_address_t validator;  // Actually host machine will stream a public key to the Ledger device,
+                             // but since we are going to display it, we will put it in public_key
+                             // of the address.
     re_address_t owner;
     uint256_t amount;
 } prepared_unstake_t;
 
 typedef enum {
-    PARSE_PREPARED_UNSTAKE_OK = 0,
-    PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_DELEGATE = 1,
-    PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_OWNER = 2,
-    PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_AMOUNT = 3,
+    PARSE_PREPARED_UNSTAKE_OK,
+    PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_RESERVED,
+    PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_VALIDATOR,
+    PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_OWNER,
+    PARSE_PREPARED_UNSTAKE_FAILURE_PARSE_AMOUNT,
 } parse_prepared_unstake_outcome_e;
 
 typedef struct {
