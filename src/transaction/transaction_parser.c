@@ -125,12 +125,12 @@ static bool update_tx_fee_and_total_xrd_cost_if_needed(re_ins_syscall_t *syscall
             return false;
         }
 
-        // Subract TAKE tx amount from tx fee
-        minus256(&amount, &transaction->tx_fee, &transaction->tx_fee);
+        // TX_FEE = TX_FEE - TX_FEE_RESERVE_TAKE
+        minus256(&transaction->tx_fee, &amount, &transaction->tx_fee);
 
-        // Subract TAKE tx amount from total cost
-        minus256(&amount,
-                 &transaction->total_xrd_amount_incl_fee,
+        // TOTAL_XRD_COST = TOTAL_XRD_COST - TX_FEE_RESERVE_TAKE
+        minus256(&transaction->total_xrd_amount_incl_fee,
+                 &amount,
                  &transaction->total_xrd_amount_incl_fee);
     }
 
