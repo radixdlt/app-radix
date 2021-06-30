@@ -979,27 +979,22 @@ static void test_failure_unsupported_substate_type_re_address_0x00(void **state)
         "0100");  // 01 for INS_UP, 00 for substate type RE_ADDRESS.
 }
 
-static void test_failure_unsupported_substate_type_token_definition_0x02(void **state) {
+static void test_failure_unsupported_substate_type_token_resource_0x03(void **state) {
     (void) state;
     test_failure_unsupported_substate_type(
-        "0102");  // 01 for INS_UP, 02 for substate type TOKEN_DEFINITION.
+        "0103");  // 01 for INS_UP, 03 for substate type TOKEN_RESOURCE.
 }
 
-static void test_failure_unsupported_substate_type_validator_0x05(void **state) {
+static void test_failure_unsupported_substate_type_token_resource_metadata_0x04(void **state) {
     (void) state;
     test_failure_unsupported_substate_type(
-        "0105");  // 01 for INS_UP, 05 for substate type VALIDATOR.
+        "0104");  // 01 for INS_UP, 04 for substate type TOKEN_RESOURCE_METADATA.
 }
 
-static void test_failure_unsupported_substate_type_unique_0x06(void **state) {
-    (void) state;
-    test_failure_unsupported_substate_type("0106");  // 01 for INS_UP, 06 for substate type UNIQUE.
-}
-
-static void test_failure_unsupported_substate_type_exiting_stake_0x0e(void **state) {
+static void test_failure_unsupported_substate_type_exiting_stake_0x09(void **state) {
     (void) state;
     test_failure_unsupported_substate_type(
-        "010e");  // 01 for INS_UP, 0e for substate type EXITING STAKE.
+        "0109");  // 01 for INS_UP, 09 for substate type EXITING STAKE.
 }
 
 static void base_test_failure_parse_token(parse_tokens_outcome_t tokens_failure,
@@ -1066,7 +1061,7 @@ static void base_test_failure_parse_token(parse_tokens_outcome_t tokens_failure,
     do_test_parse_tx(test_vector);
 }
 
-static void base_test_failure_parse_tokens_invalid_rri(
+static void base_test_failure_parse_tokens_invalid_resource(
     parse_address_failure_reason_e underlying_rri_failure,
     char *ins_hex_invalid_up_tokens,
     size_t ins_hex_invalid_up_tokens_len) {
@@ -1079,42 +1074,58 @@ static void base_test_failure_parse_tokens_invalid_rri(
         ins_hex_invalid_up_tokens_len);
 }
 
-static void test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff(void **state) {
-    (void) state;
-    // 01=INS_UP, 03=TOKENS, ff=first byte of Tokens, being Address, specifying an unrecognized
-    // Address Type value of 0xff
-    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE,
-                                               "0103ff",
-                                               3);
-}
-
-static void test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00(
+static void test_failure_parse_tokens_invalid_resource_unrecognized_address_type_0xff(
     void **state) {
     (void) state;
-    // 01=INS_UP, 03=TOKENS, 00=first byte of Tokens, being Address, specifying an unsupported
-    // Address Type value of 0x00 (RE_ADDRESS_SYSTEM).
-    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE,
-                                               "010300",
-                                               3);
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, ff=specifying an
+    // unrecognized Address Type value of 0xff
+    base_test_failure_parse_tokens_invalid_resource(
+        PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE,
+        // clang-format off
+        "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427caff",
+        // clang-format on
+        38);
 }
 
-static void test_failure_parse_tokens_invalid_rri_hashed_key_too_short(void **state) {
+static void test_failure_parse_tokens_invalid_resource_usupported_address_type_system_0x00(
+    void **state) {
     (void) state;
-    // 01=INS_UP, 03=TOKENS, 03=first byte of Tokens, being Address, specifying an HashedKeyNonce
-    // and `0xff` being just one byte instead of expected 26 bytes => too short.
-    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES,
-                                               "010303ff",
-                                               4);
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, 00=specifying an
+    // unsupported Address Type value of 0x00 (RE_ADDRESS_SYSTEM).
+    base_test_failure_parse_tokens_invalid_resource(
+        PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE,
+        // clang-format off
+        "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca00",
+        // clang-format on
+        38);
 }
 
-static void test_failure_parse_tokens_invalid_rri_incompatible_address_type(void **state) {
+static void test_failure_parse_tokens_invalid_resource_hashed_key_too_short(void **state) {
     (void) state;
-    // 01=INS_UP, 03=TOKENS, 04=first byte of Tokens, being Address, specifying an PublicKey, which
-    // is incompatible with RRI.
-    base_test_failure_parse_tokens_invalid_rri(
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, 03=specifying an
+    // HashedKeyNonce and `0xff` being just one byte instead of expected 26 bytes => too short.
+    base_test_failure_parse_tokens_invalid_resource(
+        PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES,
+        // clang-format off
+        "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca03ff",
+        // clang-format on
+        39);
+}
+
+static void test_failure_parse_tokens_invalid_resource_incompatible_address_type(void **state) {
+    (void) state;
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, 04=fspecifying an
+    // PublicKey, which is incompatible with RRI.
+    base_test_failure_parse_tokens_invalid_resource(
         PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RESOURCE,
-        "0103040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
-        36);
+        // clang-format off
+        "0105000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
+        // clang-format on
+        71);
 }
 
 static void base_test_failure_parse_tokens_invalid_owner(
@@ -1134,8 +1145,11 @@ static void test_failure_parse_tokens_invalid_owner_address_type_0x01_system(voi
     (void) state;
     base_test_failure_parse_tokens_invalid_owner(
         PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS,
-        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
+
+        // clang-format off
+        "010500" // valid start of tokens:  01=INS_UP, 05=TOKENS, 00=RESERVED, 
         "01",  // specifying RE_ADDRESS_SYSTEM (used for RRI), which is invalid for account address
+        // clang-format on
         4);
 }
 
@@ -1143,7 +1157,7 @@ static void test_failure_parse_tokens_invalid_owner_address_type_0x03_hashed_pub
     (void) state;
     base_test_failure_parse_tokens_invalid_owner(
         PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS,
-        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
+        "010500"  // valid start of tokens:  01=INS_UP, 05=TOKENS, 00=RESERVED,
         "03ababdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",  // specifying
                                                                    // RE_ADDRESS_HASHED_KEY_NONCE
                                                                    // (used for RRI), which is
@@ -1155,9 +1169,9 @@ static void test_failure_parse_tokens_invalid_owner_too_few_bytes(void **state) 
     (void) state;
     base_test_failure_parse_tokens_invalid_owner(
         PARSE_ADDRESS_FAIL_PUBKEY_NOT_ENOUGH_BYTES,
-        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
-        "04ff",   // valid type, but too few bytes
-        5);
+        "01050004"  // // valid start of tokens:  01=INS_UP, 05=TOKENS, 00=RESERVED,
+        "04ff",     // valid type, but too few bytes
+        6);
 }
 
 static void base_test_rri_format_hrp(char *hashed_key_hex,
@@ -2236,43 +2250,44 @@ int main() {
         cmocka_unit_test(test_failure_missing_header),
         cmocka_unit_test(test_failure_invalid_header_invalid_version),
         cmocka_unit_test(test_failure_invalid_header_invalid_flag),
-        // cmocka_unit_test(test_failure_no_fee_in_tx),
-        // cmocka_unit_test(test_failure_invalid_syscall_too_few_bytes),
-        // cmocka_unit_test(test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count),
-        // cmocka_unit_test(test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count),
+        cmocka_unit_test(test_failure_no_fee_in_tx),
+        cmocka_unit_test(test_failure_invalid_syscall_too_few_bytes),
+        cmocka_unit_test(test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count),
+        cmocka_unit_test(test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count),
 
-        // // Unsupported/Invalid Instructions
-        // cmocka_unit_test(test_failure_unrecognized_instruction),
-        // cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x02),
-        // cmocka_unit_test(test_failure_unsupported_instruction_vdownarg_0x03),
-        // cmocka_unit_test(test_failure_unsupported_instruction_sig_0x07),
-        // cmocka_unit_test(test_failure_unsupported_instruction_downall_0x08),
+        // Unsupported/Invalid Instructions
+        cmocka_unit_test(test_failure_unrecognized_instruction),
+        cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x02),
+        cmocka_unit_test(test_failure_unsupported_instruction_vdownarg_0x03),
+        cmocka_unit_test(test_failure_unsupported_instruction_sig_0x07),
+        cmocka_unit_test(test_failure_unsupported_instruction_downall_0x08),
 
-        // // Unsupported/Invalid Substate Types
-        // cmocka_unit_test(test_failure_unrecognized_substate_type),
-        // cmocka_unit_test(test_failure_unsupported_substate_type_re_address_0x00),
-        // cmocka_unit_test(test_failure_unsupported_substate_type_token_definition_0x02),
-        // cmocka_unit_test(test_failure_unsupported_substate_type_validator_0x05),
-        // cmocka_unit_test(test_failure_unsupported_substate_type_unique_0x06),
-        // cmocka_unit_test(test_failure_unsupported_substate_type_exiting_stake_0x0e),
+        // Unsupported/Invalid Substate Types
+        cmocka_unit_test(test_failure_unrecognized_substate_type),
+        cmocka_unit_test(test_failure_unsupported_substate_type_re_address_0x00),
+        cmocka_unit_test(test_failure_unsupported_substate_type_token_resource_0x03),
+        cmocka_unit_test(test_failure_unsupported_substate_type_token_resource_metadata_0x04),
+        cmocka_unit_test(test_failure_unsupported_substate_type_exiting_stake_0x09),
 
-        // // Failed to parse tokens
-        // // Invalid RRI
-        // cmocka_unit_test(test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff),
-        // cmocka_unit_test(test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00),
-        // cmocka_unit_test(test_failure_parse_tokens_invalid_rri_hashed_key_too_short),
-        // cmocka_unit_test(test_failure_parse_tokens_invalid_rri_incompatible_address_type),
-        // // Invalid Owner
-        // cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x01_system),
-        // cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x03_hashed_pubkey),
-        // cmocka_unit_test(test_failure_parse_tokens_invalid_owner_too_few_bytes),
+        // Failed to parse tokens
+        // Invalid Owner
+        cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x01_system),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x03_hashed_pubkey),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_owner_too_few_bytes),
+
+        // Invalid RRI
+        cmocka_unit_test(test_failure_parse_tokens_invalid_resource_unrecognized_address_type_0xff),
+        cmocka_unit_test(
+            test_failure_parse_tokens_invalid_resource_usupported_address_type_system_0x00),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_resource_hashed_key_too_short),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_resource_incompatible_address_type),
 
     };
 
     int status = 0;
 
-    // status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
-    // status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
+    status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
+    status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
     status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
     return status;
 }
