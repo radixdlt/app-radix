@@ -1431,8 +1431,8 @@ int main() {
 
     int status = 0;
 
-    // status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
+    status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
     status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
-    // status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
+    status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
     return status;
 }
