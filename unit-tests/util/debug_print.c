@@ -18,6 +18,12 @@ void dbg_print_re_ins_type(re_instruction_type_e ins_type) {
         case INS_UP:
             print_message("'UP'");
             break;
+        case INS_VREAD:
+            print_message("'VREAD'");
+            break;
+        case INS_READ:
+            print_message("'READ'");
+            break;
         case INS_END:
             print_message("'END'");
             break;

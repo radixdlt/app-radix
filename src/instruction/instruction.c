@@ -183,6 +183,8 @@ bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
         case INS_MSG:
         case INS_LDOWN:
         case INS_HEADER:
+        case INS_VREAD:
+        case INS_READ:
             return false;
         case INS_UP:
             return does_substate_need_to_be_displayed(&instruction->ins_up.substate, my_public_key);
