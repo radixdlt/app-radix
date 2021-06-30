@@ -3,7 +3,7 @@
 #include "../../src/types/re_address.h"
 #include "../../src/instruction/substate/prepared_stake.h"
 #include "../../src/instruction/substate/prepared_unstake.h"
-#include "../../src/instruction/substate/stake_share.h"
+#include "../../src/instruction/substate/stake_ownership.h"
 #include "../../src/instruction/substate/substate_id.h"
 
 void dbg_print_re_ins_type(re_instruction_type_e ins_type) {
