@@ -44,6 +44,17 @@ bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substat
             }
             PRINTF("Successfully parsed substate of type 'PREPARE_STAKE'.\n");
             break;
+        case SUBSTATE_TYPE_STAKE_OWNERSHIP:
+            if (!parse_stake_ownership(buffer,
+                                      &outcome->stake_ownership_failure,
+                                      &substate->stake_ownership)) {
+                PRINTF("Failed to parse 'STAKE_OWNERSHIP'.\n");
+
+                outcome->outcome_type = PARSE_SUBSTATE_FAILED_TO_PARSE_STAKE_OWNERSHIP;
+                return false;
+            }
+            PRINTF("Successfully parsed substate of type 'STAKE_OWNERSHIP'.\n");
+            break;
         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
             if (!parse_prepared_unstake(buffer,
                                         &outcome->prepared_unstake_failure,

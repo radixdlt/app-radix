@@ -201,6 +201,9 @@ static void dbg_print_parse_substate_id_outcome(parse_substate_id_outcome_e outc
 //         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
 //             print_message("'PREPARED_UNSTAKE'");
 //             break;
+//         case SUBSTATE_TYPE_STAKE_OWNERSHIP:
+//             print_message("'STAKE_OWNERSHIP'");
+//             break;
 //         default:
 //             print_message("UNKNOWN substate type: %d", substate_type);
 //             break;

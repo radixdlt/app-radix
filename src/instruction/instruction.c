@@ -168,6 +168,7 @@ static bool does_substate_need_to_be_displayed(substate_t *substate, public_key_
             return true;
         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
             return true;
+        case SUBSTATE_TYPE_STAKE_OWNERSHIP:
         case SUBSTATE_TYPE_VALIDATOR_ALLOW_DELEGATION_FLAG:
         case SUBSTATE_TYPE_VALIDATOR_OWNER_COPY:
             return false;
