@@ -170,8 +170,9 @@ uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failur
             return ERR_CMD_SIGN_TX_DISABLE_MINT_AND_BURN_FLAG_NOT_SET;
         case PARSE_INS_FAILED_TO_PARSE_SYSCALL:
             return ERR_CMD_SIGN_TX_PARSE_INS_SYSCALL;
+        default:
+            return ERR_BAD_STATE;  // should not happen.
     }
-    return ERR_BAD_STATE;  // should not happen.
 }
 
 static bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key) {
@@ -196,9 +197,9 @@ static bool does_substate_need_to_be_displayed(substate_t *substate, public_key_
         case SUBSTATE_TYPE_VALIDATOR_ALLOW_DELEGATION_FLAG:
         case SUBSTATE_TYPE_VALIDATOR_OWNER_COPY:
             return false;
+        default:
+            return false;  // should never happen
     }
-
-    return false;  // should never happen
 }
 
 bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
@@ -215,13 +216,13 @@ bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
         case INS_UP:
             return does_substate_need_to_be_displayed(&instruction->ins_up.substate, my_public_key);
         case INS_SYSCALL:
-            // Stating `INS_SYSCALL` separatly so that I can write this comment:
+            // Stating `INS_SYSCALL` separately so that I can write this comment:
             // SYSCALL contains the transaction fee. But since it comes amongst
             // the first bytes in the tx and we do not want to display the tx
             // fee amount now directly, but rather in the end as part of the
             // tx fee summary.
             return false;
+        default:
+            return false;  // should not happen.
     }
-
-    return false;  // should not happen.
 }

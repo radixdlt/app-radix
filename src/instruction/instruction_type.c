@@ -16,8 +16,9 @@ bool is_re_ins_type_supported(int raw) {
         case INS_VREAD:
         case INS_READ:
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 bool have_payload_to_parse(re_instruction_type_e ins_type) {
@@ -33,7 +34,7 @@ bool have_payload_to_parse(re_instruction_type_e ins_type) {
             return true;
         case INS_END:
             return false;
+        default:
+            return false;  // should never happen
     }
-
-    return false;  // should never happen
 }
