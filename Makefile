@@ -15,11 +15,11 @@
 #   limitations under the License.
 # ****************************************************************************
 
-ifeq ($(BOLOS_SDK),)
-else
-    $(error Environment variable 'BOLOS_SDK' is set, we expect it NOT to be. Instead set 'BOLOS_SDK_NANO_S' and 'BOLOS_SDK_NANO_X' respectively.\nTerminating build.)
-    exit 1;
-endif
+#ifeq ($(BOLOS_SDK),)
+#else
+#    $(error Environment variable 'BOLOS_SDK' is set, we expect it NOT to be. Instead set 'BOLOS_SDK_NANO_S' and 'BOLOS_SDK_NANO_X' respectively.\nTerminating build.)
+#    exit 1;
+#endif
 
 ifeq ($(BOLOS_SDK_NANO_S),)
     ifeq ($(BOLOS_SDK_NANO_X),)
