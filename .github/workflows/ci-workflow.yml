@@ -20,6 +20,7 @@ jobs:
 
       - name: Build
         run: |
+          printenv
           make DEBUG=1
 
       - name: Upload app binary
