@@ -7,6 +7,10 @@ jobs:
     name: Build debug
     runs-on: ubuntu-latest
 
+    env:
+      BOLOS_SDK: ""
+      BOLOS_SDK_NANO_S: $(NANOS_SDK)
+
     container:
       image: docker://ledgerhq/ledger-app-builder:1.6.1-2
 
