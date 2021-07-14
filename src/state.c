@@ -1,7 +1,6 @@
 #include "state.h"
 #include "globals.h"
 
-
 void G_update_parse_tx_ins_state(parse_tx_ins_state_e new_state) {
     parse_tx_ins_state_e current_state =
         G_context.sign_tx_info.transaction_parser.instruction_parser.state;
@@ -49,7 +48,7 @@ void G_update_parse_tx_ins_state(parse_tx_ins_state_e new_state) {
         // PRINTF("TO: ");
         // print_parse_tx_ins_state(new_state);
         // PRINTF("Considered bad state => abort tx signing");
-        
+
         io_send_sw(ERR_BAD_STATE);
         return;
     }

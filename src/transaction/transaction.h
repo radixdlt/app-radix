@@ -11,5 +11,4 @@ typedef struct {
 
 } transaction_t;
 
-
 bool is_tx_fee_set(transaction_t *transaction);

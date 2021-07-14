@@ -17,7 +17,9 @@ bool parse_validator_owner_copy(buffer_t *buffer,
     // #1 Optional<u64> flag
     uint8_t is_optional_present = 0;
     if (!buffer_read_u8(buffer, &is_optional_present)) {
-        PRINTF("Failed to parse 'optional' value for 'epoch_update' in substate 'VALIDATOR_OWNER_COPY'.\n");
+        PRINTF(
+            "Failed to parse 'optional' value for 'epoch_update' in substate "
+            "'VALIDATOR_OWNER_COPY'.\n");
         outcome->outcome_type = PARSE_VALIDATOR_OWNER_COPY_FAILURE_EPOCH_UPDATE_OPTIONAL;
         return false;
     }
@@ -55,7 +57,6 @@ bool parse_validator_owner_copy(buffer_t *buffer,
 
 uint16_t status_word_for_failed_to_parse_validator_owner_copy(
     parse_validator_owner_copy_outcome_e failure_reason) {
-
     switch (failure_reason) {
         case PARSE_VALIDATOR_OWNER_COPY_OK:
             return SW_OK;
