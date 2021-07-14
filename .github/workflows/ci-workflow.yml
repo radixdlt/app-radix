@@ -21,6 +21,8 @@ jobs:
       - name: Build
         run: |
           printenv
+          ls -l /opt
+          which clang
           make DEBUG=1
 
       - name: Upload app binary
