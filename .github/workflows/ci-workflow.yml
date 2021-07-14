@@ -9,7 +9,7 @@ jobs:
 
     env:
       BOLOS_SDK: ""
-      BOLOS_SDK_NANO_S: $(NANOS_SDK)
+      BOLOS_SDK_NANO_S: /opt/nanos-secure-sdk
 
     container:
       image: docker://ledgerhq/ledger-app-builder:1.6.1-2
