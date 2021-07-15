@@ -105,6 +105,8 @@ uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failu
             return SW_OK;
         case PARSE_SUBSTATE_FAIL_INVALID_SUBSTATE_FORMAT:
             return ERR_CMD_SIGN_TX_INVALID_SUBSTATE_FORMAT;
+        case PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE:
+            return ERR_CMD_SIGN_TX_UNRECOGNIZED_SUBSTATE_TYPE;
         case PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE:
             return ERR_CMD_SIGN_TX_UNSUPPORTED_SUBSTATE_TYPE;
         case PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS:
