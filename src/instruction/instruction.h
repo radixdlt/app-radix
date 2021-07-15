@@ -46,7 +46,7 @@ typedef struct {
  * Structure the RE instruction `INS_LDOWN.
  */
 typedef struct {
-    uint32_t substate_index;
+    uint16_t substate_index;
 } re_ins_ldown_t;
 
 /**

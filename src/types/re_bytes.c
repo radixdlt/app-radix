@@ -4,7 +4,7 @@
 #include "../bridge.h"
 
 bool parse_re_bytes(buffer_t *buffer, parse_bytes_outcome_e *outcome, re_bytes_t *bytes) {
-    if (!buffer_read_u8(buffer, &bytes->length)) {
+    if (!buffer_read_u16(buffer, &bytes->length, BE)) {
         PRINTF("Failed to parse length of RE bytes.\n");
         *outcome = PARSE_BYTES_FAILED_TO_PARSE_LENGTH;
         return false;

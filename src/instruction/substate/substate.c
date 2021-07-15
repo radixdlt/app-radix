@@ -4,6 +4,13 @@
 #include "../../bridge.h"  // PRINTF
 
 bool parse_substate(buffer_t *buffer, parse_substate_outcome_t *outcome, substate_t *substate) {
+    uint16_t substate_size;
+
+    if (!buffer_read_u16(buffer, &substate_size, BE)) {
+        outcome->outcome_type = PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE;
+        return false;
+    }
+
     uint8_t substate_type_value;
     if (!buffer_read_u8(buffer, &substate_type_value) ||
         !is_re_substate_type_known((int) substate_type_value)) {
@@ -96,8 +103,8 @@ uint16_t status_word_for_failed_to_parse_substate(parse_substate_outcome_t failu
     switch (failure_reason.outcome_type) {
         case PARSE_SUBSTATE_OK:
             return SW_OK;
-        case PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE:
-            return ERR_CMD_SIGN_TX_UNRECOGNIZED_SUBSTATE_TYPE;
+        case PARSE_SUBSTATE_FAIL_INVALID_SUBSTATE_FORMAT:
+            return ERR_CMD_SIGN_TX_INVALID_SUBSTATE_FORMAT;
         case PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE:
             return ERR_CMD_SIGN_TX_UNSUPPORTED_SUBSTATE_TYPE;
         case PARSE_SUBSTATE_FAILED_TO_PARSE_TOKENS:

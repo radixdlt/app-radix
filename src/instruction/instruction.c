@@ -6,8 +6,8 @@
 #include "substate/substate.h"
 #include "../types/public_key.h"
 
-static bool parse_substate_index(buffer_t *buffer, uint32_t *i32) {
-    if (!buffer_read_u32(buffer, i32, BE)) {
+static bool parse_substate_index(buffer_t *buffer, uint16_t *i16) {
+    if (!buffer_read_u16(buffer, i16, BE)) {
         PRINTF("Failed to parse 'substate index'.\n");
         return false;
     }
