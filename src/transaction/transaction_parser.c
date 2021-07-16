@@ -159,7 +159,7 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
         return false;
     }
 
-    // Parse newly recieved single Radix Engine instruction
+    // Parse newly received single Radix Engine instruction
     if (!parse_instruction(buffer, &outcome->parse_failure, &instruction_parser->instruction)) {
         outcome->outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE;
         return false;

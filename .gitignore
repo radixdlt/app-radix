@@ -10,6 +10,7 @@ obj/
 
 # Unit tests and code coverage
 unit-tests/build/
+unit-tests/cmake-build-debug/
 unit-tests/coverage/
 unit-tests/coverage.info
 

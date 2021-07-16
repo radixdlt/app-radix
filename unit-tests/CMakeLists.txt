@@ -34,6 +34,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 endif()
 
 add_compile_definitions(TEST)
+add_compile_definitions(APPNETWORK=1)
 
 include_directories(../src)
 
