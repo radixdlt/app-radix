@@ -1,3 +1,9 @@
+#-----------------------------------------------------------------------------
+#
+# DO NOT USE!!! WORK IN PROGRESS!!!
+#
+#-----------------------------------------------------------------------------
+
 # ****************************************************************************
 #    Ledger App Radix
 #    (c) 2020 Ledger SAS.
@@ -15,47 +21,6 @@
 #   limitations under the License.
 # ****************************************************************************
 
-ifeq ($(BOLOS_SDK),)
-else
-    $(error Environment variable 'BOLOS_SDK' is set, we expect it NOT to be. Instead set 'BOLOS_SDK_NANO_S' and 'BOLOS_SDK_NANO_X' respectively.\nTerminating build.)
-    exit 1;
-endif
-
-ifeq ($(BOLOS_SDK_NANO_S),)
-    ifeq ($(BOLOS_SDK_NANO_X),)
-        $(error Neither Environment variable 'BOLOS_SDK_NANO_S' nor 'BOLOS_SDK_NANO_X' is not set.\nTerminating build.)
-        exit 1;
-    endif
-endif
-
-ifeq ($(CLANGPATH_NANO_S),)
-    ifeq ($(CLANGPATH_NANO_X),)
-        $(error Neither Environment variable 'CLANGPATH_NANO_S' nor 'CLANGPATH_NANO_X' is not set.\nTerminating build.)
-        exit 1;
-    endif
-endif
-
-ifeq ($(BOLOS_ENV),)
-    $(error Environment variable 'BOLOS_ENV' was not found/is not set.\nTerminating build.)
-    exit 1;
-endif
-
-
-ifeq ($(TARGET),NANOX)
-TARGET_NAME=TARGET_NANOX
-BOLOS_SDK=$(BOLOS_SDK_NANO_X)
-$(info setting 'BOLOS_SDK' = 'BOLOS_SDK_NANO_X')
-else
-BOLOS_SDK=$(BOLOS_SDK_NANO_S)
-$(info setting 'BOLOS_SDK' = 'BOLOS_SDK_NANO_S')
-endif
-
-ifeq ($(BOLOS_SDK),)
-    $(error Environment variable 'BOLOS_SDK' was not found/is not set)
-else
-    $(info 'BOLOS_SDK' is set to: '$(BOLOS_SDK)')
-endif
-
 include $(BOLOS_SDK)/Makefile.defines
 
 BIP44_COIN_TYPE_RADIX= "44'/1022'"
@@ -69,18 +34,7 @@ APPNAME      = "Radix"
 APPVERSION_M = 0
 APPVERSION_N = 3
 APPVERSION_P = 7
-APPVERSION = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
-
-# 0 - MAINNET
-# 1 - STOKENET
-# 2 - RELEASENET
-# 3 - RCNET
-# 4 - MILESTONENET
-# 5 - DEVOPSNET
-# 6 - SANDPITNET
-# 7 - LOCALNET
-
-APPNETWORK = 1
+APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
     ICONNAME=icons/nanox_app_radix.gif
@@ -94,7 +48,6 @@ DEFINES += $(DEFINES_LIB)
 DEFINES += APPNAME=\"$(APPNAME)\"
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
-DEFINES += APPNETWORK=$(APPNETWORK)
 DEFINES += OS_IO_SEPROXYHAL
 DEFINES += HAVE_BAGL HAVE_UX_FLOW HAVE_SPRINTF
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=6 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
@@ -128,25 +81,10 @@ else
         DEFINES += PRINTF\(...\)=
 endif
 
-ifneq ($(BOLOS_ENV),)
-$(info BOLOS_ENV=$(BOLOS_ENV))
-GCCPATH   := $(BOLOS_ENV)/gcc_nano_s_se200_and_nano_x_se124_compatible/bin/
-endif
-
-
-ifeq ($(TARGET),NANOX)
-CLANGPATH := $(CLANGPATH_NANO_X)/bin/
-$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_X/bin')
-else
-CLANGPATH := $(CLANGPATH_NANO_S)/bin/
-$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_S/bin')
-endif
-
-
-CC      := $(CLANGPATH)clang
+CC      := clang
 CFLAGS  += -O3 -Os
-AS      := $(GCCPATH)arm-none-eabi-gcc
-LD      := $(GCCPATH)arm-none-eabi-gcc
+AS      := arm-none-eabi-gcc
+LD      := arm-none-eabi-gcc
 LDFLAGS += -O3 -Os
 LDLIBS  += -lm -lgcc -lc
 
@@ -170,7 +108,7 @@ delete:
 
 include $(BOLOS_SDK)/Makefile.rules
 
-dep/%.d: %.c Makefile
+dep/%.d: %.c Makefile.github
 
 listvariants:
 	@echo VARIANTS COIN XRD

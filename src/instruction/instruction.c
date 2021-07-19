@@ -6,11 +6,27 @@
 #include "substate/substate.h"
 #include "../types/public_key.h"
 
-static bool parse_substate_index(buffer_t *buffer, uint32_t *i32) {
-    if (!buffer_read_u32(buffer, i32, BE)) {
+static bool parse_substate_index(buffer_t *buffer, uint16_t *i16) {
+    if (!buffer_read_u16(buffer, i16, BE)) {
         PRINTF("Failed to parse 'substate index'.\n");
         return false;
     }
+    return true;
+}
+
+static bool parse_virtual_substate_id(buffer_t *buffer) {
+    uint16_t size = 0;
+
+    if (!buffer_read_u16(buffer, &size, BE)) {
+        PRINTF("Failed to read 'virtual substate size'.\n");
+        return false;
+    }
+
+    if (!buffer_seek_cur(buffer, size)) {
+        PRINTF("Failed to read 'virtual substate body'.\n");
+        return false;
+    }
+
     return true;
 }
 
@@ -21,7 +37,7 @@ bool parse_instruction(buffer_t *buffer,
     if (!buffer_read_u8(buffer, &re_instruction_type_value) ||
         !is_re_ins_type_known((int) re_instruction_type_value)) {
         PRINTF("ERROR unrecognized instruction type: %d\n", re_instruction_type_value);
-        outcome->outcome_type = PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE;
+        outcome->outcome_type = PARSE_INS_FAIL_UNRECOGNIZED_INSTRUCTION_TYPE;
         outcome->unrecognized_instruction_type_value = re_instruction_type_value;
         return false;
     }
@@ -42,12 +58,24 @@ bool parse_instruction(buffer_t *buffer,
             if (!parse_substate_id(buffer,
                                    &outcome->substate_id_failure,
                                    &instruction->ins_down.substate_id)) {
-                PRINTF("Failed to parse substate id.\n");
+                PRINTF("Failed to parse substate id for INS_DOWN.\n");
                 outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID;
                 return false;
             }
-            PRINTF("Finished parsing substate ID.\n");
+            PRINTF("Finished parsing substate ID for INS_DOWN.\n");
             break;
+
+        case INS_READ:
+            if (!parse_substate_id(buffer,
+                                   &outcome->substate_id_failure,
+                                   &instruction->ins_read.substate_id)) {
+                PRINTF("Failed to parse substate id for INS_READ.\n");
+                outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID;
+                return false;
+            }
+            PRINTF("Finished parsing substate ID for INS_READ.\n");
+            break;
+
         case INS_LDOWN:
             if (!parse_substate_index(buffer, &instruction->ins_ldown.substate_index)) {
                 PRINTF("Failed to parse substate index.\n");
@@ -60,15 +88,25 @@ bool parse_instruction(buffer_t *buffer,
             if (!parse_substate(buffer,
                                 &outcome->substate_failure,
                                 &instruction->ins_up.substate)) {
-                PRINTF("Failed to parse substate.\n");
+                PRINTF("Failed to parse substate for INS_UP.\n");
                 outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE;
                 return false;
             }
             PRINTF("Finished parsing substate.\n");
             break;
+        case INS_VREAD:
+            if (!parse_virtual_substate_id(buffer)) {
+                PRINTF("Failed to parse virtual substate id for INS_VREAD.\n");
+                outcome->outcome_type = PARSE_INS_INVALID_VIRTUAL_SUBSTATE_ID;
+                return false;
+            }
+            PRINTF("Finished parsing virtual substate id.\n");
+            break;
+
         case INS_END:
             PRINTF("Finished parsing END of substate group (empty, nothing to parse).\n");
             break;
+
         case INS_MSG:  // Attached Message
             if (!parse_re_bytes(buffer, &outcome->message_failure, &instruction->ins_msg.message)) {
                 PRINTF("Failed to parse INS_MSG.\n");
@@ -120,20 +158,28 @@ bool parse_instruction(buffer_t *buffer,
                 "any instructions to burn or mint new tokens.\n");
             break;
     }
-    outcome->outcome_type = PARSE_INS_OK;
-    return true;
+
+    outcome->outcome_type = (number_of_remaining_bytes_in_buffer(buffer) == 0)
+                                ? PARSE_INS_OK
+                                : PARSE_INS_CONTAINS_EXTRA_BYTES;
+
+    return outcome->outcome_type == PARSE_INS_OK;
 }
 
 uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failure) {
     switch (failure->outcome_type) {
         case PARSE_INS_OK:
             return SW_OK;
-        case PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE:
+        case PARSE_INS_CONTAINS_EXTRA_BYTES:
+            return ERR_CMD_SIGN_TX_PARSE_INS_EXTRA_BYTES;
+        case PARSE_INS_FAIL_UNRECOGNIZED_INSTRUCTION_TYPE:
             return ERR_CMD_SIGN_TX_UNRECOGNIZED_INSTRUCTION_TYPE;
         case PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE:
             return ERR_CMD_SIGN_TX_UNSUPPORTED_INSTRUCTION_TYPE;
         case PARSE_INS_FAILED_TO_PARSE_SUBSTATE:
             return status_word_for_failed_to_parse_substate(failure->substate_failure);
+        case PARSE_INS_INVALID_VIRTUAL_SUBSTATE_ID:
+            return ERR_CMD_SIGN_TX_INVALID_VIRTUAL_SUBSTATE_ID;
         case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID:
             return status_word_for_failed_to_parse_substate_id(failure->substate_id_failure);
         case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_INDEX:
@@ -146,8 +192,9 @@ uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failur
             return ERR_CMD_SIGN_TX_DISABLE_MINT_AND_BURN_FLAG_NOT_SET;
         case PARSE_INS_FAILED_TO_PARSE_SYSCALL:
             return ERR_CMD_SIGN_TX_PARSE_INS_SYSCALL;
+        default:
+            return ERR_BAD_STATE;  // should not happen.
     }
-    return ERR_BAD_STATE;  // should not happen.
 }
 
 static bool does_tokens_need_to_be_displayed(tokens_t *tokens, public_key_t *my_public_key) {
@@ -168,11 +215,13 @@ static bool does_substate_need_to_be_displayed(substate_t *substate, public_key_
             return true;
         case SUBSTATE_TYPE_PREPARED_UNSTAKE:
             return true;
-        case SUBSTATE_TYPE_STAKE_SHARE:
+        case SUBSTATE_TYPE_STAKE_OWNERSHIP:
+        case SUBSTATE_TYPE_VALIDATOR_ALLOW_DELEGATION_FLAG:
+        case SUBSTATE_TYPE_VALIDATOR_OWNER_COPY:
             return false;
+        default:
+            return false;  // should never happen
     }
-
-    return false;  // should never happen
 }
 
 bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
@@ -183,17 +232,19 @@ bool does_instruction_need_to_be_displayed(re_instruction_t *instruction,
         case INS_MSG:
         case INS_LDOWN:
         case INS_HEADER:
+        case INS_VREAD:
+        case INS_READ:
             return false;
         case INS_UP:
             return does_substate_need_to_be_displayed(&instruction->ins_up.substate, my_public_key);
         case INS_SYSCALL:
-            // Stating `INS_SYSCALL` separatly so that I can write this comment:
+            // Stating `INS_SYSCALL` separately so that I can write this comment:
             // SYSCALL contains the transaction fee. But since it comes amongst
             // the first bytes in the tx and we do not want to display the tx
             // fee amount now directly, but rather in the end as part of the
             // tx fee summary.
             return false;
+        default:
+            return false;  // should not happen.
     }
-
-    return false;  // should not happen.
 }

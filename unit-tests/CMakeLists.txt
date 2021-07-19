@@ -34,6 +34,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 endif()
 
 add_compile_definitions(TEST)
+add_compile_definitions(APPNETWORK=1)
 
 include_directories(../src)
 
@@ -73,13 +74,13 @@ add_library(derived_public_key SHARED ../src/types/derived_public_key.c)
 
 add_library(tokens SHARED ../src/instruction/substate/tokens.c)
 add_library(prepared_stake SHARED ../src/instruction/substate/prepared_stake.c)
+add_library(stake_ownership SHARED ../src/instruction/substate/stake_ownership.c)
 add_library(prepared_unstake SHARED ../src/instruction/substate/prepared_unstake.c)
-#
+add_library(validator_allow_delegation_flag SHARED ../src/instruction/substate/validator_allow_delegation_flag.c)
+add_library(validator_owner_copy SHARED ../src/instruction/substate/validator_owner_copy.c)
 
 # We MUST explicitly state that `prepared_unstake.c` depends on `re_address.c` (method: `parse_re_address`)
 target_link_libraries(prepared_unstake PUBLIC re_address)
-
-add_library(stake_share SHARED ../src/instruction/substate/stake_share.c)
 
 add_library(substate_type SHARED ../src/instruction/substate/substate_type.c)
 add_library(substate SHARED ../src/instruction/substate/substate.c)
@@ -93,11 +94,19 @@ target_link_libraries(substate PUBLIC prepared_stake)
 # We MUST explicitly state that `substate.c` depends on `tokens.c` (methods: `parse_tokens`, `status_word_for_failed_to_parse_tokens`)
 target_link_libraries(substate PUBLIC tokens)
 
-# We MUST explicitly state that `substate.c` depends on `stake_share.c` (methods: `parse_stake_share`, `status_word_for_failed_to_parse_stake_share`)
-target_link_libraries(substate PUBLIC stake_share)
+# We MUST explicitly state that `substate.c` depends on `stake_ownership.c` (methods: `parse_stake_ownership`, `status_word_for_failed_to_parse_stake_ownership`)
+target_link_libraries(substate PUBLIC stake_ownership)
+
+# We MUST explicitly state that `substate.c` depends on `validator_allow_delegation_flag.c` (methods: `parse_validator_allow_delegation_flag`...)
+target_link_libraries(substate PUBLIC validator_allow_delegation_flag)
+# We MUST explicitly state that `substate.c` depends on `validator_owner_copy.c` (methods: `parse_validator_owner_copy`...)
+target_link_libraries(substate PUBLIC validator_owner_copy)
+
 
 # We MUST explicitly state that `substate.c` depends on `substate_type.c` (methods: `is_re_substate_type_known`, `is_re_substate_type_supported`)
 target_link_libraries(substate PUBLIC substate_type)
+
+
 
 
 add_library(substate_id SHARED ../src/instruction/substate/substate_id.c)
@@ -156,7 +165,9 @@ target_link_libraries(test_tx_parser PUBLIC
                       tokens
                       prepared_stake
                       prepared_unstake
-                      stake_share
+                      stake_ownership
+                      validator_allow_delegation_flag
+                      validator_owner_copy
                       transaction
                       transaction_parser
                       transaction_metadata

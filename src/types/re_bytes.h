@@ -7,7 +7,7 @@
 #define MAX_BYTES_LEN 255
 
 typedef struct {
-    uint8_t length;
+    uint16_t length;
     uint8_t data[MAX_BYTES_LEN];
 } re_bytes_t;
 

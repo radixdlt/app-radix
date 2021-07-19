@@ -10,13 +10,17 @@ jobs:
     container:
       image: docker://ledgerhq/ledger-app-builder:1.6.1-2
 
+    env:
+      TARGET_NAME: TARGET_NANOS
+      TARGET_VERSION: 2.0.0
+
     steps:
       - name: Clone
         uses: actions/checkout@v2
 
       - name: Build
         run: |
-          make DEBUG=1
+          make --file=Makefile.github DEBUG=1
 
       - name: Upload app binary
         uses: actions/upload-artifact@v2

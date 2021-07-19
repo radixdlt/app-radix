@@ -26,7 +26,9 @@
 #include "instruction/substate/tokens.h"
 #include "instruction/substate/prepared_stake.h"
 #include "instruction/substate/prepared_unstake.h"
-#include "instruction/substate/stake_share.h"
+#include "instruction/substate/stake_ownership.h"
+#include "instruction/substate/validator_allow_delegation_flag.h"
+#include "instruction/substate/validator_owner_copy.h"
 
 #include "instruction/substate/substate_type.h"
 #include "instruction/substate/substate.h"
@@ -43,7 +45,6 @@
 
 typedef struct {
     char *ins_hex;
-    size_t ins_len;
     re_instruction_type_e instruction_type;
     /// Iff instruction type is 'INS_UP'
     re_substate_type_e substate_type;
@@ -66,6 +67,7 @@ static bool update_sha256_hasher_hash(buffer_t *buf, bool final, uint8_t *out) {
 }
 
 uint8_t pub_key_bytes[PUBLIC_KEY_COMPRESSED_LEN];
+
 static bool always_derive_44_536_2_1_3(derived_public_key_t *key) {
     key->address.address_type = RE_ADDRESS_PUBLIC_KEY;
     memmove(key->address.public_key.compressed, pub_key_bytes, PUBLIC_KEY_COMPRESSED_LEN);
@@ -104,7 +106,7 @@ typedef struct {
     };
 } test_vector_t;
 
-static void dbg_print_expected_result(expected_result_e expected_result) {
+void dbg_print_expected_result(expected_result_e expected_result) {
     print_message("Expected result:\n");
     switch (expected_result) {
         case EXPECTED_RESULT_SUCCESS:
@@ -117,7 +119,7 @@ static void dbg_print_expected_result(expected_result_e expected_result) {
     print_message("\n");
 }
 
-static void dbg_print_test_vector(test_vector_t *test_vector) {
+void dbg_print_test_vector(test_vector_t *test_vector) {
     print_message("\nTEST VECTOR:\n");
     dbg_print_expected_result(test_vector->expected_result);
     if (test_vector->expected_result != EXPECTED_RESULT_SUCCESS) {
@@ -141,8 +143,6 @@ static void dbg_print_test_vector(test_vector_t *test_vector) {
 static void do_test_parse_tx(test_vector_t test_vector) {
     // dbg_print_test_vector(&test_vector);
     uint16_t total_number_of_instructions = test_vector.total_number_of_instructions;
-    expected_instruction_t *expected_instructions = test_vector.expected_instructions;
-
     bool expected_failure = test_vector.expected_result != EXPECTED_RESULT_SUCCESS;
 
     if (expected_failure) {
@@ -157,14 +157,16 @@ static void do_test_parse_tx(test_vector_t test_vector) {
 
     size_t i;
     uint32_t tx_byte_count = 0;
+    expected_instruction_t *expected_instruction;
+
     if (expected_failure &&
         test_vector.expected_failure.contains_misleading_tx_size_used_to_trigger_failure) {
         tx_byte_count = test_vector.expected_failure.misleading_tx_size_used_to_trigger_failure;
     } else {
-        for (i = 0; i < total_number_of_instructions; i++) {
-            expected_instruction_t *expected_instruction = &expected_instructions[i];
-            size_t instruction_size = expected_instruction->ins_len;
-            tx_byte_count += instruction_size;
+        expected_instruction = test_vector.expected_instructions;
+
+        for (i = 0; i < total_number_of_instructions; i++, expected_instruction++) {
+            tx_byte_count += strlen(expected_instruction->ins_hex) / 2;
         }
     }
 
@@ -215,22 +217,21 @@ static void do_test_parse_tx(test_vector_t test_vector) {
 
     assert_true(init_tx_parser_successful);
 
-    expected_instruction_t expected_instruction;
     parse_and_process_instruction_outcome_t outcome;
     bool parse_instruction_successful = false;
     re_instruction_type_e parsed_ins_type;
+    expected_instruction = test_vector.expected_instructions;
 
-    for (i = 0; i < total_number_of_instructions; i++) {
+    for (i = 0; i < total_number_of_instructions; i++, expected_instruction++) {
         bool is_last_instruction = i == total_number_of_instructions - 1;
-        expected_instruction = expected_instructions[i];
-        size_t instruction_size = expected_instruction.ins_len;
+        size_t instruction_size = strlen(expected_instruction->ins_hex) / 2;
         buf.offset = 0;
         buf.size = instruction_size;
         memset(bytes255, 0, sizeof(bytes255));
-        hex_to_bin(expected_instruction.ins_hex, bytes255, instruction_size);
+        hex_to_bin(expected_instruction->ins_hex, bytes255, instruction_size);
         buf.ptr = bytes255;
 
-        // print_message("Printing bufer\n");
+        // print_message("Printing buffer\n");
         // print_message("Size: %zu\n", buf.size);
         // for (int j = 0; j < buf.size; ++j) {
         //     print_message("%02x", buf.ptr[j]);
@@ -250,8 +251,9 @@ static void do_test_parse_tx(test_vector_t test_vector) {
             (test_vector.expected_result == EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION) &&
             (i == test_vector.expected_failure.index_of_failing_instruction);
 
+        // print_error("\n#### Checking at instruction: %ld\n", i);
         if (expected_failure && expect_to_fail_at_this_specific_instruction) {
-            // Should not have succeded to parse or process since we expecte failure.
+            // Should not have succeeded to parse or process since we expected failure.
             assert_false(parse_instruction_successful);
 
             // Assert we know the failure reason
@@ -280,11 +282,11 @@ static void do_test_parse_tx(test_vector_t test_vector) {
 
                 parsed_ins_type = tx_parser.instruction_parser.instruction.ins_type;
 
-                assert_int_equal(parsed_ins_type, expected_instruction.instruction_type);
+                assert_int_equal(parsed_ins_type, expected_instruction->instruction_type);
                 if (parsed_ins_type == INS_UP) {
                     re_substate_type_e parsed_substate_type =
                         tx_parser.instruction_parser.instruction.ins_up.substate.type;
-                    assert_int_equal(parsed_substate_type, expected_instruction.substate_type);
+                    assert_int_equal(parsed_substate_type, expected_instruction->substate_type);
                 }
             }
         }
@@ -298,6 +300,15 @@ static void do_test_parse_tx(test_vector_t test_vector) {
     char *expected_tx_fee = test_vector.expected_success.expected_tx_fee;
     char *expected_total_xrd_amount = test_vector.expected_success.expected_total_xrd_amount;
     uint8_t *expected_hash = test_vector.expected_success.expected_hash;
+
+    //    uint8_t *actual_hash = tx_parser.signing.hasher.hash;
+    //    print_error("### Actual hash:\n");
+    //    for (int k = 0; k < HASH_LEN; k++) {
+    //        print_error("0x%02x, ", actual_hash[k]);
+    //        if ((k + 1) % 8 == 0) {
+    //            print_error("\n");
+    //        }
+    //    }
 
     // Assert hash
     assert_memory_equal(tx_parser.signing.hasher.hash, expected_hash, HASH_LEN);
@@ -317,1012 +328,28 @@ static void do_test_parse_tx(test_vector_t test_vector) {
     assert_string_equal(output, expected_total_xrd_amount);
 }
 
-/**
- * @brief Test parsing a tx with 9 instructions.
- *
- * Hex string for transaction below:
- * 0x0a000104374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf0000000040921000000000000000000000000000000000000000000000000000000000000000002010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba000000000000000000000000000000000000000000000001158e460913cffffe000500000003010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0000000000000000000000000000000000000000000000008ac7230489e7fffe0104040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a50000000000000000000000000000000000000000000000008ac7230489e8000000
- *
- * String representation of instructions of transaction below:
- *
- * Instructions:
- * |- HEADER(0, 1)
- * |- DOWN(SubstateId { hash:
- * 0x374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf0, index: 4 })
- * |- SYSCALL(0x000000000000000000000000000000000000000000000000000000000000000002)
- * |- UP(Tokens { rri: 0x01, owner:
- * 0x040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba, amount: U256 { raw:
- * 19999999999999999998 } })
- * |- END
- * |- LDOWN(3)
- * |- UP(Tokens { rri: 0x01, owner:
- * 0x040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba, amount: U256 { raw:
- * 9999999999999999998 } })
- * |- UP(PreparedStake { owner:
- * 0x040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba, delegate:
- * 0x02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a5, amount: U256 { raw:
- * 10000000000000000000 } })
- * |- END
- *
- * Further prettified human readable  representation of instructions of tx below:
- *
- * Instructions:
- * |- HEADER(0, 1)
- * |- DOWN(SubstateId { hash:
- * 0x374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf0, index: 4 })
- * |- SYSCALL(0x000000000000000000000000000000000000000000000000000000000000000002)
- * |
- * |- UP(Tokens {
- * |--- rri: xrd_rb1qya85pwq,
- * |--- owner: brx1qsph0wkgqeh9rngddveqcvudt2aum0x2y4tjk6e7a62y86hujggxhws07tsg3,
- * |--- amount: 19.0000
- * |- })
- * |
- * |- END
- * |- LDOWN(3)
- * |
- * |- UP(Tokens {
- * |--- rri: xrd_rb1qya85pwq,
- * |--- owner: brx1qsph0wkgqeh9rngddveqcvudt2aum0x2y4tjk6e7a62y86hujggxhws07tsg3,
- * |--- amount: 9.0000
- * |- })
- * |
- * |- UP(PreparedStake {
- * |--- owner: brx1qsph0wkgqeh9rngddveqcvudt2aum0x2y4tjk6e7a62y86hujggxhws07tsg3,
- * |--- delegate: vb1qtcektgftf2n7wjpmf9gms0cg57lhhrn83dwe6939zma0xv6ufr62ry5ycv,
- * |--- amount: 10.0000
- * |- })
- * |
- * |- END
- */
-static void test_success_transfer_transfer_stake(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04374c00efbe61f645a8b35d7746e106afa7422877e5d607975b6018e0a1aa6bf000000004",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "0921000000000000000000000000000000000000000000000000000000000000000002",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
-                       "00000000000000000000000000000000000000000000001158e460913cffffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000003",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bba0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "0104040377bac8066e51cd0d6b320c338d5abbcdbcca25572b6b3eee9443eafc92106bb"
-                       "a02f19b2d095a553f3a41da4a8dc1f8453dfbdc733c5aece8b128b7d7999ae247a50000"
-                       "000000000000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 9,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success = {
-            .my_public_key_hex =
-                "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288",
-            .expected_tx_fee = "2",
-            .expected_total_xrd_amount = "29999999999999999998",
-            .expected_hash =
-                {
-                    // clang-format off
-    	        0x83, 0xf4, 0x54, 0x4f, 0xf1, 0xfb, 0xab, 0xc7,
-            	0xbe, 0x39, 0xc6, 0xf5, 0x31, 0xc3, 0xf3, 0x7f,
-            	0xc5, 0x0e, 0x0a, 0x0b, 0x65, 0x3a, 0xfd, 0xb2,
-            	0x2c, 0xc9, 0xf8, 0xe8, 0xaa, 0x46, 0x1f, 0xc9
-                    // clang-format on
-                },  //         expected hash:
-                    //         83f4544ff1fbabc7be39c6f531c3f37fc50e0a0b653afdb22cc9f8e8aa461fc9
-
-        }};
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- * BLOB
- * 0a0001045d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f0000000309210000000000000000000000000000000000000000000000000000000000deadbeef0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155000000000000000000000000000000000000000000000001158e460913cffffe0005000000020103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550000000000000000000000000000000000000000000000008ac7230489e7fffe01040402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e15502fd72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de8870000000000000000000000000000000000000000000000008ac7230489e800000005000000050103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550000000000000000000000000000000000000000000000008ac7230489e7fffd01030104036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7000000000000000000000000000000000000000000000000000000000000000100
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f, index: 3 })
-      |- SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
- 19999999999999999998 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
- 9999999999999999998 } })
-      |- UP(PreparedStake { owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, delegate:
- 0x02fd72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de887, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-      |- LDOWN(5)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e155, amount: U256 { raw:
- 9999999999999999997 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7, amount: U256 { raw: 1 }
- })
-      |- END
-
-
-    More human readable
-
-      HEADER(0, 1)
-      DOWN(SubstateId { hash:
- 0x5d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f, index: 3 })
-      SYSCALL(0x0000000000000000000000000000000000000000000000000000000000deadbeef)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 19.0000 })
-      END
-      LDOWN(2)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
-      UP(PreparedStake { owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, delegate:
- vb1qt7h9c2t4efstkm975why0s2dzj55jwushggwk6y6083aqzp8h5gwr7x4gz, amount: 10.0000 }) END LDOWN(5)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspw6rh27498nhug7yhj28ezhzxlqzh644p5jl6yscsr2w55uhpwz4gcpqecd, amount: 9.0000 })
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspkkp3tqpz0gyhnp2tnj3l9axrx99nf6p2m0r70hd52vvs3gchdpacsadyal, amount: 0.0000 })
-      END
- *
- * @param state
- */
-static void test_success_transfer_transfer_stake_transfer_with_change(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "045d375643dded796e8d3526dcae7a068c642e35fb9931688f56ea20b56289330f00000003",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "09210000000000000000000000000000000000000000000000000000000000deadbeef",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
-                       "00000000000000000000000000000000000000000000001158e460913cffffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "01040402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e15502f"
-                       "d72e14bae5305db65f51d723e0a68a54a49dc85d0875b44d3cf1e80413de887000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000005",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402ed0eeaf54a79df88f12f251f22b88df00afaad43497f448620353a94e5c2e1550"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffd",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f70"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 13,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success = {
-            .my_public_key_hex =
-                "036b062b0044f412f30a973947e5e986629669d055b78fcfbb68a63211462ed0f7",
-            .expected_tx_fee = "3735928559",
-            .expected_total_xrd_amount = "40000000003735928552",
-            .expected_hash =
-                {
-                    // clang-format off
-      0x42, 0x32, 0x5f, 0x68, 0xc1, 0x60, 0x71, 0xd0,
-      0xf2, 0x44, 0xbe, 0x9a, 0x73, 0x82, 0xb3, 0x4e,
-      0x52, 0x03, 0x7c, 0x4c, 0x6b, 0xa6, 0x35, 0x43,
-      0xfc, 0x68, 0x56, 0x22, 0x0f, 0x42, 0x27, 0x0d
-                    // clang-format on
-                },  //         expected hash:
-                    //         42325f68c16071d0f244be9a7382b34e52037c4c6ba63543fc6856220f42270d
-        }};
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- *
- * Blob
- 0a000104c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028000000030921000000000000000000000000000000000000000000000038821089088b6063da1801030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b000000000000000000000000000000000000000000000001158e460913cffffe00050000000201030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b000000000000000000000000000000000000000000000001158e460913cffffd01030104022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411000000000000000000000000000000000000000000000000000000000000000100050000000501030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0000000000000000000000000000000000000000000000008ac7230489e7fffd010404035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b037bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac0000000000000000000000000000000000000000000000008ac7230489e8000000
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028, index: 3 })
-      |- SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
- 19999999999999999998 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
- 19999999999999999997 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411, amount: U256 { raw: 1 }
- })
-      |- END
-      |- LDOWN(5)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, amount: U256 { raw:
- 9999999999999999997 } })
-      |- UP(PreparedStake { owner:
- 0x04035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b, delegate:
- 0x037bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-
-
-      More human readable:
-
-      HEADER(0, 1)
-      DOWN(SubstateId { hash:
- 0xc1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c5028, index: 3 })
-      SYSCALL(0x000000000000000000000000000000000000000000000038821089088b6063da18)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 19.0000 })
-      END
-      LDOWN(2)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 19.0000 })
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qspzcncgxtpya0rywuq9cwtl550gmcr3qzvts9k582znxfjcc73pgygp9c86v, amount: 0.0000 })
-      END
-      LDOWN(5)
-      UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, amount: 9.0000 })
-      UP(PreparedStake { owner:
- brx1qsp4epfzf9qndj4jcaz9e4y94yzn8rafryws6vc5eu8rkc98jgge72cddfkp7, delegate:
- vb1qdal2tlawdhd5e25kwmmq04w870zhkd5k8q3uue42xg5q0led9s6cxpe65y, amount: 10.0000 }) END
-
- *
- */
-static void test_success_transfer_transfer_with_change_transfer_stake(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "0921000000000000000000000000000000000000000000000038821089088b6063da18",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
-                       "00000000000000000000000000000000000000000000001158e460913cffffe",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
-                       "00000000000000000000000000000000000000000000001158e460913cffffd",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a214110"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000005",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffd",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "010404035c8522494136cab2c7445cd485a905338fa9191d0d3314cf0e3b60a792119f2b037"
-                       "bf52ffd736eda6554b3b7b03eae3f9e2bd9b4b1c11e73355191403ff96961ac000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 13,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "022c4f0832c24ebc6477005c397fa51e8de0710098b816d43a85332658c7a21411",
-                .expected_tx_fee = "266851791263253500516888",
-                .expected_total_xrd_amount = "266901791263253500516880",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0xda, 0xbb, 0xe3, 0xc3, 0x60, 0x1b, 0x3b, 0xbc,
-      0x58, 0x63, 0x36, 0x8e, 0x8e, 0x8f, 0x06, 0x1c,
-      0x24, 0x42, 0x0a, 0x9b, 0x2e, 0x06, 0x58, 0xad,
-      0x50, 0xa7, 0x40, 0xee, 0xb6, 0x16, 0x02, 0xde
-                        // clang-format on
-                    },  //         expected hash:
-                        //         dabbe3c3601b3bbc5863368e8e8f061c24420a9b2e0658ad50a740eeb61602de
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- *
- * Blob
- *
- 0a00010414f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f308747500000001092100000000000000000000000000000000000000000000000000000000000000303901030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700000000000000000000000000000000000000000000000008ac7230489e7fffc00045e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab700000007010d031fa3fe2db67d482ef3b3b6f6facf874cf1502af8a463d8ac75f378a09d78f01204033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700000000000000000000000000000000000000000000000008ac7230489e8000000050000000201030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700000000000000000000000000000000000000000000000008ac7230489e7fffb01030104039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96000000000000000000000000000000000000000000000000000000000000000100
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
-0x14f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f3087475, index: 1 })
-      |- SYSCALL(0x000000000000000000000000000000000000000000000000000000000000003039)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
- 9999999999999999996 } })
-      |- END
-      |- DOWN(SubstateId { hash:
-0x5e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab7, index: 7 })
-      |- UP(PreparedUnstake { delegate:
- 0x031fa3fe2db67d482ef3b3b6f6facf874cf1502af8a463d8ac75f378a09d78f012, owner:
- 0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70, amount: U256 { raw:
- 9999999999999999995 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96, amount: U256 { raw: 1 }
-})
-      |- END
-
-      More human readable:
-
-*  HEADER(0, 1)
-*  DOWN(SubstateId { hash: 0x14f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f3087475,
-index: 1 })
-* SYSCALL(0x000000000000000000000000000000000000000000000000000000000000003039)
- * UP(Tokens{ rri: xrd_rb1qya85pwq, owner:
-brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, amount: 9.0000 })
- * END
- * DOWN(SubstateId { hash: 0x5e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab7,
-index: 7 })
- * UP(PreparedUnstake { owner:
-brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, delegate:
-vb1qv068l3dke75sthnkwm0d7k0sax0z5p2lzjx8k9vwheh3gya0rcpynlr3g7, amount: 10.0000 })
- * END
- * LDOWN(2)
- * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
-brx1qspnhrzvlhuptq5xyz74a5j5yf0jhe8vlngm03edp9hnskp4egwg6uq0hrnd8, amount: 9.0000 })
- * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
-brx1qspe4a5ll4r49esdpavy7n8rj5ndmp27rs6jjdrn76pauz0kkx0ye9sw2a6hz, amount: 0.0000 })
- * END
- */
-static void test_success_transfer_unstake_transfer_with_change(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "0414f4235a478a63f7c17795bb482ed22efb8bcbe5239d3a5544f33b26f308747500000001",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "0921000000000000000000000000000000000000000000000000000000000000003039",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "045e01ca4385fe4ba31d3649ae7cc746446d46c4405064bf7c6d4faa853586eab700000007",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "010d031fa3fe2db67d482ef3b3b6f6facf874cf1502af8a463d8ac75f378a09d78f01204033"
-                       "b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d70000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_UNSTAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104033b8c4cfdf815828620bd5ed254225f2be4ecfcd1b7c72d096f385835ca1c8d700"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffb",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c960"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 12,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "039af69ffd4752e60d0f584f4ce39526dd855e1c35293473f683de09f6b19e4c96",
-                .expected_tx_fee = "12345",
-                .expected_total_xrd_amount = "20000000000000012336",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0xde, 0x9e, 0x42, 0xd3, 0x9c, 0x8a, 0x23, 0xbd,
-      0x39, 0xa7, 0xde, 0xc8, 0x0a, 0xa3, 0x13, 0xed,
-      0x3e, 0x0c, 0x70, 0x95, 0x87, 0x3f, 0xc9, 0xf7,
-      0x10, 0x4e, 0x48, 0x1b, 0x43, 0x20, 0x68, 0xc4
-                        // clang-format on
-                    },  //         expected hash:
-                        //         de9e42d39c8a23bd39a7dec80aa313ed3e0c7095873fc9f7104e481b432068c4
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- * Blob
- *
- 0a000104e31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf0400000001092100000000000000000000000000000000000000000000000000000000003ade68b10103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0000000000000000000000000000000000000000000000008ac7230489e7fffc0005000000020103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0000000000000000000000000000000000000000000000008ac7230489e7fffb0103010402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a00000000000000000000000000000000000000000000000000000000000000010004361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c300000007010d02ec11f6184839402b78f5a6fbe3e5eddf41cb999ac9c3ae0cdb324ab01f8e3f200403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0000000000000000000000000000000000000000000000008ac7230489e8000000
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04, index: 1 })
-      |- SYSCALL(0x00000000000000000000000000000000000000000000000000000000003ade68b1)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
- 9999999999999999996 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
- 9999999999999999995 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x0402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a, amount: U256 { raw: 1 }
- })
-      |- END
-      |- DOWN(SubstateId { hash:
- 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3, index: 7 })
-      |- UP(PreparedUnstake { delegate:
- 0x02ec11f6184839402b78f5a6fbe3e5eddf41cb999ac9c3ae0cdb324ab01f8e3f20, owner:
- 0x0403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be, amount: U256 { raw:
- 10000000000000000000 } })
-      |- END
-
-      Human readable:
-
-      *HEADER(0, 1)
-      * DOWN(SubstateId { hash:
- 0xe31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf04, index: 1 })
-      * SYSCALL(0x00000000000000000000000000000000000000000000000000000000003ade68b1)
-      * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, amount: 9.0000 })
-      * END
-      * LDOWN(2)
-      * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, amount: 9.0000 })
-      * UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsptsam74d2t4zqcewprw6jhnryu0gp9cgt0kpfxdeu5ekx97rw567sz8utwe, amount: 0.0000 })
-      * END
-      * DOWN(SubstateId { hash:
- 0x361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c3, index: 7 })
-      * UP(PreparedUnstake { owner:
- brx1qsp6s7g7uvnxyz5tp4d6vdhtqs3pytzhw6vvhkc749aq602kcv7xp0s5whvx8, delegate:
- vb1qtkprascfqu5q2mc7kn0hcl9ah05rjuentyu8tsvmvey4vql3cljqltylt4, amount: 10.0000 })
-      * END
- */
-static void test_success_transfer_transfer_with_change_unstake(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04e31133f949d9d4a453c189e8b7c3b016215513f50b2ec9809b19f950954cbf0400000001",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000003ade68b1",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010403a8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be0"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffb",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "0103010402b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a0"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "04361a8ec30813bafdf3b547482353080cc6b7cbd8e893496fa141d9915ae180c300000007",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 101,
-            .ins_hex = "010d02ec11f6184839402b78f5a6fbe3e5eddf41cb999ac9c3ae0cdb324ab01f8e3f200403a"
-                       "8791ee326620a8b0d5ba636eb0422122c577698cbdb1ea97a0d3d56c33c60be000000000000"
-                       "0000000000000000000000000000000000008ac7230489e80000",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_PREPARED_UNSTAKE,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 12,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "02b8777eab54ba8818cb82376a5798c9c7a025c216fb05266e794cd8c5f0dd4d7a",
-                .expected_tx_fee = "987654321",
-                .expected_total_xrd_amount = "20000000000987654312",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0x18, 0x59, 0xc7, 0xa1, 0x1b, 0x46, 0xae, 0xfb,
-      0x28, 0x86, 0x0f, 0x37, 0xaf, 0xff, 0x4f, 0xcf,
-      0x5a, 0xac, 0x2c, 0x4c, 0x99, 0x5a, 0x65, 0x42,
-      0x9a, 0x4f, 0x00, 0xf3, 0x3e, 0x42, 0x98, 0xa3
-                        // clang-format on
-                    },  //         expected hash:
-                        //         1859c7a11b46aefb28860f37afff4fcf5aac2c4c995a65429a4f00f33e4298a3
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
-/**
- * @brief
- *
- * Blob
- *
- 0a0001044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001092100000000000000000000000000000000000000000000000000000000000000fade01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20000000000000000000000000000000000000000000000008ac7230489e7fffc00050000000201030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20000000000000000000000000000000000000000000000008ac7230489e7fffb010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9000000000000000000000000000000000000000000000000000000000000000100050000000501030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20000000000000000000000000000000000000000000000008ac7230489e7fff9010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9000000000000000000000000000000000000000000000000000000000000000200
-
-
-      Instructions:
-      |- HEADER(0, 1)
-      |- DOWN(SubstateId { hash:
- 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2, index: 1 })
-      |- SYSCALL(0x00000000000000000000000000000000000000000000000000000000000000fade)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
- 9999999999999999996 } })
-      |- END
-      |- LDOWN(2)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
- 9999999999999999995 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 1 }
- })
-      |- END
-      |- LDOWN(5)
-      |- UP(Tokens { rri: 0x01, owner:
- 0x04034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae2, amount: U256 { raw:
- 9999999999999999993 } })
-      |- UP(Tokens { rri: 0x01, owner:
- 0x040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9, amount: U256 { raw: 2 }
- })
-      |- END
-
-
-      HEADER(0, 1)
-      DOWN(SubstateId { hash:
- 0x4b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d2, index: 1 })
- SYSCALL(0x00000000000000000000000000000000000000000000000000000000000000fade) UP(Tokens { rri:
- xrd_rb1qya85pwq, owner: brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73,
- amount: 9.0000 }) END LDOWN(2) UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens
- { rri: xrd_rb1qya85pwq, owner:
- brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk, amount: 0.0000 }) END
- LDOWN(5) UP(Tokens { rri: xrd_rb1qya85pwq, owner:
- brx1qsp5egjv9dcqpapeegsuhvgmq3x537gvnpaj4mnxpz39wzjxvcfd4csdkqd73, amount: 9.0000 }) UP(Tokens
- { rri: xrd_rb1qya85pwq, owner:
- brx1qsp52jtlsr8jcj2js6s5v9utc2k349fr928uu3v9d32avackekszpwgwkayzk, amount: 0.0000 }) END
- */
-static void test_success_transfer_transfer_with_change_transfer_with_change(void **state) {
-    (void) state;
-
-    expected_instruction_t expected_instructions[] = {
-        {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
-            .instruction_type = INS_HEADER,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
-            .instruction_type = INS_DOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
-            .instruction_type = INS_SYSCALL,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000002",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffb",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b90"
-                       "000000000000000000000000000000000000000000000000000000000000001",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 5,
-            .ins_hex = "0500000005",
-            .instruction_type = INS_LDOWN,
-            .substate_type = IRRELEVANT,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fff9",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 69,
-            .ins_hex = "010301040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b90"
-                       "000000000000000000000000000000000000000000000000000000000000002",
-            .instruction_type = INS_UP,
-            .substate_type = SUBSTATE_TYPE_TOKENS,
-        },
-        {
-            .ins_len = 1,
-            .ins_hex = "00",
-            .instruction_type = INS_END,
-            .substate_type = IRRELEVANT,
-        },
-    };
-
-    test_vector_t test_vector = (test_vector_t){
-        .total_number_of_instructions = 13,
-        .expected_instructions = expected_instructions,
-        .expected_result = EXPECTED_RESULT_SUCCESS,
-        .expected_success =
-            {
-                .my_public_key_hex =
-                    "0345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
-                .expected_tx_fee = "64222",
-                .expected_total_xrd_amount = "30000000000000064206",
-                .expected_hash =
-                    {
-                        // clang-format off
-      0x52, 0xe8, 0x97, 0x42, 0x10, 0xec, 0x91, 0xae,
-      0x34, 0x9b, 0x7d, 0x9c, 0x01, 0x6f, 0xcd, 0xfc,
-      0x24, 0x08, 0xb3, 0x99, 0x4d, 0xbc, 0xa8, 0x9d,
-      0x0a, 0x81, 0xdc, 0x0e, 0x19, 0x75, 0xa1, 0x3b
-                        // clang-format on
-                    },  //         expected hash:
-                        //         52e8974210ec91ae349b7d9c016fcdfc2408b3994dbca89d0a81dc0e1975a13b
-            },
-    };
-
-    do_test_parse_tx(test_vector);
-}
-
 static void test_failure_missing_header(void **state) {
     (void) state;
 
     expected_instruction_t expected_instructions[] = {
         // Missing header
         {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
+            .ins_hex = "074b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000000de0b6b3a7640000",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
@@ -1352,14 +379,13 @@ static void test_failure_invalid_header_invalid_version(void **state) {
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0aff01",  // invalid version byte 0xff instead of valid 0x00 (second
-                                  // byte, "flag" byte is valid though)
+            // invalid ins_hex, invalid version byte 0xff instead of valid 0x00 (second
+            // byte, "flag" byte is valid though)
+            .ins_hex = "0dff01",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
@@ -1372,11 +398,11 @@ static void test_failure_invalid_header_invalid_version(void **state) {
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
         .expected_failure = {
-            .expected_failure_outcome = { 
+            .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
                 .parse_failure = {
                     .outcome_type = PARSE_INS_INVALID_HEADER,
-                }
+                 }
             },
             .index_of_failing_instruction = 0,
         },
@@ -1391,36 +417,29 @@ static void test_failure_invalid_header_invalid_flag(void **state) {
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0002",  // invalid "flag" byte: 0x02 instead of valid 0x01 ("version"
-                                  // byte is valid though.)
+            // invalid ins_hex, invalid "flag" byte: 0x02 instead of valid 0x01 ("version"
+            // byte is valid though.)
+            .ins_hex = "0d0002",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    // clang-format off
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 2,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
         .expected_failure = {
             .index_of_failing_instruction = 0,
-            .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
-                .parse_failure = {
-                    .outcome_type = PARSE_INS_INVALID_HEADER,
-                }
-            }
-        }
-    };
-    // clang-format on
+            .expected_failure_outcome = {.outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                                         .parse_failure = {
+                                             .outcome_type = PARSE_INS_INVALID_HEADER,
+                                         }}}};
 
     do_test_parse_tx(test_vector);
 }
@@ -1431,20 +450,17 @@ static void test_failure_no_fee_in_tx(void **state) {
     // This tx lacks the SYSCALL instruction, containing the tx fee.
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000000de0b6b3a7640000",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
@@ -1452,19 +468,19 @@ static void test_failure_no_fee_in_tx(void **state) {
     };
 
     uint16_t total_number_of_instructions = 3;
-    // clang-format off
+
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
         .expected_failure = {
-            .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE,
-            },
-            .index_of_failing_instruction = total_number_of_instructions - 1, // will not fail until last INS has been parsed.
-        }
-    };
-    // clang-format on
+            .expected_failure_outcome =
+                {
+                    .outcome_type = PARSE_PROCESS_INS_TX_DOES_NOT_CONTAIN_TX_FEE,
+                },
+            .index_of_failing_instruction =
+                total_number_of_instructions - 1,  // will not fail until last INS has been parsed.
+        }};
 
     do_test_parse_tx(test_vector);
 }
@@ -1475,56 +491,41 @@ static void test_failure_invalid_syscall_too_few_bytes(void **state) {
     // This tx contains an invalid SYSCALL instruction => fail to parse tx fee
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
-                       "0000001",
+            .ins_hex = "074b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "0901000000000000000000000000000000000000000000000000000000000000000"
-                       "007",  // invalid, expected 0x0921, where `0x09` denotes `SYSCALL`
-                               // and `0x21`, being hex for 0d33, telling us SYSCALL
-                               // contains of 33 bytes, instead this hex specifies 0x01.
+            .ins_hex = "01000107",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 69,
-            .ins_hex = "01030104034ca24c2b7000f439ca21cbb11b044d48f90c987b2aee6608a2570a466"
-                       "612dae20"
-                       "000000000000000000000000000000000000000000000008ac7230489e7fffc",
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000000de0b6b3a7640000",
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    // clang-format off
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 5,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
-        .expected_failure = {
-            .index_of_failing_instruction = 2, 
-            .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL,
-            }
-        }
-    };
-    // clang-format on
+        .expected_failure = {.index_of_failing_instruction = 2,
+                             .expected_failure_outcome = {
+                                 .outcome_type = PARSE_PROCESS_INS_PARSE_TX_FEE_FROM_SYSCALL_FAIL,
+                             }}};
 
     do_test_parse_tx(test_vector);
 }
@@ -1534,19 +535,16 @@ static void test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_coun
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
@@ -1554,21 +552,19 @@ static void test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_coun
     };
 
     uint16_t total_number_of_instructions = 3;
-    // clang-format off
+
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = total_number_of_instructions,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
         .expected_failure = {
             .contains_misleading_tx_size_used_to_trigger_failure = true,
-            .misleading_tx_size_used_to_trigger_failure = 123456789, // we mislead here, actual size is 39 bytes.
-            .index_of_failing_instruction = total_number_of_instructions - 1, // fail at last
+            .misleading_tx_size_used_to_trigger_failure =
+                123456789,  // we mislead here, actual size is 39 bytes.
+            .index_of_failing_instruction = total_number_of_instructions - 1,  // fail at last
             .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH,
-            }
-        }
-    };
-    // clang-format on
+            }}};
 
     do_test_parse_tx(test_vector);
 }
@@ -1578,40 +574,35 @@ static void test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_cou
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    // clang-format off
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 3,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
         .expected_failure = {
             .contains_misleading_tx_size_used_to_trigger_failure = true,
-            .misleading_tx_size_used_to_trigger_failure = 5, // we mislead here, actual size is 39 bytes.
-            .index_of_failing_instruction = 1, // fail at second, because already after second we have parsed too many bytes.
+            .misleading_tx_size_used_to_trigger_failure =
+                5,  // we mislead here, actual size is 39 bytes.
+            .index_of_failing_instruction =
+                1,  // fail at second, because already after second we have parsed too many bytes.
             .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_BYTE_COUNT_MISMATCH,
-            }
-        }
-    };
-    // clang-format on
+            }}};
 
     do_test_parse_tx(test_vector);
 }
@@ -1621,55 +612,74 @@ static void test_failure_unrecognized_instruction(void **state) {
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
-                       "0000001",
+            .ins_hex = "074b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = "ff",
             .instruction_type = 0xff,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    // clang-format off
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 5,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
-        .expected_failure = {
-            .index_of_failing_instruction = 3, 
-            .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
-                .parse_failure = {
-                    .outcome_type = PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE,
-                    .unrecognized_instruction_type_value =  0xff,
-                }
-            }
-        }
+        .expected_failure = {.index_of_failing_instruction = 3,
+                             .expected_failure_outcome = {
+                                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                                 .parse_failure = {
+                                     .outcome_type = PARSE_INS_FAIL_UNRECOGNIZED_INSTRUCTION_TYPE,
+                                     .unrecognized_instruction_type_value = 0xff,
+                                 }}}};
+
+    do_test_parse_tx(test_vector);
+}
+
+static void test_failure_extra_bytes_after_instruction(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_hex = "0d0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex =
+                "07a0686a487f9d3adf4892a358e4460cda432068f069e5e9f4c815af21bc3dd1d60000000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
     };
-    // clang-format on
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 2,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
+        .expected_failure = {
+            .index_of_failing_instruction = 1,
+            .expected_failure_outcome = {.outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                                         .parse_failure = {
+                                             .outcome_type = PARSE_INS_CONTAINS_EXTRA_BYTES,
+                                         }}}};
 
     do_test_parse_tx(test_vector);
 }
@@ -1680,77 +690,75 @@ static void test_failure_unsupported_instruction(char *unsupported_as_hex) {
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
-                       "0000001",
+            .ins_hex = "074b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = unsupported_as_hex,
             .instruction_type = unsupported_instruction,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    // clang-format off
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 5,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
-        .expected_failure = {
-            .index_of_failing_instruction = 3, 
-            .expected_failure_outcome = {
-                .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
-                .parse_failure = {
-                    .outcome_type = PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE,
-                    .unsupported_instruction_type_value = unsupported_instruction,
-                }
-            }
-        }
-    };
-    // clang-format on
+        .expected_failure = {.index_of_failing_instruction = 3,
+                             .expected_failure_outcome = {
+                                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
+                                 .parse_failure = {
+                                     .outcome_type = PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE,
+                                     .unsupported_instruction_type_value = unsupported_instruction,
+                                 }}}};
 
     do_test_parse_tx(test_vector);
 }
 
-static void test_failure_unsupported_instruction_vdown_0x02(void **state) {
+static void test_failure_unsupported_instruction_lread_0x04(void **state) {
     (void) state;
-    test_failure_unsupported_instruction("02");
+    test_failure_unsupported_instruction("04");
 }
 
-static void test_failure_unsupported_instruction_vdownarg_0x03(void **state) {
+static void test_failure_unsupported_instruction_lvread_0x06(void **state) {
     (void) state;
-    test_failure_unsupported_instruction("03");
+    test_failure_unsupported_instruction("06");
 }
 
-static void test_failure_unsupported_instruction_sig_0x07(void **state) {
+static void test_failure_unsupported_instruction_vdown_0x09(void **state) {
     (void) state;
-    test_failure_unsupported_instruction("07");
+    test_failure_unsupported_instruction("09");
 }
 
-static void test_failure_unsupported_instruction_downall_0x08(void **state) {
+static void test_failure_unsupported_instruction_lvdown_0x0a(void **state) {
     (void) state;
-    test_failure_unsupported_instruction("08");
+    test_failure_unsupported_instruction("0a");
+}
+
+static void test_failure_unsupported_instruction_readindex_0x0e(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("0e");
+}
+
+static void test_failure_unsupported_instruction_downindex_0x0f(void **state) {
+    (void) state;
+    test_failure_unsupported_instruction("0f");
 }
 
 static void test_failure_unrecognized_substate_type(void **state) {
@@ -1758,182 +766,190 @@ static void test_failure_unrecognized_substate_type(void **state) {
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d20"
-                       "0000001",
+            .ins_hex = "074b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 2,
-            .ins_hex = "01ff",  // 0x01 is INS_UP, and 0xff is an unrecognized substate type
+            .ins_hex = "020001ff",  // 0x02 is INS_UP, and 0xff is an unrecognized substate type
             .instruction_type = INS_UP,
             .substate_type = 0xff,  // Unrecognized
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    // clang-format off
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 5,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
-         .expected_failure = {
-            .index_of_failing_instruction = 3, 
+        .expected_failure = {
+            .index_of_failing_instruction = 3,
             .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
                 .parse_failure = {
                     .outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
-                    .substate_failure =  {
-                        .outcome_type = PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE,
-                        .unrecognized_substate_type_value = 0xff,
-                    },
-                }
-            }
-        }
-    };
-    // clang-format on
+                    .substate_failure =
+                        {
+                            .outcome_type = PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE,
+                            .unrecognized_substate_type_value = 0xff,
+                        },
+                }}}};
 
     do_test_parse_tx(test_vector);
 }
 
 static void test_failure_unsupported_substate_type(char *unsupported_ins_as_hex) {
     uint8_t unsupported_substate;
-    hex_to_bin(unsupported_ins_as_hex + 2, &unsupported_substate, 1);
+    hex_to_bin(unsupported_ins_as_hex + strlen(unsupported_ins_as_hex) - 2,
+               &unsupported_substate,
+               1);
 
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 37,
-            .ins_hex = "044b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
+            .ins_hex = "074b95e6aa95cae5010419b986e8913a5c9628647b0ea21d977dc96c4baa4ef2d200000001",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "092100000000000000000000000000000000000000000000000000000000000000fade",
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000000000000000fade",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 2,
             .ins_hex = unsupported_ins_as_hex,
             .instruction_type = INS_UP,
             .substate_type = unsupported_substate,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
         },
     };
 
-    // clang-format off
     test_vector_t test_vector = (test_vector_t){
         .total_number_of_instructions = 5,
         .expected_instructions = expected_instructions,
         .expected_result = EXPECTED_FAILURE_REASON_SPECIFIC_INSTRUCTION,
-         .expected_failure = {
-            .index_of_failing_instruction = 3, 
+        .expected_failure = {
+            .index_of_failing_instruction = 3,
             .expected_failure_outcome = {
                 .outcome_type = PARSE_PROCESS_INS_FAILED_TO_PARSE,
                 .parse_failure = {
                     .outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
-                    .substate_failure =  {
-                        .outcome_type = PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE,
-                        .unsupported_substate_type_value = unsupported_substate,
-                    },
-                }
-            }
-        }
-    };
-    // clang-format on
+                    .substate_failure =
+                        {
+                            .outcome_type = PARSE_SUBSTATE_FAIL_UNSUPPORTED_SUBSTATE_TYPE,
+                            .unsupported_substate_type_value = unsupported_substate,
+                        },
+                }}}};
 
     do_test_parse_tx(test_vector);
 }
 
-static void test_failure_unsupported_substate_type_re_address_0x00(void **state) {
+static void test_failure_unsupported_substate_type_0x00(void **state) {
     (void) state;
-    test_failure_unsupported_substate_type(
-        "0100");  // 01 for INS_UP, 00 for substate type RE_ADDRESS.
+    test_failure_unsupported_substate_type("02000000");
 }
 
-static void test_failure_unsupported_substate_type_token_definition_0x02(void **state) {
+static void test_failure_unsupported_substate_type_0x01(void **state) {
     (void) state;
-    test_failure_unsupported_substate_type(
-        "0102");  // 01 for INS_UP, 02 for substate type TOKEN_DEFINITION.
+    test_failure_unsupported_substate_type("02000001");
 }
 
-static void test_failure_unsupported_substate_type_validator_0x05(void **state) {
+static void test_failure_unsupported_substate_type_0x02(void **state) {
     (void) state;
-    test_failure_unsupported_substate_type(
-        "0105");  // 01 for INS_UP, 05 for substate type VALIDATOR.
+    test_failure_unsupported_substate_type("02000002");
 }
 
-static void test_failure_unsupported_substate_type_unique_0x06(void **state) {
+static void test_failure_unsupported_substate_type_0x03(void **state) {
     (void) state;
-    test_failure_unsupported_substate_type("0106");  // 01 for INS_UP, 06 for substate type UNIQUE.
+    test_failure_unsupported_substate_type("02000003");
 }
 
-static void test_failure_unsupported_substate_type_exiting_stake_0x0e(void **state) {
+static void test_failure_unsupported_substate_type_0x04(void **state) {
     (void) state;
-    test_failure_unsupported_substate_type(
-        "010e");  // 01 for INS_UP, 0e for substate type EXITING STAKE.
+    test_failure_unsupported_substate_type("02000004");
+}
+
+static void test_failure_unsupported_substate_type_0x05(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("02000005");
+}
+
+static void test_failure_unsupported_substate_type_0x0a(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("0200000a");
+}
+
+static void test_failure_unsupported_substate_type_0x0b(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("0200000b");
+}
+
+static void test_failure_unsupported_substate_type_0x0c(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("0200000c");
+}
+
+static void test_failure_unsupported_substate_type_0x0d(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("0200000d");
+}
+
+static void test_failure_unsupported_substate_type_0x0f(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("0200000f");
+}
+
+static void test_failure_unsupported_substate_type_0x10(void **state) {
+    (void) state;
+    test_failure_unsupported_substate_type("02000010");
 }
 
 static void base_test_failure_parse_token(parse_tokens_outcome_t tokens_failure,
-                                          char *ins_hex_invalid_up_tokens,
-                                          size_t ins_hex_invalid_up_tokens_len) {
+                                          char *ins_hex_invalid_up_tokens) {
     expected_instruction_t expected_instructions[] = {
         {
-            .ins_len = 3,
-            .ins_hex = "0a0001",
+            .ins_hex = "0d0001",
             .instruction_type = INS_HEADER,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 37,
-            .ins_hex = "04c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
+            .ins_hex = "07c1e268b8b61ce5688d039aefa1e5ea6612a6c4d3b497713582916b533d6c502800000003",
             .instruction_type = INS_DOWN,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = 35,
-            .ins_hex = "0921000000000000000000000000000000000000000000000038821089088b6063da18",
+            .ins_hex = "010021000000000000000000000000000000000000000000000038821089088b6063da18",
             .instruction_type = INS_SYSCALL,
             .substate_type = IRRELEVANT,
         },
         {
-            .ins_len = ins_hex_invalid_up_tokens_len,
             .ins_hex = ins_hex_invalid_up_tokens,
             .instruction_type = INS_UP,
             .substate_type = SUBSTATE_TYPE_TOKENS,
         },
         {
-            .ins_len = 1,
             .ins_hex = "00",
             .instruction_type = INS_END,
             .substate_type = IRRELEVANT,
@@ -1959,98 +975,98 @@ static void base_test_failure_parse_token(parse_tokens_outcome_t tokens_failure,
     do_test_parse_tx(test_vector);
 }
 
-static void base_test_failure_parse_tokens_invalid_rri(
+static void base_test_failure_parse_tokens_invalid_resource(
     parse_address_failure_reason_e underlying_rri_failure,
-    char *ins_hex_invalid_up_tokens,
-    size_t ins_hex_invalid_up_tokens_len) {
+    char *ins_hex_invalid_up_tokens) {
     base_test_failure_parse_token(
         (parse_tokens_outcome_t){
-            .outcome_type = PARSE_TOKENS_FAILURE_PARSE_RRI,
-            .rri_parse_failure_reason = underlying_rri_failure,
+            .outcome_type = PARSE_TOKENS_FAILURE_PARSE_RESOURCE,
+            .resource_parse_failure_reason = underlying_rri_failure,
         },
-        ins_hex_invalid_up_tokens,
-        ins_hex_invalid_up_tokens_len);
+        ins_hex_invalid_up_tokens);
 }
 
-static void test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff(void **state) {
-    (void) state;
-    // 01=INS_UP, 03=TOKENS, ff=first byte of Tokens, being Address, specifying an unrecognized
-    // Address Type value of 0xff
-    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE,
-                                               "0103ff",
-                                               3);
-}
-
-static void test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00(
+static void test_failure_parse_tokens_invalid_resource_unrecognized_address_type_0xff(
     void **state) {
     (void) state;
-    // 01=INS_UP, 03=TOKENS, 00=first byte of Tokens, being Address, specifying an unsupported
-    // Address Type value of 0x00 (RE_ADDRESS_SYSTEM).
-    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE,
-                                               "010300",
-                                               3);
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, ff=specifying an
+    // unrecognized Address Type value of 0xff
+    base_test_failure_parse_tokens_invalid_resource(
+        PARSE_ADDRESS_FAIL_UNRECOGNIZED_ADDRESS_TYPE,
+        "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427caff");
 }
 
-static void test_failure_parse_tokens_invalid_rri_hashed_key_too_short(void **state) {
+static void test_failure_parse_tokens_invalid_resource_usupported_address_type_system_0x00(
+    void **state) {
     (void) state;
-    // 01=INS_UP, 03=TOKENS, 03=first byte of Tokens, being Address, specifying an HashedKeyNonce
-    // and `0xff` being just one byte instead of expected 26 bytes => too short.
-    base_test_failure_parse_tokens_invalid_rri(PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES,
-                                               "010303ff",
-                                               4);
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, 00=specifying an
+    // unsupported Address Type value of 0x00 (RE_ADDRESS_SYSTEM).
+    base_test_failure_parse_tokens_invalid_resource(
+        PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE,
+        "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca00");
 }
 
-static void test_failure_parse_tokens_invalid_rri_incompatible_address_type(void **state) {
+static void test_failure_parse_tokens_invalid_resource_hashed_key_too_short(void **state) {
     (void) state;
-    // 01=INS_UP, 03=TOKENS, 04=first byte of Tokens, being Address, specifying an PublicKey, which
-    // is incompatible with RRI.
-    base_test_failure_parse_tokens_invalid_rri(
-        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RRI,
-        "0103040345497f80cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9",
-        36);
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, 03=specifying an
+    // HashedKeyNonce and `0xff` being just one byte instead of expected 26 bytes => too short.
+    base_test_failure_parse_tokens_invalid_resource(
+        PARSE_ADDRESS_FAIL_HASHEDKEY_NOT_ENOUGH_BYTES,
+        "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca03ff");
+}
+
+static void test_failure_parse_tokens_invalid_resource_incompatible_address_type(void **state) {
+    (void) state;
+    // 01=INS_UP, 05=TOKENS, 00=RESERVED,
+    // OWNER=0402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca, 04=fspecifying an
+    // PublicKey, which is incompatible with RRI.
+    base_test_failure_parse_tokens_invalid_resource(
+        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_WITH_RESOURCE,
+        "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca040345497f80"
+        "cf2c495286a146178bc2ad1a95232a8fce45856c55d67716cda020b9");
 }
 
 static void base_test_failure_parse_tokens_invalid_owner(
     parse_address_failure_reason_e underlying_owner_failure,
-    char *ins_hex_invalid_up_tokens,
-    size_t ins_hex_invalid_up_tokens_len) {
+    char *ins_hex_invalid_up_tokens) {
     base_test_failure_parse_token(
         (parse_tokens_outcome_t){
             .outcome_type = PARSE_TOKENS_FAILURE_PARSE_OWNER,
             .owner_parse_failure_reason = underlying_owner_failure,
         },
-        ins_hex_invalid_up_tokens,
-        ins_hex_invalid_up_tokens_len);
+        ins_hex_invalid_up_tokens);
 }
 
 static void test_failure_parse_tokens_invalid_owner_address_type_0x01_system(void **state) {
     (void) state;
     base_test_failure_parse_tokens_invalid_owner(
-        PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS,
-        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
-        "01",  // specifying RE_ADDRESS_SYSTEM (used for RRI), which is invalid for account address
-        4);
+        PARSE_ADDRESS_FAIL_UNSUPPORTED_ADDRESS_TYPE,
+        "0200020600"  // valid start of tokens:  02=INS_UP, 0002=SIZE, 06=TOKENS, 00=RESERVED,
+        "00"  // specifying RE_ADDRESS_SYSTEM (used for RRI), which is invalid for account address
+    );
 }
 
 static void test_failure_parse_tokens_invalid_owner_address_type_0x03_hashed_pubkey(void **state) {
     (void) state;
     base_test_failure_parse_tokens_invalid_owner(
         PARSED_ADDRESS_FAIL_EXPECTED_TYPE_COMPATIBLE_ACCOUNT_OR_VALIDATOR_ADDRESS,
-        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
-        "03ababdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",  // specifying
-                                                                   // RE_ADDRESS_HASHED_KEY_NONCE
-                                                                   // (used for RRI), which is
-                                                                   // invalid for account address
-        30);
+        "0200020600"  // valid start of tokens:  01=INS_UP, 05=TOKENS, 00=RESERVED,
+        "03ababdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"  // specifying
+                                                                  // RE_ADDRESS_HASHED_KEY
+                                                                  // (used for RRI), which is
+                                                                  // invalid for account address
+    );
 }
 
 static void test_failure_parse_tokens_invalid_owner_too_few_bytes(void **state) {
     (void) state;
     base_test_failure_parse_tokens_invalid_owner(
         PARSE_ADDRESS_FAIL_PUBKEY_NOT_ENOUGH_BYTES,
-        "010301"  // valid start of tokens:  01=INS_UP, 03=TOKENS, 01=RE_ADDRESS_SYSTEM (valid RRI)
-        "04ff",   // valid type, but too few bytes
-        5);
+        "020002060004"  // valid start of tokens:  02=INS_UP, 06=TOKENS, 00=RESERVED,
+        "04ff");        // valid type, but too few bytes
 }
 
 static void base_test_rri_format_hrp(char *hashed_key_hex,
@@ -2087,7 +1103,7 @@ static void test_rri_format_hrp_6_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "stella_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsa766sk");
+        "stella_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsynma8s");
 }
 
 static void test_rri_format_hrp_7_chars(void **state) {
@@ -2097,7 +1113,7 @@ static void test_rri_format_hrp_7_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "marantz_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsypduqu");
+        "marantz_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsavvmh6");
 }
 
 static void test_rri_format_hrp_8_chars(void **state) {
@@ -2107,7 +1123,7 @@ static void test_rri_format_hrp_8_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "nintendo_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsrepq7q");
+        "nintendo_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs65q8fx");
 }
 
 static void test_rri_format_hrp_9_chars(void **state) {
@@ -2117,7 +1133,7 @@ static void test_rri_format_hrp_9_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "deadlocks_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhssxkuvg");
+        "deadlocks_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsfthmmw");
 }
 
 static void test_rri_format_hrp_10_chars(void **state) {
@@ -2127,7 +1143,7 @@ static void test_rri_format_hrp_10_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "cryptocarp_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs22mk4k");
+        "cryptocarp_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsn863zs");
 }
 
 static void test_rri_format_hrp_11_chars(void **state) {
@@ -2137,7 +1153,7 @@ static void test_rri_format_hrp_11_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "frostbitten_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs9hvdqj");
+        "frostbitten_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsu6d2h5");
 }
 
 static void test_rri_format_hrp_12_chars(void **state) {
@@ -2147,7 +1163,7 @@ static void test_rri_format_hrp_12_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "jeopordizing_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs97d2cr");
+        "jeopordizing_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsunvd09");
 }
 
 static void test_rri_format_hrp_13_chars(void **state) {
@@ -2157,7 +1173,7 @@ static void test_rri_format_hrp_13_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "paradoxically_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs5t2ggh");
+        "paradoxically_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsdxt0l3");
 }
 
 static void test_rri_format_hrp_14_chars(void **state) {
@@ -2167,7 +1183,7 @@ static void test_rri_format_hrp_14_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "transformation_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsp2ls68");
+        "transformation_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsc87hdp");
 }
 
 static void test_rri_format_hrp_15_chars(void **state) {
@@ -2177,7 +1193,7 @@ static void test_rri_format_hrp_15_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "insignificantly_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsh2e8gx");
+        "insignificantly_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsw8cqlq");
 }
 
 static void test_rri_format_hrp_16_chars(void **state) {
@@ -2187,7 +1203,491 @@ static void test_rri_format_hrp_16_chars(void **state) {
     base_test_rri_format_hrp_abba_deadbeef(
         hrp,
         strlen(hrp),
-        "characterisation_rb1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhsdyejyy");
+        "characterisation_tr1qw4m4h4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhs5fc4nz");
+}
+
+/**
+ * @brief Test of successful parsing of TX
+ */
+static void test_success_token_transfer_only_xrd(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_hex = "0d0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "07a0686a487f9d3adf4892a358e4460cda432068f069e5e9f4c815af21bc3dd1d600000000",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "01002100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca0100000000000000000000000000000000000000000000d3c1e44bf21f03700000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "080000",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca0100000000000000000000000000000000000000000000d38bae82445924d00000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "0200000600040356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597"
+                       "bb70100000000000000000000000000000000000000000000003635c9adc5dea00000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "010021010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        }};
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 12,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
+        .expected_success = {
+            .my_public_key_hex =
+                "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
+            .expected_tx_fee = "50684735185526206758912",
+            .expected_total_xrd_amount = "2049677735185526206758912",
+            .expected_hash =
+                {
+                    0x0b, 0xc5, 0x21, 0xbd, 0x59, 0x54, 0xb6, 0x6a, 0x1a, 0x0c, 0x7c,
+                    0xe1, 0x01, 0x3a, 0xd6, 0x7c, 0xe2, 0x8e, 0x37, 0x9b, 0xe1, 0xc4,
+                    0xf0, 0x33, 0x6d, 0xd9, 0xc6, 0x83, 0x58, 0x89, 0xb2, 0x31,
+                },
+        }};
+
+    do_test_parse_tx(test_vector);
+}
+
+/**
+ * @brief Test of successful parsing of TX
+ */
+static void test_success_token_transfer_only_xrd_with_msg(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_hex = "0d0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "07973b739777f86d706b1ff85aaab35065e8de03da0fe83bbedf30a0acc0ec4ea500000001",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "01002100000000000000000000000000000000000000000000000deadde0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca0100000000000000000000000000000000000000000000d38ba0a18da57d6c0000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "080000",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca0100000000000000000000000000000000000000000000d38b5b3dfc2338780000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "0200000600040356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597"
+                       "bb7010000000000000000000000000000000000000000000000004563918244f40000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "010021010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "0c000548656c6c6f",
+            .instruction_type = INS_MSG,
+            .substate_type = IRRELEVANT,
+        }};
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 13,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
+        .expected_success = {
+            .my_public_key_hex =
+                "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
+            .expected_tx_fee = "65722290370113311866880",
+            .expected_total_xrd_amount = "2063708290370113311866880",
+            .expected_hash =
+                {
+                    0x39, 0x72, 0x63, 0xba, 0x56, 0xb6, 0xe6, 0x94, 0x16, 0x30, 0x49,
+                    0x0b, 0x88, 0x83, 0x81, 0x45, 0xb7, 0xc1, 0x08, 0xfc, 0xcb, 0x24,
+                    0x41, 0xee, 0x2d, 0xdd, 0xae, 0x01, 0xe8, 0xa4, 0x26, 0x82,
+                },
+        }};
+
+    do_test_parse_tx(test_vector);
+}
+
+/**
+ * @brief Test of successful parsing of TX
+ */
+static void test_success_token_transfer_xrd_and_non_xrd_mixed(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_hex = "0d0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "076ae6ca1c740d4b7d1a9d07ddad52ca62226851ac9f595e390a6e5ab3bf4f626b00000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "01002100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "07973b739777f86d706b1ff85aaab35065e8de03da0fe83bbedf30a0acc0ec4ea500000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "07a0686a487f9d3adf4892a358e4460cda432068f069e5e9f4c815af21bc3dd1d600000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "07b1f4197b20e6c64bee1f751b76a779293481c910f413c0fcafc0b993e10b137100000000",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca0100000000000000000000000000000000000000000000d37ff8e81cc3e8700000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "0200000600040356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597"
+                       "bb7010000000000000000000000000000000000000000000000004563918244f40000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "07c809308c578cbb2dc9e38ad49f9ac6b15826be4870bd5995e4e1872c3f0abe2a00000000",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca039aee5d3daebf6b132c0c58b241f25f198ddcac69421759cb1c92000000000000000000"
+                       "0000000000000000000000000000000000000000000005",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "0200000600040356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597"
+                       "bb7039aee5d3daebf6b132c0c58b241f25f198ddcac69421759cb1c92000000000000000000"
+                       "0000000000000000000000000000000000000000000002",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "010021010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        }};
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 17,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
+        .expected_success = {
+            .my_public_key_hex =
+                "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
+            .expected_tx_fee = "50684735185526206758912",
+            .expected_total_xrd_amount = "1049465735185526206758912",
+            .expected_hash =
+                {
+                    0x97, 0x1e, 0xaa, 0x2a, 0x95, 0x93, 0x9c, 0x37, 0x99, 0x9f, 0xc0,
+                    0x70, 0x5c, 0x53, 0x5f, 0x20, 0xa4, 0x9a, 0x88, 0xea, 0xb5, 0x39,
+                    0xed, 0xed, 0x82, 0xac, 0x4e, 0x8c, 0x13, 0xbc, 0xe2, 0xbf,
+                },
+        }};
+
+    do_test_parse_tx(test_vector);
+}
+
+/**
+ * @brief Test of successful parsing of TX
+ */
+static void test_success_xrd_transfer_to_self(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_hex = "0d0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "070c7e6ad291944d3fdf50cd278651e4d20ad28536b529004008a4c3938dce092c00000003",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "01002100000000000000000000000000000000000000000000000abbade0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "076ae6ca1c740d4b7d1a9d07ddad52ca62226851ac9f595e390a6e5ab3bf4f626b00000000",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca0100000000000000000000000000000000000000000000d380228a40dede9c0000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000004563918244f40000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "010021010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02000006000402935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe42"
+                       "7ca010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        }};
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 11,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
+        .expected_success = {
+            .my_public_key_hex =
+                "02935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca",
+            .expected_tx_fee = "50684735185526206758912",
+            .expected_total_xrd_amount = "50684735185526206758912",
+            .expected_hash =
+                {
+                    0xa9, 0x56, 0xe6, 0xf6, 0xb4, 0x8f, 0xfb, 0xfc, 0xb8, 0xd6, 0x29,
+                    0x37, 0x4c, 0x56, 0x1c, 0x71, 0xcf, 0x91, 0xa0, 0x64, 0x45, 0xa1,
+                    0xda, 0x1c, 0x06, 0x8c, 0xcf, 0xb4, 0xbf, 0x12, 0x4d, 0x31,
+                },
+        }};
+
+    do_test_parse_tx(test_vector);
+}
+
+/**
+ * @brief Test of successful parsing of TX
+ */
+static void test_success_token_transfer_and_stake(void **state) {
+    (void) state;
+
+    expected_instruction_t expected_instructions[] = {
+        {
+            .ins_hex = "0d0001",
+            .instruction_type = INS_HEADER,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "076a950e22681f3db30ab6fd4714815443fb680249ea07d65adee004a46a80daac00000000",
+            .instruction_type = INS_DOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "01002100000000000000000000000000000000000000000000000000017efb8762c98000",
+            .instruction_type = INS_SYSCALL,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "0200450600040385be69c03154ba40a0a3ea8d06d31e256b1bdb4f6753543db88d2b173f4b5"
+                       "dfd01000000000000000000000000000000000000000000000036326a5e8f76348000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "080000",
+            .instruction_type = INS_LDOWN,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "0200450600040385be69c03154ba40a0a3ea8d06d31e256b1bdb4f6753543db88d2b173f4b5"
+                       "dfd0100000000000000000000000000000000000000000000002b5adba234b0148000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_TOKENS,
+        },
+        {
+            .ins_hex = "05004529f251379200c559e01b8e3fb7b4c7cf9bf23279dc6ebd26ba20a5f4e88c772e00000"
+                       "0050385be69c03154ba40a0a3ea8d06d31e256b1bdb4f6753543db88d2b173f4b5dfd",
+            .instruction_type = INS_VREAD,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "05004529f251379200c559e01b8e3fb7b4c7cf9bf23279dc6ebd26ba20a5f4e88c772e00000"
+                       "0080385be69c03154ba40a0a3ea8d06d31e256b1bdb4f6753543db88d2b173f4b5dfd",
+            .instruction_type = INS_VREAD,
+            .substate_type = IRRELEVANT,
+        },
+        {
+            .ins_hex = "02006507000385be69c03154ba40a0a3ea8d06d31e256b1bdb4f6753543db88d2b173f4b5df"
+                       "d040385be69c03154ba40a0a3ea8d06d31e256b1bdb4f6753543db88d2b173f4b5dfd000000"
+                       "00000000000000000000000000000000000000000ad78ebc5ac6200000",
+            .instruction_type = INS_UP,
+            .substate_type = SUBSTATE_TYPE_PREPARED_STAKE,
+        },
+        {
+            .ins_hex = "00",
+            .instruction_type = INS_END,
+            .substate_type = IRRELEVANT,
+        }};
+
+    test_vector_t test_vector = (test_vector_t){
+        .total_number_of_instructions = 11,
+        .expected_instructions = expected_instructions,
+        .expected_result = EXPECTED_RESULT_SUCCESS,
+        .expected_success = {
+            .my_public_key_hex =
+                "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
+            .expected_tx_fee = "107800000000000000",
+            .expected_total_xrd_amount = "1799621800000000000000",
+            .expected_hash =
+                {
+                    0xb6, 0x6d, 0x4f, 0x03, 0x7e, 0xf0, 0x33, 0x4d, 0x5c, 0xf0, 0xfa,
+                    0x10, 0x80, 0x58, 0xcc, 0x27, 0x36, 0x9b, 0x69, 0x56, 0x6b, 0x9c,
+                    0xc7, 0x9b, 0x76, 0x46, 0x37, 0xc5, 0x79, 0xaa, 0x37, 0x95,
+                },
+        }};
+
+    do_test_parse_tx(test_vector);
 }
 
 int main() {
@@ -2206,12 +1706,11 @@ int main() {
     };
 
     const struct CMUnitTest success_complex_tx[] = {
-        cmocka_unit_test(test_success_transfer_transfer_stake),
-        cmocka_unit_test(test_success_transfer_transfer_stake_transfer_with_change),
-        cmocka_unit_test(test_success_transfer_transfer_with_change_transfer_stake),
-        cmocka_unit_test(test_success_transfer_unstake_transfer_with_change),
-        cmocka_unit_test(test_success_transfer_transfer_with_change_unstake),
-        cmocka_unit_test(test_success_transfer_transfer_with_change_transfer_with_change),
+        cmocka_unit_test(test_success_token_transfer_and_stake),
+        cmocka_unit_test(test_success_token_transfer_only_xrd),
+        cmocka_unit_test(test_success_token_transfer_only_xrd_with_msg),
+        cmocka_unit_test(test_success_token_transfer_xrd_and_non_xrd_mixed),
+        cmocka_unit_test(test_success_xrd_transfer_to_self),
     };
 
     const struct CMUnitTest failing_txs[] = {
@@ -2222,32 +1721,44 @@ int main() {
         cmocka_unit_test(test_failure_invalid_syscall_too_few_bytes),
         cmocka_unit_test(test_failure_claiming_tx_is_larger_than_sum_of_instruction_byte_count),
         cmocka_unit_test(test_failure_claiming_tx_is_smaller_than_sum_of_instruction_byte_count),
+        cmocka_unit_test(test_failure_extra_bytes_after_instruction),
 
         // Unsupported/Invalid Instructions
         cmocka_unit_test(test_failure_unrecognized_instruction),
-        cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x02),
-        cmocka_unit_test(test_failure_unsupported_instruction_vdownarg_0x03),
-        cmocka_unit_test(test_failure_unsupported_instruction_sig_0x07),
-        cmocka_unit_test(test_failure_unsupported_instruction_downall_0x08),
+        cmocka_unit_test(test_failure_unsupported_instruction_lread_0x04),
+        cmocka_unit_test(test_failure_unsupported_instruction_lvread_0x06),
+        cmocka_unit_test(test_failure_unsupported_instruction_vdown_0x09),
+        cmocka_unit_test(test_failure_unsupported_instruction_lvdown_0x0a),
+        cmocka_unit_test(test_failure_unsupported_instruction_readindex_0x0e),
+        cmocka_unit_test(test_failure_unsupported_instruction_downindex_0x0f),
 
         // Unsupported/Invalid Substate Types
         cmocka_unit_test(test_failure_unrecognized_substate_type),
-        cmocka_unit_test(test_failure_unsupported_substate_type_re_address_0x00),
-        cmocka_unit_test(test_failure_unsupported_substate_type_token_definition_0x02),
-        cmocka_unit_test(test_failure_unsupported_substate_type_validator_0x05),
-        cmocka_unit_test(test_failure_unsupported_substate_type_unique_0x06),
-        cmocka_unit_test(test_failure_unsupported_substate_type_exiting_stake_0x0e),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x00),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x01),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x02),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x03),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x04),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x05),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x0a),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x0b),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x0c),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x0d),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x0f),
+        cmocka_unit_test(test_failure_unsupported_substate_type_0x10),
 
         // Failed to parse tokens
-        // Invalid RRI
-        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_unrecognized_address_type_0xff),
-        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_usupported_address_type_system_0x00),
-        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_hashed_key_too_short),
-        cmocka_unit_test(test_failure_parse_tokens_invalid_rri_incompatible_address_type),
         // Invalid Owner
         cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x01_system),
         cmocka_unit_test(test_failure_parse_tokens_invalid_owner_address_type_0x03_hashed_pubkey),
         cmocka_unit_test(test_failure_parse_tokens_invalid_owner_too_few_bytes),
+
+        // Invalid RRI
+        cmocka_unit_test(test_failure_parse_tokens_invalid_resource_unrecognized_address_type_0xff),
+        cmocka_unit_test(
+            test_failure_parse_tokens_invalid_resource_usupported_address_type_system_0x00),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_resource_hashed_key_too_short),
+        cmocka_unit_test(test_failure_parse_tokens_invalid_resource_incompatible_address_type),
 
     };
 

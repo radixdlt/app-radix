@@ -6,6 +6,27 @@
 // #include "../macros.h"  // ASSERT
 #include "../bridge.h"  // PRINTF
 
+typedef struct {
+    uint8_t network_id;
+    const char *account_hrp;
+    uint8_t account_hrp_len;
+    const char *validator_hrp;
+    uint8_t validator_hrp_len;
+    const char *resource_hrp;
+    uint8_t resource_hrp_len;
+} network_t;
+
+static network_t networks[] = {
+    {1, "rdx", 3, "rv", 2, "_rr", 3},     /* MAINNET */
+    {2, "tdx", 3, "tv", 2, "_tr", 3},     /* STOKENET */
+    {3, "tdx3", 4, "tv3", 3, "_tr3", 4},  /* RELEASENET */
+    {4, "tdx4", 4, "tv4", 3, "_tr4", 4},  /* RCNET */
+    {5, "tdx5", 4, "tv5", 3, "_tr5", 4},  /* MILESTONENET */
+    {6, "tdx6", 4, "tv6", 3, "_tr6", 4},  /* DEVOPSNET */
+    {7, "tdx7", 4, "tv7", 3, "_tr7", 4},  /* SANDPITNET */
+    {99, "ddx", 3, "dv", 2, "_dr", 3},    /* LOCALNET */
+};
+
 bool parse_re_address(buffer_t *buffer,
                       parse_address_failure_reason_e *failure_reason,
                       re_address_t *address) {
@@ -120,8 +141,6 @@ static bool __to_string_re_address(re_address_t *re_address,
 
                                    char *out,
                                    const size_t out_len) {
-    bool is_mainnet = false;  // TODO MAINNET change this
-
     if (rri_hrp && rri_hrp_len == 0) {
         return false;
     }
@@ -164,21 +183,13 @@ static bool __to_string_re_address(re_address_t *re_address,
                 case DISPLAY_TYPE_ACCOUNT_ADDRESS:
                     // Set HRP
                     hrp_len = ACCOUNT_ADDRESS_HRP_LENGTH;
-                    if (is_mainnet) {
-                        memmove(hrp, ACCOUNT_ADDRESS_HRP_MAINNET, hrp_len);
-                    } else {
-                        memmove(hrp, ACCOUNT_ADDRESS_HRP_BETANET, hrp_len);
-                    }
+                    memmove(hrp, ACCOUNT_ADDRESS_HRP, hrp_len);
                     memmove(data + 1, re_address->public_key.compressed, PUBLIC_KEY_COMPRESSED_LEN);
                     data_len += PUBLIC_KEY_COMPRESSED_LEN;
                     break;
                 case DISPLAY_TYPE_VALIDATOR_ADDRESS:
                     hrp_len = VALIDATOR_ADDRESS_HRP_LENGTH;
-                    if (is_mainnet) {
-                        memmove(hrp, VALIDATOR_ADDRESS_HRP_MAINNET, hrp_len);
-                    } else {
-                        memmove(hrp, VALIDATOR_ADDRESS_HRP_BETANET, hrp_len);
-                    }
+                    memmove(hrp, VALIDATOR_ADDRESS_HRP, hrp_len);
                     memmove(data, re_address->public_key.compressed, PUBLIC_KEY_COMPRESSED_LEN);
                     data_len = PUBLIC_KEY_COMPRESSED_LEN;
                     break;
@@ -189,12 +200,7 @@ static bool __to_string_re_address(re_address_t *re_address,
     bool is_rri = re_address->address_type == RE_ADDRESS_NATIVE_TOKEN ||
                   re_address->address_type == RE_ADDRESS_HASHED_KEY_NONCE;
     if (is_rri) {
-        if (is_mainnet) {
-            memmove(hrp + hrp_len, RRI_HRP_SUFFIX_MAINNET, RRI_HRP_SUFFIX_LEN);
-        } else {
-            memmove(hrp + hrp_len, RRI_HRP_SUFFIX_BETANET, RRI_HRP_SUFFIX_LEN);
-        }
-
+        memmove(hrp + hrp_len, RRI_HRP_SUFFIX, RRI_HRP_SUFFIX_LEN);
         hrp_len += RRI_HRP_SUFFIX_LEN;
     }
 

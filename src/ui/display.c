@@ -372,7 +372,7 @@ UX_FLOW(ux_display_tx_summary_flow,
         &ux_display_review_tx_summary_step,  // #1 screen: eye icon + "Review Transaction"
         &ux_display_tx_fee_amount_step,      // #2 screen: display tx fee amount
         &ux_display_approve_sign_tx_step,    // #3 screen: approve button // "Sign tx?"
-        &ux_display_reject_step);            // #4  screen: reject button // "Reject"
+        &ux_display_reject_step);            // #4 screen: reject button // "Reject"
 
 int ui_display_tx_summary(transaction_t *transaction,
                           bip32_path_t *bip32_path,
@@ -465,7 +465,7 @@ static void ui_display_tokens(tokens_t *tokens) {
     // Prepare tokens RRI
     transaction_metadata_t *tx_metadata =
         &G_context.sign_tx_info.transaction_parser.transaction_metadata;
-    if (tokens->rri.address_type == RE_ADDRESS_HASHED_KEY_NONCE) {
+    if (tokens->resource.address_type == RE_ADDRESS_HASHED_KEY_NONCE) {
         // Would be nice to avoid this global state access...
         if (tx_metadata->hrp_non_native_token_len == 0) {
             io_send_sw(ERR_DISPLAY_RRI_FAIL);
@@ -473,14 +473,14 @@ static void ui_display_tokens(tokens_t *tokens) {
         }
 
         // Would be nice to avoid this global state access...
-        if (!format_other_token_for_display(&tokens->rri,
+        if (!format_other_token_for_display(&tokens->resource,
                                             tx_metadata->hrp_non_native_token,
                                             tx_metadata->hrp_non_native_token_len)) {
             io_send_sw(ERR_DISPLAY_RRI_FAIL);
             return;
         }
     } else {
-        if (!format_native_token_for_display(&tokens->rri)) {
+        if (!format_native_token_for_display(&tokens->resource)) {
             io_send_sw(ERR_DISPLAY_RRI_FAIL);
             return;
         }
@@ -528,7 +528,7 @@ static void ui_display_stake(prepared_stake_t *prepared_stake) {
     PRINTF("START: ui_display_stake.\n");
     prepare_ui_for_new_flow();
     // Prepare 'to validator' address for display
-    if (!format_validator_address_for_display(&prepared_stake->delegate)) {
+    if (!format_validator_address_for_display(&prepared_stake->validator)) {
         io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
         return;
     }
@@ -576,8 +576,8 @@ static void ui_display_unstake(prepared_unstake_t *prepared_unstake) {
     PRINTF("START: ui_display_unstake.\n");
     prepare_ui_for_new_flow();
 
-    // Prepare 'from validator' address for display
-    if (!format_validator_address_for_display(&prepared_unstake->delegate)) {
+    // Prepare 'validator' address for display
+    if (!format_validator_address_for_display(&prepared_unstake->validator)) {
         io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
         return;
     }
