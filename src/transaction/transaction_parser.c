@@ -91,6 +91,8 @@ static bool update_tx_fee_and_total_xrd_cost_if_needed(re_ins_syscall_t *syscall
 
     // SYSCALL specifies TX fee
     uint256_t amount;
+    uint256_t tmp;
+
     if (!parse_tx_fee_from_syscall(syscall, &amount)) {
         return false;
     }
@@ -105,10 +107,12 @@ static bool update_tx_fee_and_total_xrd_cost_if_needed(re_ins_syscall_t *syscall
         // Copy over tx fee.
         copy256(&transaction->tx_fee, &amount);
 
+        // Save current amount to avoid in-place update
+        copy256(&tmp, &transaction->total_xrd_amount_incl_fee);
+
         // Add tx fee to total cost
-        add256(&amount,
-               &transaction->total_xrd_amount_incl_fee,
-               &transaction->total_xrd_amount_incl_fee);
+        add256(&amount, &tmp, &transaction->total_xrd_amount_incl_fee);
+
     } else if (sys_call_is_tx_fee_take) {
         if (!is_tx_fee_set(transaction)) {
             // Invalid state, a transaction must first specify one (and only one) SYSCALL
@@ -125,13 +129,17 @@ static bool update_tx_fee_and_total_xrd_cost_if_needed(re_ins_syscall_t *syscall
             return false;
         }
 
+        // Save current amount to avoid in-place update
+        copy256(&tmp, &transaction->tx_fee);
+
         // TX_FEE = TX_FEE - TX_FEE_RESERVE_TAKE
-        minus256(&transaction->tx_fee, &amount, &transaction->tx_fee);
+        minus256(&tmp, &amount, &transaction->tx_fee);
+
+        // Save current amount to avoid in-place update
+        copy256(&tmp, &transaction->total_xrd_amount_incl_fee);
 
         // TOTAL_XRD_COST = TOTAL_XRD_COST - TX_FEE_RESERVE_TAKE
-        minus256(&transaction->total_xrd_amount_incl_fee,
-                 &amount,
-                 &transaction->total_xrd_amount_incl_fee);
+        minus256(&tmp, &amount, &transaction->total_xrd_amount_incl_fee);
     }
 
     return true;
@@ -203,9 +211,13 @@ bool parse_and_process_instruction_from_buffer(buffer_t *buffer,
                 RE_ADDRESS_NATIVE_TOKEN;
 
         if (increment_xrd_grand_total) {
+            uint256_t tmp;
+            // Save current amount to avoid in-place update
+            copy256(&tmp, &tx_parser->transaction.total_xrd_amount_incl_fee);
+
             // Spending XRD => increment total XRD spent counter
             add256(&instruction_parser->instruction.ins_up.substate.tokens.amount,
-                   &tx_parser->transaction.total_xrd_amount_incl_fee,
+                   &tmp,
                    &tx_parser->transaction.total_xrd_amount_incl_fee);
         }
     }
