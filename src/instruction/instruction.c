@@ -14,6 +14,22 @@ static bool parse_substate_index(buffer_t *buffer, uint16_t *i16) {
     return true;
 }
 
+static bool parse_virtual_substate_id(buffer_t *buffer) {
+    uint16_t size = 0;
+
+    if (!buffer_read_u16(buffer, &size, BE)) {
+        PRINTF("Failed to read 'virtual substate size'.\n");
+        return false;
+    }
+
+    if (!buffer_seek_cur(buffer, size)) {
+        PRINTF("Failed to read 'virtual substate body'.\n");
+        return false;
+    }
+
+    return true;
+}
+
 bool parse_instruction(buffer_t *buffer,
                        parse_instruction_outcome_t *outcome,
                        re_instruction_t *instruction) {
@@ -21,7 +37,7 @@ bool parse_instruction(buffer_t *buffer,
     if (!buffer_read_u8(buffer, &re_instruction_type_value) ||
         !is_re_ins_type_known((int) re_instruction_type_value)) {
         PRINTF("ERROR unrecognized instruction type: %d\n", re_instruction_type_value);
-        outcome->outcome_type = PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE;
+        outcome->outcome_type = PARSE_INS_FAIL_UNRECOGNIZED_INSTRUCTION_TYPE;
         outcome->unrecognized_instruction_type_value = re_instruction_type_value;
         return false;
     }
@@ -79,14 +95,12 @@ bool parse_instruction(buffer_t *buffer,
             PRINTF("Finished parsing substate.\n");
             break;
         case INS_VREAD:
-            if (!parse_substate(buffer,
-                                &outcome->substate_failure,
-                                &instruction->ins_vread.substate)) {
-                PRINTF("Failed to parse substate for INS_VREAD.\n");
-                outcome->outcome_type = PARSE_INS_FAILED_TO_PARSE_SUBSTATE;
+            if (!parse_virtual_substate_id(buffer)) {
+                PRINTF("Failed to parse virtual substate id for INS_VREAD.\n");
+                outcome->outcome_type = PARSE_INS_INVALID_VIRTUAL_SUBSTATE_ID;
                 return false;
             }
-            PRINTF("Finished parsing substate.\n");
+            PRINTF("Finished parsing virtual substate id.\n");
             break;
 
         case INS_END:
@@ -144,20 +158,28 @@ bool parse_instruction(buffer_t *buffer,
                 "any instructions to burn or mint new tokens.\n");
             break;
     }
-    outcome->outcome_type = PARSE_INS_OK;
-    return true;
+
+    outcome->outcome_type = (number_of_remaining_bytes_in_buffer(buffer) == 0)
+                                ? PARSE_INS_OK
+                                : PARSE_INS_CONTAINS_EXTRA_BYTES;
+
+    return outcome->outcome_type == PARSE_INS_OK;
 }
 
 uint16_t status_word_for_failed_to_parse_ins(parse_instruction_outcome_t *failure) {
     switch (failure->outcome_type) {
         case PARSE_INS_OK:
             return SW_OK;
-        case PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE:
+        case PARSE_INS_CONTAINS_EXTRA_BYTES:
+            return ERR_CMD_SIGN_TX_PARSE_INS_EXTRA_BYTES;
+        case PARSE_INS_FAIL_UNRECOGNIZED_INSTRUCTION_TYPE:
             return ERR_CMD_SIGN_TX_UNRECOGNIZED_INSTRUCTION_TYPE;
         case PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE:
             return ERR_CMD_SIGN_TX_UNSUPPORTED_INSTRUCTION_TYPE;
         case PARSE_INS_FAILED_TO_PARSE_SUBSTATE:
             return status_word_for_failed_to_parse_substate(failure->substate_failure);
+        case PARSE_INS_INVALID_VIRTUAL_SUBSTATE_ID:
+            return ERR_CMD_SIGN_TX_INVALID_VIRTUAL_SUBSTATE_ID;
         case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID:
             return status_word_for_failed_to_parse_substate_id(failure->substate_id_failure);
         case PARSE_INS_FAILED_TO_PARSE_SUBSTATE_INDEX:

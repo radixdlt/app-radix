@@ -39,7 +39,7 @@ typedef struct {
  * Structure the RE instruction `INS_VREAD.
  */
 typedef struct {
-    substate_t substate;
+    uint16_t length;
 } re_ins_vread_t;
 
 /**
@@ -99,15 +99,17 @@ typedef struct {
 
 typedef enum {
     PARSE_INS_OK,
-    PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE,
+    PARSE_INS_FAIL_UNRECOGNIZED_INSTRUCTION_TYPE,
     PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE,
     PARSE_INS_FAILED_TO_PARSE_SUBSTATE,
     PARSE_INS_FAILED_TO_PARSE_SUBSTATE_ID,
+    PARSE_INS_INVALID_VIRTUAL_SUBSTATE_ID,
     PARSE_INS_FAILED_TO_PARSE_SUBSTATE_INDEX,
     PARSE_INS_FAILED_TO_PARSE_MSG,
     PARSE_INS_FAILED_TO_PARSE_SYSCALL,
     PARSE_INS_FAILED_TO_PARSE_HEADER,
     PARSE_INS_INVALID_HEADER,
+    PARSE_INS_CONTAINS_EXTRA_BYTES,
 } parse_instruction_outcome_type_e;
 
 typedef struct {

@@ -284,6 +284,9 @@ static void dbg_print_parse_substate_outcome(parse_substate_outcome_t *failure_r
         case PARSE_SUBSTATE_OK:
             print_message("'OK'");
             break;
+        case PARSE_SUBSTATE_FAIL_INVALID_SUBSTATE_FORMAT:
+            print_message("'FAIL_UNRECOGNIZED_SUBSTATE_FORMAT'");
+            break;
         case PARSE_SUBSTATE_FAIL_UNRECOGNIZED_SUBSTATE_TYPE:
             print_message("'FAIL_UNRECOGNIZED_SUBSTATE_TYPE': %hu",
                           failure_reason->unrecognized_substate_type_value);
@@ -324,8 +327,14 @@ static void dbg_print_parse_instruction_outcome(parse_instruction_outcome_t *out
         case PARSE_INS_OK:
             print_message("'OK'");
             break;
-        case PARSE_INS_FAIL_UNREGOZNIED_INSTRUCTION_TYPE:
-            print_message("'FAIL_UNREGOZNIED_INSTRUCTION_TYPE'");
+        case PARSE_INS_CONTAINS_EXTRA_BYTES:
+            print_message("'FAIL_INS_CONTAINS_EXTRA_BYTES'");
+            break;
+        case PARSE_INS_INVALID_VIRTUAL_SUBSTATE_ID:
+            print_message("'FAIL_INVALID_VIRTUAL_SUBSTATE_ID''");
+            break;
+        case PARSE_INS_FAIL_UNRECOGNIZED_INSTRUCTION_TYPE:
+            print_message("'FAIL_UNRECOGNIZED_INSTRUCTION_TYPE'");
             break;
         case PARSE_INS_FAIL_UNSUPPORTED_INSTRUCTION_TYPE:
             print_message("'FAIL_UNSUPPORTED_INSTRUCTION_TYPE'");

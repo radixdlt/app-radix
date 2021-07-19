@@ -372,7 +372,7 @@ UX_FLOW(ux_display_tx_summary_flow,
         &ux_display_review_tx_summary_step,  // #1 screen: eye icon + "Review Transaction"
         &ux_display_tx_fee_amount_step,      // #2 screen: display tx fee amount
         &ux_display_approve_sign_tx_step,    // #3 screen: approve button // "Sign tx?"
-        &ux_display_reject_step);            // #4  screen: reject button // "Reject"
+        &ux_display_reject_step);            // #4 screen: reject button // "Reject"
 
 int ui_display_tx_summary(transaction_t *transaction,
                           bip32_path_t *bip32_path,
