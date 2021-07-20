@@ -21,7 +21,7 @@
 #   limitations under the License.
 # ****************************************************************************
 
-BOLOS_SDK=./nanos-secure-sdk
+BOLOS_SDK=../nanos-secure-sdk
 TARGET_NAME=TARGET_NANOS
 
 include $(BOLOS_SDK)/Makefile.defines

@@ -15,17 +15,12 @@ jobs:
       TARGET_VERSION: 2.0.0
 
     steps:
-      - name: Setup
-        run: |
-          git clone https://github.com/LedgerHQ/nanos-secure-sdk.git
-
       - name: Clone
         uses: actions/checkout@v2
 
       - name: Build
         run: |
-          ls -l ..
-          ls -l ../..
+          git clone https://github.com/LedgerHQ/nanos-secure-sdk.git ../nanos-secure-sdk
           make --file=Makefile.github DEBUG=1
 
       - name: Upload app binary
