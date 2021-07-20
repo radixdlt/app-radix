@@ -169,11 +169,7 @@ static int ux_finished_parsing_tx(transaction_parser_t *tx_parser) {
         }
     }
 
-    return ui_display_tx_summary(&tx_parser->transaction,
-                                 &tx_parser->signing.my_derived_public_key.bip32_path,
-                                 tx_parser->signing.hasher.hash
-
-    );
+    return ui_display_tx_summary(&tx_parser->transaction);
 }
 
 static int ux_display_new_instruction_if_needed(transaction_parser_t *tx_parser) {
