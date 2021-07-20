@@ -24,6 +24,7 @@ jobs:
 
       - name: Build
         run: |
+          ls -l
           make --file=Makefile.github DEBUG=1
 
       - name: Upload app binary
