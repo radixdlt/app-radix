@@ -374,9 +374,7 @@ UX_FLOW(ux_display_tx_summary_flow,
         &ux_display_approve_sign_tx_step,    // #3 screen: approve button // "Sign tx?"
         &ux_display_reject_step);            // #4 screen: reject button // "Reject"
 
-int ui_display_tx_summary(transaction_t *transaction,
-                          bip32_path_t *bip32_path,
-                          uint8_t hash[static HASH_LEN]) {
+int ui_display_tx_summary(transaction_t *transaction) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {

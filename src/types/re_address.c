@@ -17,14 +17,14 @@ typedef struct {
 } network_t;
 
 static network_t networks[] = {
-    {1, "rdx", 3, "rv", 2, "_rr", 3},     /* MAINNET */
-    {2, "tdx", 3, "tv", 2, "_tr", 3},     /* STOKENET */
-    {3, "tdx3", 4, "tv3", 3, "_tr3", 4},  /* RELEASENET */
-    {4, "tdx4", 4, "tv4", 3, "_tr4", 4},  /* RCNET */
-    {5, "tdx5", 4, "tv5", 3, "_tr5", 4},  /* MILESTONENET */
-    {6, "tdx6", 4, "tv6", 3, "_tr6", 4},  /* DEVOPSNET */
-    {7, "tdx7", 4, "tv7", 3, "_tr7", 4},  /* SANDPITNET */
-    {99, "ddx", 3, "dv", 2, "_dr", 3},    /* LOCALNET */
+    {1, "rdx", 3, "rv", 2, "_rr", 3},    /* MAINNET */
+    {2, "tdx", 3, "tv", 2, "_tr", 3},    /* STOKENET */
+    {3, "tdx3", 4, "tv3", 3, "_tr3", 4}, /* RELEASENET */
+    {4, "tdx4", 4, "tv4", 3, "_tr4", 4}, /* RCNET */
+    {5, "tdx5", 4, "tv5", 3, "_tr5", 4}, /* MILESTONENET */
+    {6, "tdx6", 4, "tv6", 3, "_tr6", 4}, /* DEVOPSNET */
+    {7, "tdx7", 4, "tv7", 3, "_tr7", 4}, /* SANDPITNET */
+    {99, "ddx", 3, "dv", 2, "_dr", 3},   /* LOCALNET */
 };
 
 bool parse_re_address(buffer_t *buffer,

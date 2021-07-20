@@ -5,33 +5,20 @@
 #include "../constants.h"
 #include "public_key.h"
 
-//#define VALIDATOR_ADDRESS_HRP_LENGTH  2
-//#define VALIDATOR_ADDRESS_HRP_MAINNET "vr"
-//#define VALIDATOR_ADDRESS_HRP_BETANET "vb"
-//#define ACCOUNT_ADDRESS_HRP_LENGTH  3
-//#define ACCOUNT_ADDRESS_HRP_MAINNET "rdx"
-//#define ACCOUNT_ADDRESS_HRP_BETANET "brx"
-//#define RRI_HRP_PREFIX_NATIVE_TOKEN     "xrd"
-//#define RRI_HRP_PREFIX_NATIVE_TOKEN_LEN 3  // "xrd" has length 3
-//#define RRI_HRP_SUFFIX_MAINNET "_rr"
-//#define RRI_HRP_SUFFIX_BETANET "_rb"
-//#define RRI_HRP_SUFFIX_LEN     3
-
-#define VALIDATOR_ADDRESS_HRP_LENGTH  (networks[APPNETWORK].validator_hrp_len)
-#define VALIDATOR_ADDRESS_HRP         (networks[APPNETWORK].validator_hrp)
-#define ACCOUNT_ADDRESS_HRP_LENGTH    (networks[APPNETWORK].account_hrp_len)
-#define ACCOUNT_ADDRESS_HRP           (networks[APPNETWORK].account_hrp)
-#define RRI_HRP_SUFFIX_LEN            (networks[APPNETWORK].resource_hrp_len)
-#define RRI_HRP_SUFFIX                (networks[APPNETWORK].resource_hrp)
+#define VALIDATOR_ADDRESS_HRP_LENGTH (networks[APPNETWORK].validator_hrp_len)
+#define VALIDATOR_ADDRESS_HRP        (networks[APPNETWORK].validator_hrp)
+#define ACCOUNT_ADDRESS_HRP_LENGTH   (networks[APPNETWORK].account_hrp_len)
+#define ACCOUNT_ADDRESS_HRP          (networks[APPNETWORK].account_hrp)
+#define RRI_HRP_SUFFIX_LEN           (networks[APPNETWORK].resource_hrp_len)
+#define RRI_HRP_SUFFIX               (networks[APPNETWORK].resource_hrp)
 
 #define RRI_HRP_PREFIX_NATIVE_TOKEN     "xrd"
 #define RRI_HRP_PREFIX_NATIVE_TOKEN_LEN (sizeof(RRI_HRP_PREFIX_NATIVE_TOKEN) - 1)
 
 #define RE_ADDR_HASHED_KEY_LEN 26
-#define VALIDATOR_ADDRESS_LEN 62
-#define ACCOUNT_ADDRESS_LEN 65
-#define NATIVE_TOKEN_LEN              (networks[APPNETWORK].resource_hrp_len + 12)
-
+#define VALIDATOR_ADDRESS_LEN  62
+#define ACCOUNT_ADDRESS_LEN    65
+#define NATIVE_TOKEN_LEN       (networks[APPNETWORK].resource_hrp_len + 12)
 
 /**
  * @brief Display type for a RE address of PublicKey type.
