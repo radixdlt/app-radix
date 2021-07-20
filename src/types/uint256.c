@@ -297,7 +297,7 @@ bool to_string_uint256(const uint256_t *uint256, char *out, const size_t out_len
     return to_string_uint256_get_len(uint256, out, out_len, &discarded);
 }
 
-static const uint256_t ZERO = {0};
+static const uint256_t ZERO = {{0}};
 
 bool is_uint256_greater_than_zero(const uint256_t *target) {
     return gt256(target, &ZERO);
