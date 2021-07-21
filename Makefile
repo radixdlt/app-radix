@@ -56,7 +56,7 @@ endif
 ifeq ($(BOLOS_SDK),)
     $(error Environment variable 'BOLOS_SDK' was not found/is not set)
 else
-    $(info 'BOLOS_SDK' is set to: '$(BOLOS_SDK)')
+$(info 'BOLOS_SDK' is set to: '$(BOLOS_SDK)')
 endif
 
 include $(BOLOS_SDK)/Makefile.defines
@@ -178,5 +178,5 @@ dep/%.d: %.c Makefile
 listvariants:
 	@echo VARIANTS COIN XRD
 
-import: all
-	@echo Used for importing project into CLion
+appversion:
+	@echo "VERSION=$(APPVERSION)"

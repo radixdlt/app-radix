@@ -115,6 +115,7 @@ UX_STEP_CB(ux_display_approve_step,
                "Approve",
            });
 
+// Step with approve button (but with text "Encrypt")
 UX_STEP_CB(ux_display_encrypt_step,
            pb,
            (*g_validate_callback)(true),
@@ -123,14 +124,14 @@ UX_STEP_CB(ux_display_encrypt_step,
                "Encrypt",
            });
 
+// Step with approve button (but with text "Decrypt")
 UX_STEP_CB(ux_display_decrypt_step,
            pb,
            (*g_validate_callback)(true),
            {
                &C_icon_validate_14,
                "Decrypt",
-          });
-
+           });
 
 // Step with approve button (but with text "Sign tx?")
 UX_STEP_CB(ux_display_approve_sign_tx_step,
