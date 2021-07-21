@@ -14,6 +14,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 # ****************************************************************************
+#BOLOS_SDK_NANO_S=/opt/bolos-devenv/nano_s_sdk_se200
+#CLANGPATH_NANO_S=/opt/bolos-devenv/nanos_se200_clang_10
+#BOLOS_ENV=/opt/bolos-devenv
 
 ifeq ($(BOLOS_SDK),)
 else
@@ -80,7 +83,7 @@ APPVERSION = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 # 6 - SANDPITNET
 # 7 - LOCALNET
 
-APPNETWORK = 0
+APPNETWORK = 1
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
     ICONNAME=icons/nanox_app_radix.gif
@@ -174,3 +177,6 @@ dep/%.d: %.c Makefile
 
 listvariants:
 	@echo VARIANTS COIN XRD
+
+import: all
+	@echo Used for importing project into CLion

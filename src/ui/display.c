@@ -123,6 +123,15 @@ UX_STEP_CB(ux_display_encrypt_step,
                "Encrypt",
            });
 
+UX_STEP_CB(ux_display_decrypt_step,
+           pb,
+           (*g_validate_callback)(true),
+           {
+               &C_icon_validate_14,
+               "Decrypt",
+          });
+
+
 // Step with approve button (but with text "Sign tx?")
 UX_STEP_CB(ux_display_approve_sign_tx_step,
            pb,
@@ -293,7 +302,8 @@ int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_le
 /// ####                               ####
 /// #######################################
 // Step with icon and text
-UX_STEP_NOCB(ux_display_confirm_other_pubkey_step, pn, {&C_icon_eye, "Encrypt msg?"});
+UX_STEP_NOCB(ux_display_confirm_other_pubkey_step_encrypt, pn, {&C_icon_eye, "Encrypt msg?"});
+UX_STEP_NOCB(ux_display_confirm_other_pubkey_step_decrypt, pn, {&C_icon_eye, "Decrypt msg?"});
 
 // Step with title/text for public key of other party
 UX_STEP_NOCB(ux_display_other_party_address_step,
@@ -303,19 +313,31 @@ UX_STEP_NOCB(ux_display_other_party_address_step,
                  .text = g_address,
              });
 
-// FLOW to display other party pubkey and BIP32 path:
-// #1 screen: eye icon + "ECDH with?"
+// FLOW (Encrypt) to display other party pubkey and BIP32 path:
+// #1 screen: eye icon + "Encrypt with?"
 // #3 screen: display address of other party
 // #4 screen: approve button
 // #5 screen: reject button
-UX_FLOW(ux_display_ecdh_flow,
-        &ux_display_confirm_other_pubkey_step,
+UX_FLOW(ux_display_ecdh_flow_encrypt,
+        &ux_display_confirm_other_pubkey_step_encrypt,
         &ux_display_other_party_address_step,
         &ux_display_encrypt_step,  // "Encrypt"
         &ux_display_cancel_step);  // "Cancel"
 
+// FLOW (Decrypt) to display other party pubkey and BIP32 path:
+// #1 screen: eye icon + "Decrypt with?"
+// #3 screen: display address of other party
+// #4 screen: approve button
+// #5 screen: reject button
+UX_FLOW(ux_display_ecdh_flow_decrypt,
+        &ux_display_confirm_other_pubkey_step_decrypt,
+        &ux_display_other_party_address_step,
+        &ux_display_decrypt_step,  // "Decrypt"
+        &ux_display_cancel_step);  // "Cancel"
+
 int ui_display_ecdh(derived_public_key_t *my_derived_public_key,
-                    re_address_t *other_party_address) {
+                    re_address_t *other_party_address,
+                    display_state_t display) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_ECDH) {
@@ -336,7 +358,17 @@ int ui_display_ecdh(derived_public_key_t *my_derived_public_key,
     g_validate_callback = &ui_action_validate_sharedkey;
 
     // Initialize (start) the UX flow for ECDH key exchange
-    ux_flow_init(0, ux_display_ecdh_flow, NULL);
+    switch (display) {
+        case DISPLAY_ENCRYPT:
+            ux_flow_init(0, ux_display_ecdh_flow_encrypt, NULL);
+            break;
+        case DISPLAY_DECRYPT:
+            ux_flow_init(0, ux_display_ecdh_flow_decrypt, NULL);
+            break;
+        default:
+        case NO_DISPLAY:
+            return io_send_sw(ERR_DISPLAY_ECDH_FAIL);
+    }
 
     return 0;
 }

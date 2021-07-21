@@ -104,7 +104,7 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_sign_hash(&buf);
         case ECDH:
-            if (cmd->p1 > 1 || cmd->p2 > 0) {
+            if (cmd->p1 > 2 || cmd->p2 > 0) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
 
@@ -114,7 +114,7 @@ int apdu_dispatcher(const command_t *cmd) {
 
             fill_buffer(&buf, cmd);
 
-            return handler_ecdh(&buf, (bool) cmd->p1);
+            return handler_ecdh(&buf, (display_state_t) cmd->p1);
 
         default:
             return io_send_sw(SW_INS_NOT_SUPPORTED);
