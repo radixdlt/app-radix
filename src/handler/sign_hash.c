@@ -15,8 +15,8 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include <stdint.h>   // uint*_t
-#include <string.h>   // memset, explicit_bzero
+#include <stdint.h>
+#include <string.h>
 
 #include "sign_hash.h"
 #include "../constants.h"
