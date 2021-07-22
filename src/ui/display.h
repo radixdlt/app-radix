@@ -29,7 +29,7 @@ int ui_display_address_from_get_pubkey_cmd(derived_public_key_t *my_derived_publ
 int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_len);
 
 /**
- * Display BIP32 and pub key of other part on the device and ask confirmation to sign derive a
+ * Display BIP32 and pub key of other party on the device and ask confirmation to sign derive a
  * shared ECDH with pubkey of other party and key at BIP32 path.
  *
  * @return 0 if success, negative integer otherwise.

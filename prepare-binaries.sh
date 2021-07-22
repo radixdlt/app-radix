@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 APPVERSION=`make appversion 2>/dev/null | grep ^VERSION | cut -d '=' -f 2`
 
