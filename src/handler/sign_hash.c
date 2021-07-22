@@ -16,23 +16,12 @@
  *****************************************************************************/
 
 #include <stdint.h>   // uint*_t
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
 #include <string.h>   // memset, explicit_bzero
-
-#include "os.h"
-#include "cx.h"
 
 #include "sign_hash.h"
 #include "../constants.h"
 #include "../globals.h"
-#include "../state.h"
-#include "../io.h"
-#include "../sw.h"
-#include "../crypto.h"
-#include "../types/buffer.h"
 #include "../ui/display.h"
-#include "../helper/send_response.h"
 
 int handler_sign_hash(buffer_t *cdata) {
     PRINTF("\n.-~=: SIGN_HASH called :=~-.\n\n");

@@ -1,10 +1,7 @@
 #include "instruction.h"
 
-#include "../sw_custom.h"
-
 #include "../bridge.h"
 #include "substate/substate.h"
-#include "../types/public_key.h"
 
 static bool parse_substate_index(buffer_t *buffer, uint16_t *i16) {
     if (!buffer_read_u16(buffer, i16, BE)) {

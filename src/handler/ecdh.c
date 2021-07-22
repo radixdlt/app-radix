@@ -16,9 +16,6 @@
  *****************************************************************************/
 
 #include "ecdh.h"
-#include "../types/buffer.h"
-
-#include "os.h"
 #include "sw.h"     // SW_WRONG_DATA_LENGTH
 #include "../io.h"  // io_send_sw
 

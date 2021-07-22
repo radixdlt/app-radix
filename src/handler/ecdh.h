@@ -8,9 +8,9 @@
 #include "../types/buffer.h"
 
 typedef enum {
-    NO_DISPLAY,
-    DISPLAY_ENCRYPT,
-    DISPLAY_DECRYPT,
+    NO_DISPLAY = 0,
+    DISPLAY_ENCRYPT = 1,
+    DISPLAY_DECRYPT = 2,
 } display_state_t;
 
 /**

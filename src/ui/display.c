@@ -26,15 +26,9 @@
 
 #include "display.h"
 #include "constants.h"
-#include "../crypto.h"
 #include "../globals.h"
-#include "../io.h"
-#include "../sw.h"
 #include "action/validate.h"
-#include "../types/re_address.h"
-#include "../types/bip32_path.h"
 #include "../common/format.h"
-#include "../macros.h"  // ASSERT
 
 /// #######################################
 /// ####                               ####

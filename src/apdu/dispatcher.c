@@ -15,16 +15,10 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include <stdint.h>
 #include <stdbool.h>
 
 #include "dispatcher.h"
-#include "../constants.h"
 #include "../globals.h"
-#include "../state.h"
-#include "../io.h"
-#include "../sw.h"
-#include "../types/buffer.h"
 #include "../handler/get_version.h"
 #include "../handler/get_app_name.h"
 #include "../handler/get_public_key.h"
