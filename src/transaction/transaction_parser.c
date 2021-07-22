@@ -1,13 +1,7 @@
 #include "transaction_parser.h"
 
 #include <string.h>  // explicit_bzero
-
-#include "../types/uint256.h"
-#include "../types/public_key.h"
-
 #include "../bridge.h"
-
-#include "../instruction/instruction.h"  // re_ins_syscall_t
 
 status_word_t status_word_for_parse_and_process_ins_failure(
     parse_and_process_instruction_outcome_t *failure) {

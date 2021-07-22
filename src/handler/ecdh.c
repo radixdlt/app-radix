@@ -16,9 +16,6 @@
  *****************************************************************************/
 
 #include "ecdh.h"
-#include "../types/buffer.h"
-
-#include "os.h"
 #include "sw.h"     // SW_WRONG_DATA_LENGTH
 #include "../io.h"  // io_send_sw
 
@@ -27,7 +24,7 @@
 #include "../ui/display.h"            // ui_display_ecdh
 #include "../helper/send_response.h"  // helper_send_response_sharedkey
 
-int handler_ecdh(buffer_t *cdata, bool display) {
+int handler_ecdh(buffer_t *cdata, display_state_t display) {
     PRINTF("\n.-~=: ECDH (Diffie-Hellman) called :=~-.\n\n");
     explicit_bzero(&G_context, sizeof(G_context));
     G_context.req_type = CONFIRM_ECDH;
@@ -66,10 +63,17 @@ int handler_ecdh(buffer_t *cdata, bool display) {
            G_context.ecdh_info.other_party_public_key.W_len,
            G_context.ecdh_info.other_party_public_key.W);
 
-    if (display) {
+    if (display != NO_DISPLAY) {
         return ui_display_ecdh(&G_context.ecdh_info.my_derived_public_key,
-                               &G_context.ecdh_info.other_party_address);
+                               &G_context.ecdh_info.other_party_address,
+                               display);
+    } else {
+        if (!crypto_ecdh(&G_context.ecdh_info.my_derived_public_key.bip32_path,
+                         &G_context.ecdh_info.other_party_public_key,
+                         G_context.ecdh_info.shared_pubkey_point)) {
+            G_context.state = STATE_NONE;
+            return io_send_sw(ERR_CMD_ECDH_COMPUTE_SHARED_KEY_FAILURE);
+        }
+        return helper_send_response_sharedkey();
     }
-
-    return helper_send_response_sharedkey();
 }

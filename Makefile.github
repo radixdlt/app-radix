@@ -1,9 +1,3 @@
-#-----------------------------------------------------------------------------
-#
-# DO NOT USE!!! WORK IN PROGRESS!!!
-#
-#-----------------------------------------------------------------------------
-
 # ****************************************************************************
 #    Ledger App Radix
 #    (c) 2020 Ledger SAS.
@@ -36,7 +30,7 @@ APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 APPNAME      = "Radix"
 APPVERSION_M = 0
 APPVERSION_N = 3
-APPVERSION_P = 7
+APPVERSION_P = 8
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 # 0 - MAINNET
@@ -48,7 +42,7 @@ APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 # 6 - SANDPITNET
 # 7 - LOCALNET
 
-APPNETWORK = 1
+APPNETWORK = 0
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
     ICONNAME=icons/nanox_app_radix.gif

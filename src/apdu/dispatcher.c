@@ -15,16 +15,10 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include <stdint.h>
 #include <stdbool.h>
 
 #include "dispatcher.h"
-#include "../constants.h"
 #include "../globals.h"
-#include "../state.h"
-#include "../io.h"
-#include "../sw.h"
-#include "../types/buffer.h"
 #include "../handler/get_version.h"
 #include "../handler/get_app_name.h"
 #include "../handler/get_public_key.h"
@@ -104,7 +98,7 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_sign_hash(&buf);
         case ECDH:
-            if (cmd->p1 > 1 || cmd->p2 > 0) {
+            if (cmd->p1 > 2 || cmd->p2 > 0) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
 
@@ -114,7 +108,7 @@ int apdu_dispatcher(const command_t *cmd) {
 
             fill_buffer(&buf, cmd);
 
-            return handler_ecdh(&buf, (bool) cmd->p1);
+            return handler_ecdh(&buf, (display_state_t) cmd->p1);
 
         default:
             return io_send_sw(SW_INS_NOT_SUPPORTED);

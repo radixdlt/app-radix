@@ -1,5 +1,4 @@
 #include "prepared_stake.h"
-#include "../../sw.h"
 
 #include "../../bridge.h"
 

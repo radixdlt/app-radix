@@ -20,9 +20,7 @@
 #include <string.h>  // memmove
 
 #include "send_response.h"
-#include "../constants.h"
 #include "../globals.h"
-#include "../sw.h"
 #include "types/buffer.h"
 
 int helper_send_response_pubkey() {

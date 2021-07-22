@@ -427,6 +427,7 @@ enum generic_identifiers_radix {
 #define ERR_DISPLAY_ADDRESS_FAIL    (ERR_DISPLAY + ERR_BYTE_02)
 #define ERR_DISPLAY_AMOUNT_FAIL     (ERR_DISPLAY + ERR_BYTE_03)
 #define ERR_DISPLAY_RRI_FAIL        (ERR_DISPLAY + ERR_BYTE_04)
+#define ERR_DISPLAY_ECDH_FAIL       (ERR_DISPLAY + ERR_BYTE_05)
 
 /// $$$$$$$$$$$$$$$$$$$$$$$$$$$$
 /// $$   E: Exception (EXXX)    $$

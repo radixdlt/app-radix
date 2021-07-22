@@ -7,6 +7,7 @@ bin/
 debug/
 dep/
 obj/
+out/
 
 # Unit tests and code coverage
 unit-tests/build/
@@ -32,5 +33,7 @@ __pycache__/
 # Doxygen
 doc/html
 doc/latex
+
+*.zip
 
 venv

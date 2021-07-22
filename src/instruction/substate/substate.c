@@ -1,5 +1,4 @@
 #include "substate.h"
-#include "../../sw_custom.h"
 
 #include "../../bridge.h"  // PRINTF
 

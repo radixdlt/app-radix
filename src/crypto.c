@@ -20,7 +20,6 @@
 #include <stdbool.h>  // bool
 
 #include "crypto.h"
-#include "sw.h"
 
 #include "globals.h"
 

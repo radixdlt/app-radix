@@ -1,7 +1,6 @@
 #include "tokens.h"
 #include "../../sw.h"
 #include "../../bridge.h"  // PRINTF
-// #include "../macros.h"  // ASSERT
 
 bool parse_tokens(buffer_t *buffer, parse_tokens_outcome_t *outcome, tokens_t *tokens) {
     // Parse field 'reserved'
