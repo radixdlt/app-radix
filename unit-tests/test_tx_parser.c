@@ -1690,6 +1690,17 @@ static void test_success_token_transfer_and_stake(void **state) {
     do_test_parse_tx(test_vector);
 }
 
+static void test_format_whole_tokens(void** state) {
+    (void) state;
+
+    char formatted[128] = {0};
+
+    uint256_t test_amount0 = {0};
+
+    assert_true(to_string_uint256(&test_amount0, formatted, sizeof(formatted)));
+    assert_string_equal("0", formatted);
+}
+
 int main() {
     const struct CMUnitTest rri_formatting[] = {
         cmocka_unit_test(test_rri_format_hrp_6_chars),
@@ -1762,10 +1773,15 @@ int main() {
 
     };
 
+    const struct CMUnitTest formatting_tests[] = {
+        cmocka_unit_test(test_format_whole_tokens),
+    };
+
     int status = 0;
 
     status += cmocka_run_group_tests_name("RRI", rri_formatting, NULL, NULL);
     status += cmocka_run_group_tests_name("Valid transactions", success_complex_tx, NULL, NULL);
     status += cmocka_run_group_tests_name("Invalid transactions", failing_txs, NULL, NULL);
+    status += cmocka_run_group_tests_name("Amount formatting", formatting_tests, NULL, NULL);
     return status;
 }
