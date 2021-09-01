@@ -21,7 +21,7 @@ fuzzing/build/
 
 # Editors
 .idea/
-.vscode/**
+.vscode/
 
 # Python
 *.pyc[cod]
