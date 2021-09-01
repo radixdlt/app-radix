@@ -1285,8 +1285,8 @@ static void test_success_token_transfer_only_xrd(void **state) {
         .expected_success = {
             .my_public_key_hex =
                 "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
-            .expected_tx_fee = "50684735185526206758912",
-            .expected_total_xrd_amount = "2049677735185526206758912",
+            .expected_tx_fee = "50684.735185526206758912",
+            .expected_total_xrd_amount = "2049677.735185526206758912",
             .expected_hash =
                 {
                     0x0b, 0xc5, 0x21, 0xbd, 0x59, 0x54, 0xb6, 0x6a, 0x1a, 0x0c, 0x7c,
@@ -1382,8 +1382,8 @@ static void test_success_token_transfer_only_xrd_with_msg(void **state) {
         .expected_success = {
             .my_public_key_hex =
                 "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
-            .expected_tx_fee = "65722290370113311866880",
-            .expected_total_xrd_amount = "2063708290370113311866880",
+            .expected_tx_fee = "65722.29037011331186688",
+            .expected_total_xrd_amount = "2063708.29037011331186688",
             .expected_hash =
                 {
                     0x39, 0x72, 0x63, 0xba, 0x56, 0xb6, 0xe6, 0x94, 0x16, 0x30, 0x49,
@@ -1502,8 +1502,8 @@ static void test_success_token_transfer_xrd_and_non_xrd_mixed(void **state) {
         .expected_success = {
             .my_public_key_hex =
                 "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
-            .expected_tx_fee = "50684735185526206758912",
-            .expected_total_xrd_amount = "1049465735185526206758912",
+            .expected_tx_fee = "50684.735185526206758912",
+            .expected_total_xrd_amount = "1049465.735185526206758912",
             .expected_hash =
                 {
                     0x97, 0x1e, 0xaa, 0x2a, 0x95, 0x93, 0x9c, 0x37, 0x99, 0x9f, 0xc0,
@@ -1588,8 +1588,8 @@ static void test_success_xrd_transfer_to_self(void **state) {
         .expected_success = {
             .my_public_key_hex =
                 "02935deebcad35bcf27d05b431276be8fcba26312cd1d54c33ac6748a72fe427ca",
-            .expected_tx_fee = "50684735185526206758912",
-            .expected_total_xrd_amount = "50684735185526206758912",
+            .expected_tx_fee = "50684.735185526206758912",
+            .expected_total_xrd_amount = "50684.735185526206758912",
             .expected_hash =
                 {
                     0xa9, 0x56, 0xe6, 0xf6, 0xb4, 0x8f, 0xfb, 0xfc, 0xb8, 0xd6, 0x29,
@@ -1677,8 +1677,8 @@ static void test_success_token_transfer_and_stake(void **state) {
         .expected_success = {
             .my_public_key_hex =
                 "0356959464545aa2787984fe4ac76496721a22f150c0076724ad7190fe3a597bb7",
-            .expected_tx_fee = "107800000000000000",
-            .expected_total_xrd_amount = "1799621800000000000000",
+            .expected_tx_fee = "0.1078",
+            .expected_total_xrd_amount = "1799.6218",
             .expected_hash =
                 {
                     0xb6, 0x6d, 0x4f, 0x03, 0x7e, 0xf0, 0x33, 0x4d, 0x5c, 0xf0, 0xfa,
@@ -1749,7 +1749,7 @@ static void test_single_format_vector(uint8_t* amount_input, char* expected) {
 
     readu256BE(amount_input, &amount);
 
-    assert_true(to_string_uint256(amount, formatted, sizeof(formatted)));
+    assert_true(to_string_uint256(&amount, formatted, sizeof(formatted)));
     assert_string_equal(expected, formatted);
 }
 
