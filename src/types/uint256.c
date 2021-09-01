@@ -246,23 +246,24 @@ static void divmod256(uint256_t *l, uint256_t *r, uint256_t *retDiv, uint256_t *
 
 static size_t pretty_print(char* input, uint32_t input_len, char* output) {
     size_t out_len = 0;
-    bool met_dot = false;
+    uint32_t start;
 
-    for(uint32_t i = input_len; i >= 0; i++) {
-        if (!met_dot) {
-            if (input[i] == '0') {
-                continue;
-            }
-            
-            met_dot = true;
-
-            if (input[i] == '.') {
-                continue;
-            }
+    for(start = 0; start < input_len; start++) {
+        if (input[start] == '0') {
+            continue;
         }
 
-        output[out_len++] = input[i];
+        if (input[start] == '.') {
+            start++;
+        }
+
+        break;
     }
+
+    for(int j = (int) input_len - 1; start != input_len; j--) {
+        output[out_len++] = input[j];
+        start++;
+    };
 
     output[out_len++] = '\0';
 
@@ -289,7 +290,7 @@ bool to_string_uint256_get_len(const uint256_t *number, char *out, const size_t 
             buffer[offset++] = '.';
         }
 
-    } while (!zero256(&rDiv));
+    } while (offset < 20 || !zero256(&rDiv));
     
     if (offset > outLength) {
         return false;
