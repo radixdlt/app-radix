@@ -248,7 +248,7 @@ static size_t pretty_print(char* input, uint32_t input_len, char* output) {
     size_t out_len = 0;
     uint32_t start;
 
-    for(start = 0; start < input_len; start++) {
+    for (start = 0; start < input_len; start++) {
         if (input[start] == '0') {
             continue;
         }
@@ -260,7 +260,7 @@ static size_t pretty_print(char* input, uint32_t input_len, char* output) {
         break;
     }
 
-    for(int j = (int) input_len - 1; start != input_len; j--) {
+    for (int j = (int) input_len - 1; start != input_len; j--) {
         output[out_len++] = input[j];
         start++;
     };
@@ -270,7 +270,10 @@ static size_t pretty_print(char* input, uint32_t input_len, char* output) {
     return out_len;
 }
 
-bool to_string_uint256_get_len(const uint256_t *number, char *out, const size_t outLength, size_t *actual_len) {
+bool to_string_uint256_get_len(const uint256_t *number, 
+                               char *out, 
+                               const size_t outLength, 
+                               size_t *actual_len) {
     uint256_t rDiv;
     uint256_t rMod;
     uint256_t base;
@@ -280,13 +283,13 @@ bool to_string_uint256_get_len(const uint256_t *number, char *out, const size_t 
     UPPER(LOWER(base)) = 0;
     LOWER(LOWER(base)) = 10;
     uint32_t offset = 0;
-    char buffer[UINT256_DEC_STRING_MAX_LENGTH + 2]; //+1 for \0 and +1 for '.'
+    char buffer[UINT256_DEC_STRING_MAX_LENGTH + 2];  //+1 for \0 and +1 for '.'
     
     do {
         divmod256(&rDiv, &base, &rDiv, &rMod);
         buffer[offset++] = HEXDIGITS[(uint8_t) LOWER(LOWER(rMod))];
 
-        if (offset == 18) { //E-18
+        if (offset == 18) {  //E-18
             buffer[offset++] = '.';
         }
 
