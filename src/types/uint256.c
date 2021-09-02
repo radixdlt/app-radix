@@ -271,9 +271,9 @@ static size_t pretty_print(char* input, uint32_t input_len, char* output) {
 }
 
 bool to_string_uint256_get_len(const uint256_t *number, 
-                               char *out, 
-                               const size_t outLength, 
-                               size_t *actual_len) {
+				char *out, 
+				const size_t outLength, 
+				size_t *actual_len) {
     uint256_t rDiv;
     uint256_t rMod;
     uint256_t base;

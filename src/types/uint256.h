@@ -71,9 +71,9 @@ bool uint256_from_buffer(buffer_t *buffer, uint256_t *target);
  * @return false If failed.
  */
 bool to_string_uint256_get_len(const uint256_t *uint256, 
-                               char *out, 
-                               const size_t out_len, 
-                               size_t *actual_len);
+				char *out, 
+				const size_t out_len, 
+				size_t *actual_len);
 
 /**
  * @brief Formats a UInt256 as a decimal string
