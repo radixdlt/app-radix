@@ -244,7 +244,7 @@ static void divmod256(uint256_t *l, uint256_t *r, uint256_t *retDiv, uint256_t *
     }
 }
 
-static size_t pretty_print(char* input, uint32_t input_len, char* output) {
+static size_t pretty_print(char *input, uint32_t input_len, char *output) {
     size_t out_len = 0;
     uint32_t start;
 
@@ -270,10 +270,10 @@ static size_t pretty_print(char* input, uint32_t input_len, char* output) {
     return out_len;
 }
 
-bool to_string_uint256_get_len(const uint256_t *number, 
-				char *out, 
-				const size_t outLength, 
-				size_t *actual_len) {
+bool to_string_uint256_get_len(const uint256_t *number,
+                               char *out,
+                               const size_t outLength,
+                               size_t *actual_len) {
     uint256_t rDiv;
     uint256_t rMod;
     uint256_t base;
@@ -284,12 +284,12 @@ bool to_string_uint256_get_len(const uint256_t *number,
     LOWER(LOWER(base)) = 10;
     uint32_t offset = 0;
     char buffer[UINT256_DEC_STRING_MAX_LENGTH + 2];  //+1 for \0 and +1 for '.'
-    
+
     do {
         divmod256(&rDiv, &base, &rDiv, &rMod);
         buffer[offset++] = HEXDIGITS[(uint8_t) LOWER(LOWER(rMod))];
 
-        if (offset == 18) {  //E-18
+        if (offset == 18) {  // E-18
             buffer[offset++] = '.';
         }
 
