@@ -294,7 +294,7 @@ bool to_string_uint256_get_len(const uint256_t *number,
         }
 
     } while (offset < 20 || !zero256(&rDiv));
-    
+
     if (offset > outLength) {
         return false;
     }
