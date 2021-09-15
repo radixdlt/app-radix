@@ -14,9 +14,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 # ****************************************************************************
-#BOLOS_SDK_NANO_S=/opt/bolos-devenv/nano_s_sdk_se200
-#CLANGPATH_NANO_S=/opt/bolos-devenv/nanos_se200_clang_10
-#BOLOS_ENV=/opt/bolos-devenv
 
 ifeq ($(BOLOS_SDK),)
 else
@@ -59,6 +56,11 @@ else
 $(info 'BOLOS_SDK' is set to: '$(BOLOS_SDK)')
 endif
 
+ifneq ($(BOLOS_ENV),)
+$(info BOLOS_ENV=$(BOLOS_ENV))
+GCCPATH   := $(BOLOS_ENV)/gcc_nano_s_se200_and_nano_x_se124_compatible/bin/
+endif
+
 include $(BOLOS_SDK)/Makefile.defines
 
 BIP44_COIN_TYPE_RADIX= "44'/1022'"
@@ -71,7 +73,7 @@ APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 APPNAME      = "Radix"
 APPVERSION_M = 0
 APPVERSION_N = 3
-APPVERSION_P = 8
+APPVERSION_P = 9
 APPVERSION = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 # 0 - MAINNET
@@ -129,11 +131,6 @@ ifneq ($(DEBUG),0)
     endif
 else
         DEFINES += PRINTF\(...\)=
-endif
-
-ifneq ($(BOLOS_ENV),)
-$(info BOLOS_ENV=$(BOLOS_ENV))
-GCCPATH   := $(BOLOS_ENV)/gcc_nano_s_se200_and_nano_x_se124_compatible/bin/
 endif
 
 

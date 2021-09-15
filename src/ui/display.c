@@ -38,21 +38,10 @@
 static action_validate_cb g_validate_callback;
 
 static char g_bip32_path[60];
-
-#define DISPLAYED_AMOUNT_LEN              \
-    (UINT256_DEC_STRING_MAX_LENGTH + 10 + \
-     1)  // +10 for length of "E-18 XRD: ", +1 for Null terminator
 static char g_amount[DISPLAYED_AMOUNT_LEN];
 static char g_tx_fee[DISPLAYED_AMOUNT_LEN];
-
-#define DISPLAYED_HASH_LEN \
-    (HASH_LEN * 2 + 1)  // x2 factor for 2chars per bytes in hex and +1 for Null terminator
 static char g_hash[DISPLAYED_HASH_LEN];
-
-#define DISPLAYED_ACCOUNT_ADDR_LEN (ACCOUNT_ADDRESS_LEN + 1)  // +1 for Null terminator
 static char g_address[DISPLAYED_ACCOUNT_ADDR_LEN];
-
-#define DISPLAYED_RRI_LEN DISPLAYED_ACCOUNT_ADDR_LEN
 static char g_rri[DISPLAYED_RRI_LEN];
 
 /// #######################################
@@ -62,10 +51,10 @@ static char g_rri[DISPLAYED_RRI_LEN];
 /// #######################################
 static void prepare_ui_for_new_flow(void) {
     explicit_bzero(g_amount, sizeof(g_amount));
-    explicit_bzero(g_address, sizeof(g_amount));
+    explicit_bzero(g_tx_fee, sizeof(g_tx_fee));
+    explicit_bzero(g_address, sizeof(g_address));
     explicit_bzero(g_rri, sizeof(g_rri));
     explicit_bzero(g_hash, sizeof(g_hash));
-    explicit_bzero(g_tx_fee, sizeof(g_tx_fee));
     explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
 }
 
@@ -390,7 +379,7 @@ UX_STEP_NOCB(ux_display_review_tx_summary_step,
 UX_STEP_NOCB(ux_display_tx_fee_amount_step,
              bnnn_paging,
              {
-                 .title = "XRD Fee (E-18):",
+                 .title = "XRD Fee:",
                  .text = g_tx_fee,
              });
 
@@ -463,7 +452,7 @@ UX_STEP_NOCB(ux_display_token_rri_step,
 UX_STEP_NOCB(ux_display_amount_step,
              bnnn_paging,
              {
-                 .title = "Amount (E-18):",
+                 .title = "Amount:",
                  .text = g_amount,
              });
 

@@ -244,21 +244,36 @@ static void divmod256(uint256_t *l, uint256_t *r, uint256_t *retDiv, uint256_t *
     }
 }
 
-static void reverseString(char *str, uint32_t length) {
-    uint32_t i, j;
-    for (i = 0, j = length - 1; i < j; i++, j--) {
-        uint8_t c;
-        c = str[i];
-        str[i] = str[j];
-        str[j] = c;
+static size_t pretty_print(char *input, uint32_t input_len, char *output) {
+    size_t out_len = 0;
+    uint32_t start;
+
+    for (start = 0; start < input_len; start++) {
+        if (input[start] == '0') {
+            continue;
+        }
+
+        if (input[start] == '.') {
+            start++;
+        }
+
+        break;
     }
+
+    for (int j = (int) input_len - 1; start != input_len; j--) {
+        output[out_len++] = input[j];
+        start++;
+    };
+
+    output[out_len++] = '\0';
+
+    return out_len;
 }
 
-static bool tostring256(const uint256_t *number,
-                        uint32_t baseParam,
-                        char *out,
-                        uint32_t outLength,
-                        size_t *actual_len) {
+bool to_string_uint256_get_len(const uint256_t *number,
+                               char *out,
+                               const size_t outLength,
+                               size_t *actual_len) {
     uint256_t rDiv;
     uint256_t rMod;
     uint256_t base;
@@ -266,30 +281,26 @@ static bool tostring256(const uint256_t *number,
     clear256(&rMod);
     clear256(&base);
     UPPER(LOWER(base)) = 0;
-    LOWER(LOWER(base)) = baseParam;
+    LOWER(LOWER(base)) = 10;
     uint32_t offset = 0;
-    if ((baseParam < 2) || (baseParam > 16)) {
+    char buffer[UINT256_DEC_STRING_MAX_LENGTH + 2];  //+1 for \0 and +1 for '.'
+
+    do {
+        divmod256(&rDiv, &base, &rDiv, &rMod);
+        buffer[offset++] = HEXDIGITS[(uint8_t) LOWER(LOWER(rMod))];
+
+        if (offset == 18) {  // E-18
+            buffer[offset++] = '.';
+        }
+
+    } while (offset < 20 || !zero256(&rDiv));
+
+    if (offset > outLength) {
         return false;
     }
-    do {
-        if (offset > (outLength - 1)) {
-            return false;
-        }
-        divmod256(&rDiv, &base, &rDiv, &rMod);
-        out[offset++] = HEXDIGITS[(uint8_t) LOWER(LOWER(rMod))];
-    } while (!zero256(&rDiv));
-    out[offset] = '\0';
-    reverseString(out, offset);
-    *actual_len = offset;
-    return true;
-}
 
-bool to_string_uint256_get_len(const uint256_t *uint256,
-                               char *out,
-                               const size_t out_len,
-                               size_t *actual_len) {
-    uint32_t base10 = 10;
-    return tostring256(uint256, base10, out, (uint32_t) out_len, actual_len);
+    *actual_len = pretty_print(buffer, offset, out);
+    return true;
 }
 
 bool to_string_uint256(const uint256_t *uint256, char *out, const size_t out_len) {
