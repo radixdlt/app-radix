@@ -19,6 +19,7 @@
 #include <stdbool.h>  // bool
 #include <string.h>   // memset, explicit_bzero
 
+#include "os.h"
 #include "cx.h"
 
 #include "sign_tx.h"

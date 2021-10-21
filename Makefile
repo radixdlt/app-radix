@@ -61,6 +61,13 @@ $(info BOLOS_ENV=$(BOLOS_ENV))
 GCCPATH   := $(BOLOS_ENV)/gcc_nano_s_se200_and_nano_x_se124_compatible/bin/
 endif
 
+ifeq ($(TARGET),NANOX)
+CLANGPATH := $(CLANGPATH_NANO_X)/bin/
+$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_X/bin')
+else
+CLANGPATH := $(CLANGPATH_NANO_S)/bin/
+$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_S/bin')
+endif
 include $(BOLOS_SDK)/Makefile.defines
 
 BIP44_COIN_TYPE_RADIX= "44'/1022'"
@@ -132,16 +139,6 @@ ifneq ($(DEBUG),0)
 else
         DEFINES += PRINTF\(...\)=
 endif
-
-
-ifeq ($(TARGET),NANOX)
-CLANGPATH := $(CLANGPATH_NANO_X)/bin/
-$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_X/bin')
-else
-CLANGPATH := $(CLANGPATH_NANO_S)/bin/
-$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_S/bin')
-endif
-
 
 CC      := $(CLANGPATH)clang
 CFLAGS  += -O3 -Os
