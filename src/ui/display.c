@@ -602,7 +602,7 @@ static void ui_display_unstake(prepared_unstake_t *prepared_unstake) {
         io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
         return;
     }
-    snprintf(g_amount, sizeof(g_amount), "XRD %.*s", sizeof(amount), amount);
+    snprintf(g_amount, sizeof(g_amount), "StakeUnits %.*s", sizeof(amount), amount);
     PRINTF("Amount: %s\n", g_amount);
 
     ux_flow_init(0, ux_display_instruction_prepared_unstake_flow, NULL);
