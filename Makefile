@@ -61,6 +61,10 @@ $(info BOLOS_ENV=$(BOLOS_ENV))
 GCCPATH   := $(BOLOS_ENV)/gcc_nano_s_se200_and_nano_x_se124_compatible/bin/
 endif
 
+# Do not set CLANG if both variables are empty
+ifneq ($(CLANGPATH_NANO_X),)
+ifneq ($(CLANGPATH_NANO_S),)
+
 ifeq ($(TARGET),NANOX)
 CLANGPATH := $(CLANGPATH_NANO_X)/bin/
 $(info setting 'CLANGPATH' = 'CLANGPATH_NANO_X/bin')
@@ -68,6 +72,10 @@ else
 CLANGPATH := $(CLANGPATH_NANO_S)/bin/
 $(info setting 'CLANGPATH' = 'CLANGPATH_NANO_S/bin')
 endif
+
+endif
+endif
+
 include $(BOLOS_SDK)/Makefile.defines
 
 BIP44_COIN_TYPE_RADIX= "44'/1022'"
@@ -77,10 +85,13 @@ APP_LOAD_PARAMS += --appFlags 0x240
 APP_LOAD_PARAMS += --path $(BIP44_COIN_TYPE_RADIX)
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
+APP_LOAD_PARAMS += --tlvraw 9F:01
+DEFINES += HAVE_PENDING_REVIEW_SCREEN
+
 APPNAME      = "Radix"
 APPVERSION_M = 0
 APPVERSION_N = 3
-APPVERSION_P = 10
+APPVERSION_P = 11
 APPVERSION = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 # 0 - MAINNET
