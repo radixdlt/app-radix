@@ -5,7 +5,7 @@
 #include "../handler/ecdh.h"
 
 #define DISPLAYED_AMOUNT_LEN \
-    (UINT256_DEC_STRING_MAX_LENGTH + 10 + 2)  // +10 for length of "XRD: ", +1 for \0, +1 for '.'
+    (UINT256_DEC_STRING_MAX_LENGTH + 12 + 2)  // +12 for length of "StakeUnits: ", +1 for \0, +1 for '.'
 #define DISPLAYED_HASH_LEN \
     (HASH_LEN * 2 + 1)  // x2 factor for 2chars per bytes in hex and +1 for Null terminator
 #define DISPLAYED_ACCOUNT_ADDR_LEN (ACCOUNT_ADDRESS_LEN + 1)  // +1 for Null terminator
