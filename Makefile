@@ -57,8 +57,9 @@ $(info 'BOLOS_SDK' is set to: '$(BOLOS_SDK)')
 endif
 
 ifneq ($(BOLOS_ENV),)
-$(info BOLOS_ENV=$(BOLOS_ENV))
+$(info using BOLOS_ENV=$(BOLOS_ENV))
 GCCPATH   := $(BOLOS_ENV)/gcc_nano_s_se200_and_nano_x_se124_compatible/bin/
+$(info setting 'GCCPATH' = '$(GCCPATH)')
 endif
 
 # Do not set CLANG if both variables are empty
@@ -67,11 +68,10 @@ ifneq ($(CLANGPATH_NANO_S),)
 
 ifeq ($(TARGET),NANOX)
 CLANGPATH := $(CLANGPATH_NANO_X)/bin/
-$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_X/bin')
 else
 CLANGPATH := $(CLANGPATH_NANO_S)/bin/
-$(info setting 'CLANGPATH' = 'CLANGPATH_NANO_S/bin')
 endif
+$(info setting 'CLANGPATH' = '$(CLANGPATH)/bin')
 
 endif
 endif
