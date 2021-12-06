@@ -5,15 +5,17 @@ This is a [Radix DLT](https://www.radixdlt.com/) Ledger Nano S and X app.
 ## Inspiration
 This Ledger app is **heavily** based on [Ledger HQ's boilerplate app](https://github.com/LedgerHQ/app-boilerplate), please use that as source of future improvement and further development. Ledger's boilerplate app contains fuzzing and integration tests using the Ledger emulatur Speculos
 
-
-> ⚠️  Building the app from source is only confirmed to be working on Ubuntu 20.04, but should probably work on 18.04 as well ⚠️
-
 > ☣️ ONLY Use a dedicated Ledger device for development. Don't use one with "funds on".  ☣️
 
 # Setup development
 
-Here is the official [Setup](https://ledger.readthedocs.io/en/latest/userspace/setup.html) guide for a dev environment. 
+**WARNING!!!** It is highly recommended to use [Application Builder Docker Image](./app-radix-builder/README.md) for development. Instructions below
+are necessary only if you need to set up environment from scratch. 
 
+**WARNING!!!** The image is not intended to perform loading of the application, so instructions below still apply.
+
+## References
+Here is the official [Setup](https://ledger.readthedocs.io/en/latest/userspace/setup.html) guide for a dev environment. 
 
 > ⚠️ The official guide is not updated and does not work properly for Nano S with firmware 2.0.0 nor with Ledger Nano X. ⚠️
 > PLEASE FOLLOW THE GUIDE IN THIS `README`INSTEAD.
@@ -56,6 +58,8 @@ This will be our `BOLOS_ENV` location, referenced to by all steps below.
 2. Unarchive.
 3. Change name of the folder to `nano_s_sdk_se200`.
 4. Move the folder to the folder `/opt/bolos-devenv/`.
+5. Replace `Makefile.defines` in the SDK with the one provided [here](app-radix-builder/nano-s/Makefile.defines). This file prevents overriding `CLANGPATH` and `GCCPATH` environment 
+variables with garbage.
 
 ### `Nano X` SDK
 1. Download [`Nano X` SDK 1.2.4 (1.2.4-5.1)](https://github.com/LedgerHQ/nanox-secure-sdk/releases/tag/1.2.4-5.1), which only works with Ledger Nano X, and only with firmware SE 1.2.4.
