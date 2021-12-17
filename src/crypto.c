@@ -20,7 +20,6 @@
 #include <stdbool.h>  // bool
 
 #include "crypto.h"
-#include "sw.h"
 
 #include "globals.h"
 
@@ -209,7 +208,7 @@ static int __crypto_sign_message(const uint8_t *hash,
     }
 
     *der_len = sig_len;
-    *v = (uint8_t) (info & CX_ECCINFO_PARITY_ODD);
+    *v = (uint8_t)(info & CX_ECCINFO_PARITY_ODD);
 
     return 0;
 }
@@ -306,8 +305,8 @@ static int __sha256_hash(cx_sha256_t *hash_context,
 }
 
 bool sha256_hash_ledger_sdk(cx_sha256_t *hash_context,
-                 buffer_t *buffer,
-                 bool finalize,  // if `false` then `out` is not used
-                 uint8_t *out) {
+                            buffer_t *buffer,
+                            bool finalize,  // if `false` then `out` is not used
+                            uint8_t *out) {
     return __sha256_hash(hash_context, buffer->ptr, buffer->size, finalize, out, HASH_LEN) == 0;
 }

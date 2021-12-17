@@ -17,7 +17,6 @@
 
 #include <stdint.h>   // uint*_t
 #include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
 #include <string.h>   // memset, explicit_bzero
 
 #include "os.h"
@@ -26,21 +25,9 @@
 #include "sign_tx.h"
 
 #include "../state.h"
-#include "../sw.h"
 #include "../globals.h"
 #include "../crypto.h"
 #include "../ui/display.h"
-
-#include "../types/buffer.h"
-#include "../types/status_word.h"
-#include "../types/public_key.h"
-#include "../instruction/instruction.h"
-
-#include "../common/bech32_encode.h"
-#include "../common/read.h"    // read_u16_be, read_u32_be
-#include "../common/format.h"  // print_uint256
-#include "../transaction/transaction_parser.h"
-
 #include "../helper/send_response.h"
 
 typedef enum {
@@ -169,11 +156,7 @@ static int ux_finished_parsing_tx(transaction_parser_t *tx_parser) {
         }
     }
 
-    return ui_display_tx_summary(&tx_parser->transaction,
-                                 &tx_parser->signing.my_derived_public_key.bip32_path,
-                                 tx_parser->signing.hasher.hash
-
-    );
+    return ui_display_tx_summary(&tx_parser->transaction);
 }
 
 static int ux_display_new_instruction_if_needed(transaction_parser_t *tx_parser) {

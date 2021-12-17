@@ -7,9 +7,11 @@ bin/
 debug/
 dep/
 obj/
+out/
 
 # Unit tests and code coverage
 unit-tests/build/
+unit-tests/cmake-build-debug/
 unit-tests/coverage/
 unit-tests/coverage.info
 
@@ -19,6 +21,7 @@ fuzzing/build/
 
 # Editors
 .idea/
+.vscode/
 
 # Python
 *.pyc[cod]
@@ -31,5 +34,7 @@ __pycache__/
 # Doxygen
 doc/html
 doc/latex
+
+*.zip
 
 venv

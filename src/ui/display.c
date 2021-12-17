@@ -26,15 +26,9 @@
 
 #include "display.h"
 #include "constants.h"
-#include "../crypto.h"
 #include "../globals.h"
-#include "../io.h"
-#include "../sw.h"
 #include "action/validate.h"
-#include "../types/re_address.h"
-#include "../types/bip32_path.h"
 #include "../common/format.h"
-#include "../macros.h"  // ASSERT
 
 /// #######################################
 /// ####                               ####
@@ -44,21 +38,10 @@
 static action_validate_cb g_validate_callback;
 
 static char g_bip32_path[60];
-
-#define DISPLAYED_AMOUNT_LEN              \
-    (UINT256_DEC_STRING_MAX_LENGTH + 10 + \
-     1)  // +10 for length of "E-18 XRD: ", +1 for Null terminator
 static char g_amount[DISPLAYED_AMOUNT_LEN];
 static char g_tx_fee[DISPLAYED_AMOUNT_LEN];
-
-#define DISPLAYED_HASH_LEN \
-    (HASH_LEN * 2 + 1)  // x2 factor for 2chars per bytes in hex and +1 for Null terminator
 static char g_hash[DISPLAYED_HASH_LEN];
-
-#define DISPLAYED_ACCOUNT_ADDR_LEN (ACCOUNT_ADDRESS_LEN + 1)  // +1 for Null terminator
 static char g_address[DISPLAYED_ACCOUNT_ADDR_LEN];
-
-#define DISPLAYED_RRI_LEN DISPLAYED_ACCOUNT_ADDR_LEN
 static char g_rri[DISPLAYED_RRI_LEN];
 
 /// #######################################
@@ -68,10 +51,10 @@ static char g_rri[DISPLAYED_RRI_LEN];
 /// #######################################
 static void prepare_ui_for_new_flow(void) {
     explicit_bzero(g_amount, sizeof(g_amount));
-    explicit_bzero(g_address, sizeof(g_amount));
+    explicit_bzero(g_tx_fee, sizeof(g_tx_fee));
+    explicit_bzero(g_address, sizeof(g_address));
     explicit_bzero(g_rri, sizeof(g_rri));
     explicit_bzero(g_hash, sizeof(g_hash));
-    explicit_bzero(g_tx_fee, sizeof(g_tx_fee));
     explicit_bzero(g_bip32_path, sizeof(g_bip32_path));
 }
 
@@ -115,12 +98,22 @@ UX_STEP_CB(ux_display_approve_step,
                "Approve",
            });
 
+// Step with approve button (but with text "Encrypt")
 UX_STEP_CB(ux_display_encrypt_step,
            pb,
            (*g_validate_callback)(true),
            {
                &C_icon_validate_14,
                "Encrypt",
+           });
+
+// Step with approve button (but with text "Decrypt")
+UX_STEP_CB(ux_display_decrypt_step,
+           pb,
+           (*g_validate_callback)(true),
+           {
+               &C_icon_validate_14,
+               "Decrypt",
            });
 
 // Step with approve button (but with text "Sign tx?")
@@ -293,7 +286,8 @@ int ui_display_sign_hash(bip32_path_t *bip32_path, uint8_t *hash, size_t hash_le
 /// ####                               ####
 /// #######################################
 // Step with icon and text
-UX_STEP_NOCB(ux_display_confirm_other_pubkey_step, pn, {&C_icon_eye, "Encrypt msg?"});
+UX_STEP_NOCB(ux_display_confirm_other_pubkey_step_encrypt, pn, {&C_icon_eye, "Encrypt msg?"});
+UX_STEP_NOCB(ux_display_confirm_other_pubkey_step_decrypt, pn, {&C_icon_eye, "Decrypt msg?"});
 
 // Step with title/text for public key of other party
 UX_STEP_NOCB(ux_display_other_party_address_step,
@@ -303,19 +297,31 @@ UX_STEP_NOCB(ux_display_other_party_address_step,
                  .text = g_address,
              });
 
-// FLOW to display other party pubkey and BIP32 path:
-// #1 screen: eye icon + "ECDH with?"
+// FLOW (Encrypt) to display other party pubkey and BIP32 path:
+// #1 screen: eye icon + "Encrypt with?"
 // #3 screen: display address of other party
 // #4 screen: approve button
 // #5 screen: reject button
-UX_FLOW(ux_display_ecdh_flow,
-        &ux_display_confirm_other_pubkey_step,
+UX_FLOW(ux_display_ecdh_flow_encrypt,
+        &ux_display_confirm_other_pubkey_step_encrypt,
         &ux_display_other_party_address_step,
         &ux_display_encrypt_step,  // "Encrypt"
         &ux_display_cancel_step);  // "Cancel"
 
+// FLOW (Decrypt) to display other party pubkey and BIP32 path:
+// #1 screen: eye icon + "Decrypt with?"
+// #3 screen: display address of other party
+// #4 screen: approve button
+// #5 screen: reject button
+UX_FLOW(ux_display_ecdh_flow_decrypt,
+        &ux_display_confirm_other_pubkey_step_decrypt,
+        &ux_display_other_party_address_step,
+        &ux_display_decrypt_step,  // "Decrypt"
+        &ux_display_cancel_step);  // "Cancel"
+
 int ui_display_ecdh(derived_public_key_t *my_derived_public_key,
-                    re_address_t *other_party_address) {
+                    re_address_t *other_party_address,
+                    display_state_t display) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_ECDH) {
@@ -336,7 +342,17 @@ int ui_display_ecdh(derived_public_key_t *my_derived_public_key,
     g_validate_callback = &ui_action_validate_sharedkey;
 
     // Initialize (start) the UX flow for ECDH key exchange
-    ux_flow_init(0, ux_display_ecdh_flow, NULL);
+    switch (display) {
+        case DISPLAY_ENCRYPT:
+            ux_flow_init(0, ux_display_ecdh_flow_encrypt, NULL);
+            break;
+        case DISPLAY_DECRYPT:
+            ux_flow_init(0, ux_display_ecdh_flow_decrypt, NULL);
+            break;
+        default:
+        case NO_DISPLAY:
+            return io_send_sw(ERR_DISPLAY_ECDH_FAIL);
+    }
 
     return 0;
 }
@@ -363,7 +379,7 @@ UX_STEP_NOCB(ux_display_review_tx_summary_step,
 UX_STEP_NOCB(ux_display_tx_fee_amount_step,
              bnnn_paging,
              {
-                 .title = "XRD Fee (E-18):",
+                 .title = "XRD Fee:",
                  .text = g_tx_fee,
              });
 
@@ -372,11 +388,9 @@ UX_FLOW(ux_display_tx_summary_flow,
         &ux_display_review_tx_summary_step,  // #1 screen: eye icon + "Review Transaction"
         &ux_display_tx_fee_amount_step,      // #2 screen: display tx fee amount
         &ux_display_approve_sign_tx_step,    // #3 screen: approve button // "Sign tx?"
-        &ux_display_reject_step);            // #4  screen: reject button // "Reject"
+        &ux_display_reject_step);            // #4 screen: reject button // "Reject"
 
-int ui_display_tx_summary(transaction_t *transaction,
-                          bip32_path_t *bip32_path,
-                          uint8_t hash[static HASH_LEN]) {
+int ui_display_tx_summary(transaction_t *transaction) {
     prepare_ui_for_new_flow();
 
     if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
@@ -438,7 +452,7 @@ UX_STEP_NOCB(ux_display_token_rri_step,
 UX_STEP_NOCB(ux_display_amount_step,
              bnnn_paging,
              {
-                 .title = "Amount (E-18):",
+                 .title = "Amount:",
                  .text = g_amount,
              });
 
@@ -465,7 +479,7 @@ static void ui_display_tokens(tokens_t *tokens) {
     // Prepare tokens RRI
     transaction_metadata_t *tx_metadata =
         &G_context.sign_tx_info.transaction_parser.transaction_metadata;
-    if (tokens->rri.address_type == RE_ADDRESS_HASHED_KEY_NONCE) {
+    if (tokens->resource.address_type == RE_ADDRESS_HASHED_KEY_NONCE) {
         // Would be nice to avoid this global state access...
         if (tx_metadata->hrp_non_native_token_len == 0) {
             io_send_sw(ERR_DISPLAY_RRI_FAIL);
@@ -473,14 +487,14 @@ static void ui_display_tokens(tokens_t *tokens) {
         }
 
         // Would be nice to avoid this global state access...
-        if (!format_other_token_for_display(&tokens->rri,
+        if (!format_other_token_for_display(&tokens->resource,
                                             tx_metadata->hrp_non_native_token,
                                             tx_metadata->hrp_non_native_token_len)) {
             io_send_sw(ERR_DISPLAY_RRI_FAIL);
             return;
         }
     } else {
-        if (!format_native_token_for_display(&tokens->rri)) {
+        if (!format_native_token_for_display(&tokens->resource)) {
             io_send_sw(ERR_DISPLAY_RRI_FAIL);
             return;
         }
@@ -528,7 +542,7 @@ static void ui_display_stake(prepared_stake_t *prepared_stake) {
     PRINTF("START: ui_display_stake.\n");
     prepare_ui_for_new_flow();
     // Prepare 'to validator' address for display
-    if (!format_validator_address_for_display(&prepared_stake->delegate)) {
+    if (!format_validator_address_for_display(&prepared_stake->validator)) {
         io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
         return;
     }
@@ -576,8 +590,8 @@ static void ui_display_unstake(prepared_unstake_t *prepared_unstake) {
     PRINTF("START: ui_display_unstake.\n");
     prepare_ui_for_new_flow();
 
-    // Prepare 'from validator' address for display
-    if (!format_validator_address_for_display(&prepared_unstake->delegate)) {
+    // Prepare 'validator' address for display
+    if (!format_validator_address_for_display(&prepared_unstake->validator)) {
         io_send_sw(ERR_DISPLAY_ADDRESS_FAIL);
         return;
     }
@@ -588,7 +602,7 @@ static void ui_display_unstake(prepared_unstake_t *prepared_unstake) {
         io_send_sw(ERR_DISPLAY_AMOUNT_FAIL);
         return;
     }
-    snprintf(g_amount, sizeof(g_amount), "XRD %.*s", sizeof(amount), amount);
+    snprintf(g_amount, sizeof(g_amount), "StakeUnits: %.*s", sizeof(amount), amount);
     PRINTF("Amount: %s\n", g_amount);
 
     ux_flow_init(0, ux_display_instruction_prepared_unstake_flow, NULL);

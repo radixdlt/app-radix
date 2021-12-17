@@ -6,7 +6,7 @@
 #include "transaction/transaction_parser.h"
 
 #include "os.h"
-#include "cx.h"  // cx_ecfp_public_key_t
+#include "cx.h"
 
 typedef bool user_accepted_t;
 

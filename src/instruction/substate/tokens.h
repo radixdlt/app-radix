@@ -5,8 +5,9 @@
 #include "../../types/public_key.h"
 
 typedef struct {
-    re_address_t rri;
+    uint8_t reserved;
     re_address_t owner;
+    re_address_t resource;
     uint256_t amount;
 } tokens_t;
 
@@ -16,16 +17,17 @@ typedef struct {
  */
 typedef enum {
     PARSE_TOKENS_OK,
-    PARSE_TOKENS_FAILURE_PARSE_RRI,
+    PARSE_TOKENS_FAILURE_PARSE_RESERVED,
     PARSE_TOKENS_FAILURE_PARSE_OWNER,
+    PARSE_TOKENS_FAILURE_PARSE_RESOURCE,
     PARSE_TOKENS_FAILURE_PARSE_AMOUNT,
 } parse_tokens_outcome_e;
 
 typedef struct {
     parse_tokens_outcome_e outcome_type;
     union {
-        parse_address_failure_reason_e rri_parse_failure_reason;
         parse_address_failure_reason_e owner_parse_failure_reason;
+        parse_address_failure_reason_e resource_parse_failure_reason;
     };
 } parse_tokens_outcome_t;
 

@@ -15,9 +15,7 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include <stdint.h>   // uint*_t
 #include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
 #include <string.h>   // memset, explicit_bzero
 
 #include "os.h"
@@ -25,12 +23,7 @@
 
 #include "get_public_key.h"
 #include "../globals.h"
-#include "../state.h"
-#include "../io.h"
-#include "../sw.h"
 #include "../crypto.h"
-#include "../types/buffer.h"
-#include "../types/re_address.h"
 #include "../ui/display.h"
 #include "../helper/send_response.h"
 

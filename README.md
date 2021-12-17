@@ -204,7 +204,6 @@ Mainnet validator address: `vr1qdxjlkg5hdsytavtywwkjjwaxhnnh3n6vllfv68dpkwqttl7r
 
 </details>
 
-
 ## PIN bypass [Optional]
 Optionally, to skip having to enter PIN to opened the app you can [follow this guide](https://ledger.readthedocs.io/en/latest/userspace/debugging.html#pin-bypass)
 
@@ -280,7 +279,24 @@ python -m ledgerblue.deleteApp \
 
 # Compilation and installation
 
-## Nano S
+## Parameters Configurable via Makefile
+Following parameters are set in `Makefile`:
+- Application name defined in `APPNAME` variable
+- Application version defined in following variables `APPVERSION_M`, `APPVERSION_N` and `APPVERSION_P` which 
+  corresponds to traditional semantic versioning components - major version, minor version and patch level
+- The network configuration used by application is set in `APPNETWORK` variable. Following networks recognized:
+  - 0 - `MAINNET`
+  - 1 - `STOKENET`
+  - 2 - `RELEASENET`
+  - 3 - `RCNET`
+  - 4 - `MILESTONENET`
+  - 5 - `DEVOPSNET`
+  - 6 - `SANDPITNET`
+  - 7 - `LOCALNET`
+
+__NOTE__: By default, application compiled for `STOKENET`.
+
+## Compiling for Nano S
 
 ```sh
 make DEBUG=1  # compile optionally with PRINTF
@@ -289,7 +305,7 @@ make load     # load the app on the Nano using Python pkg `ledgerblue`
 
 > 💡 When compiling against Nano S you should not get any warnings.
 
-## Nano X
+## Compiling for Nano X
 
 ```sh
 make TARGET=NANOX DEBUG=1
