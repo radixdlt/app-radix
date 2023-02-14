@@ -51,11 +51,12 @@ int handler_get_public_key(buffer_t *cdata, bool display, bool address_verificat
     crypto_init_and_export_public_key(&private_key, &public_key, ctx->raw_uncompressed_public_key);
 
     if (!crypto_compress_public_key(&public_key, &ctx->my_derived_public_key.address.public_key)) {
+        explicit_bzero(&private_key, sizeof(private_key));
+
         return io_send_sw(ERR_CMD_GET_PUBLIC_KEY_FAILED_TO_COMPRESS_KEY);
     }
     ctx->my_derived_public_key.address.address_type = RE_ADDRESS_PUBLIC_KEY;
 
-    // reset private key
     explicit_bzero(&private_key, sizeof(private_key));
 
     if (display) {
