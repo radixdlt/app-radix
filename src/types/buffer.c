@@ -162,7 +162,7 @@ bool buffer_copy_some(const buffer_t *buffer,
         return false;
     }
 
-    memmove(out, buffer->ptr + buffer->offset, remaining_byte_count);
+    memmove(out, buffer->ptr + buffer->offset, bytes_to_copy_count);
 
     return true;
 }
