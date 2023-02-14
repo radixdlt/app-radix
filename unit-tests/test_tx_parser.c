@@ -21,7 +21,6 @@
 #include "types/hasher.h"
 
 #include "common/read.h"
-#include "common/format.h"
 
 #include "instruction/substate/tokens.h"
 #include "instruction/substate/prepared_stake.h"
