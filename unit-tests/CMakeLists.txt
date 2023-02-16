@@ -45,7 +45,6 @@ add_library(debug_print SHARED util/debug_print.c)
 add_library(hex_to_bin SHARED util/hex_to_bin.c)
 
 add_library(read SHARED ../src/common/read.c)
-add_library(format SHARED ../src/common/format.c)
 add_library(bech32_encode SHARED ../src/common/bech32_encode.c)
 
 add_library(public_key SHARED ../src/types/public_key.c)

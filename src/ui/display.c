@@ -28,7 +28,6 @@
 #include "constants.h"
 #include "../globals.h"
 #include "action/validate.h"
-#include "../common/format.h"
 
 /// #######################################
 /// ####                               ####
