@@ -157,7 +157,6 @@ target_link_libraries(test_tx_parser PUBLIC
                       bip32_path
                       read
                       uint256
-                      format
                       substate_type
                       substate
                       substate_id

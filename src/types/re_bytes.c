@@ -11,7 +11,7 @@ bool parse_re_bytes(buffer_t *buffer, parse_bytes_outcome_e *outcome, re_bytes_t
     }
 
     if (bytes->length >= MAX_BYTES_LEN ||
-            !buffer_move_fill_target(buffer, bytes->data, bytes->length)) {
+        !buffer_move_fill_target(buffer, bytes->data, bytes->length)) {
         PRINTF("Failed to parse RE bytes, wrong length, first byte specified length of %d\n",
                bytes->length);
         *outcome = PARSE_BYTES_FAIL_WRONG_LENGTH;
